@@ -35,8 +35,7 @@ This repo uses the OpenCode "get-shit-done" workflow. `.planning/` is the source
 When `/gsd-execute-phase` runs **≥2 plans in parallel** (one wave with
 multiple autonomous plans), each `gsd-executor` subagent commits on a
 **shared git index** — concurrent `git add`/`git commit` calls race and
-sweep in each other's staged files (happened in Phase 4 Wave 1: 3 agents,
-~3 Rule-3 collision fixes). To eliminate this collision class:
+sweep in each other's staged files. To eliminate this collision class:
 
 - **One worktree per parallel plan.** Before spawning a wave, the
   orchestrator creates a git worktree (or branch) per parallel plan:

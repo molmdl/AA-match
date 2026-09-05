@@ -44,7 +44,10 @@ INTERACTION_TYPES = ["h_bond", "salt_bridge", "pi_stacking", "cation_pi",
 INTERACTION_MODES = ["exclusive", "block_exclusive", "unset"]
 
 MOLECULES_DEFAULT, MOLECULES_MIN, MOLECULES_CAP = 2, 1, 10
-DIFFICULTY_DEFAULT, DIFFICULTY_MIN, DIFFICULTY_CAP = 3, 1, 9
+# difficulty cap 10: human-amended at the 01-09 install checkpoint
+# (proposed 9, human approved 10). Frozen for Phases 2+; changing it
+# later is a version-bump event.
+DIFFICULTY_DEFAULT, DIFFICULTY_MIN, DIFFICULTY_CAP = 3, 1, 10
 
 _VALID_SOURCE_MODES = ('demo', 'upload')
 

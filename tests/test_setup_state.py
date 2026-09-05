@@ -78,7 +78,7 @@ def _non_default_raw_state(interaction_mode):
         'demo_set_id': 'démo-β',                        # unicode, non-empty
         'upload': {'path': 'C:\\sets\\ligand.sdf', 'sha256': 'ab' * 32},
         'molecules_per_level': MOLECULES_MIN,           # boundary MIN (1)
-        'difficulty_levels': DIFFICULTY_CAP,            # boundary CAP (9)
+        'difficulty_levels': DIFFICULTY_CAP,            # boundary CAP (10)
         'interaction_mode': interaction_mode,
         'allowed_interactions': list(INTERACTION_TYPES),  # all 7 types
     }
@@ -103,7 +103,7 @@ class TestSetupStateContract(unittest.TestCase):
         self.assertEqual(
             (MOLECULES_DEFAULT, MOLECULES_MIN, MOLECULES_CAP), (2, 1, 10))
         self.assertEqual(
-            (DIFFICULTY_DEFAULT, DIFFICULTY_MIN, DIFFICULTY_CAP), (3, 1, 9))
+            (DIFFICULTY_DEFAULT, DIFFICULTY_MIN, DIFFICULTY_CAP), (3, 1, 10))
 
     def test_persistence_wrappers_share_the_model_validate(self):
         # B8 dependency direction: persistence imports the pure model
@@ -148,8 +148,13 @@ class TestValidateState(unittest.TestCase):
             ({'molecules_per_level': MOLECULES_CAP}, MOLECULES_CAP),
             ({'difficulty_levels': -1}, DIFFICULTY_MIN),
             ({'difficulty_levels': 99}, DIFFICULTY_CAP),
+            # Human-amended cap (01-09): literal pins prove the boundary
+            # independent of the constant -- 10 accepted, 11 clamps to 10.
+            ({'difficulty_levels': 10}, 10),
+            ({'difficulty_levels': 11}, 10),
             ({'difficulty_levels': 'x'}, DIFFICULTY_DEFAULT),
             ({'difficulty_levels': DIFFICULTY_MIN}, DIFFICULTY_MIN),
+            ({'difficulty_levels': DIFFICULTY_CAP}, DIFFICULTY_CAP),
         ]
         for dirty, expected in cases:
             with self.subTest(dirty=dirty, expected=expected):

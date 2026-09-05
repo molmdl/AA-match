@@ -47,11 +47,15 @@ PAYLOAD = {
 }
 
 
-class BackupContractTestCase(unittest.TestCase):
-    """Shared snapshot/restore/discard/verify contract, one run per store."""
+class BackupContractMixin(object):
+    """Shared snapshot/restore/discard/verify contract, one run per store.
+
+    Plain mixin (NOT a TestCase subclass) so the contract runs exactly twice
+    — once per concrete store below — never as an abstract third suite.
+    """
 
     def make_store(self):
-        raise NotImplementedError('subclass must provide a store factory')
+        raise NotImplementedError('concrete class must provide a store factory')
 
     def setUp(self):
         self.store = self.make_store()
@@ -124,7 +128,7 @@ class BackupContractTestCase(unittest.TestCase):
         self.assertEqual(_canonical(nested_a), _canonical(nested_b))
 
 
-class MemoryStoreBackupTests(BackupContractTestCase):
+class MemoryStoreBackupTests(BackupContractMixin, unittest.TestCase):
     """Contract over the dict-backed in-memory store."""
 
     def make_store(self):
@@ -142,12 +146,12 @@ class MemoryStoreBackupTests(BackupContractTestCase):
         self.assertFalse(verify_intact(self.store, self.key, PAYLOAD))
 
 
-class FileStoreBackupTests(BackupContractTestCase):
+class FileStoreBackupTests(BackupContractMixin, unittest.TestCase):
     """Contract over the filesystem store (temp file + os.replace)."""
 
     def setUp(self):
         self.root = tempfile.mkdtemp(prefix='aam_backup_test_')
-        BackupContractTestCase.setUp(self)
+        BackupContractMixin.setUp(self)
 
     def tearDown(self):
         shutil.rmtree(self.root, ignore_errors=True)

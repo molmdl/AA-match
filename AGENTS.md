@@ -30,6 +30,23 @@ This repo uses the OpenCode "get-shit-done" workflow. `.planning/` is the source
 - `phases/<NN-name>/` — `NN-MM-PLAN.md`, `NN-MM-SUMMARY.md`, optional `RESEARCH.md` / `VERIFICATION.md` / `UAT.md`.
 - Commit style: Conventional Commits with phase-plan scope, e.g. `feat(02-03):`, `docs(02-03):`, `test(02-01):`, `fix(02):`. Planning docs are committed (`commit_docs: true`).
 
+## AA-match standing gates (Phase 1 — inherit into every phase)
+
+These gates are ENFORCED by `tests/test_purity.py` and run as part of the
+normal WSL suite. Every later phase inherits them; do not weaken them and
+do not add sys.modules stubs anywhere.
+
+1. **Commands (run from repo root):**
+   - `python3.6 -m py_compile aamatch/*.py` — syntax floor (3.6; catches 3.7+ syntax).
+   - `python3.6 -m unittest discover -s tests -v` — ALL WSL tests INCLUDING the purity gates (`tests/test_purity.py`).
+   - `bash smoke/run_smoke.sh smoke/<script>.py` — headless Windows PyMOL proof (greps `=== SMOKE-0N PASS ===`; exit codes cannot carry verdicts through cmd.exe).
+2. **Purity contract:** pure modules (`setup_state`, `level_spec`, `persistence`, `backup`, `paths`) import stdlib + other pure modules ONLY — no `pymol`, no Qt, no numpy, no dataclasses, at module level OR inside any function body. `aamatch/__init__.py` keeps ZERO module-level imports (lazy imports inside `__init_plugin__`/handlers). Tests import pure modules with ZERO sys.modules stubs — do NOT add stubs (ARCHITECTURE.md's stub pattern is superseded for AA-match; the enforced gates are `tests/test_purity.py`).
+3. **Grep-gate warning (Gate C, documented-only):** token greps fire on prose — the prior art "hit a false positive on a docstring that said 'from PyQt5 import'". The AST gate is the enforced mechanism; greps are for human plan checks with inspection, never blind-fail.
+4. **Two version gates, never conflate:** format `version` (container + level-spec payload) refuses only NEWER and accepts older (additive-only evolution, `.get` defaults on read); `detector_version` refuses ANY mismatch (exact match — changed detection semantics make specs unsolvable). Constants live in `aamatch/persistence.py` (`FORMAT_VERSION`) and `aamatch/level_spec.py` (`DETECTOR_VERSION`, `LEVEL_SPEC_VERSION`).
+5. **Module identity:** after a real install the plugin imports as `pmg_tk.startup.aamatch`; in smokes/direct imports it is `aamatch`. NEVER mix both import mechanisms in one PyMOL session (two module objects → duplicate singletons later).
+6. **Dev loop:** headless smokes run against the REPO copy (repo is Windows-visible on /mnt/c — no staging step). Plugin-Manager installs are for human checkpoints only; an installed copy never sees repo edits until reinstalled.
+7. **Windows env:** see `.planning/phases/01-bootstrap-pure-foundation/windows-env-versions.md` for the recorded Python/Qt/PyMOL/numpy versions and the cmd.load path-probe results.
+
 ## Parallel subagent execution (worktree/branch protocol)
 
 When `/gsd-execute-phase` runs **≥2 plans in parallel** (one wave with

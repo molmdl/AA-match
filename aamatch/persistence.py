@@ -18,14 +18,18 @@ from .get() defaults. Any semantic change to an existing field requires a
 version bump. No header checksum by design: hand-editable educator files
 are a feature (corruption surfaces as a parse error with a clear message).
 
-Purity: module-level imports are stdlib (json, os, tempfile) ONLY.
-NO `pymol` / Qt / numpy import at module level OR inside any function
-body, so this module unit-tests in WSL with bare python3.6 and zero stubs.
+Purity: module-level imports are stdlib (json, os, tempfile) plus the
+PURE sibling `setup_state` (validate_state -- a pure<-pure import,
+dependency direction B8). NO `pymol` / Qt / numpy import at module level
+OR inside any function body, so this module unit-tests in WSL with bare
+python3.6 and zero stubs.
 """
 
 import json
 import os
 import tempfile
+
+from .setup_state import validate_state
 
 AAM_MAGIC = "AAMATCH"
 FORMAT_VERSION = 1
@@ -135,3 +139,26 @@ def load_container(path, expected_kind):
     check_container (foreign / newer / misfiled).
     """
     return check_container(read_json_file(path), expected_kind)['data']
+
+
+def save_setup_file(path, state):
+    """Write a setup state to `path` as a versioned setup container.
+
+    Validates BEFORE write (validate-on-save): the file on disk is
+    always a normalized, complete 7-field setup payload inside the
+    standard container header. This replaces the prior art's raw
+    json.dump with no header (gui_setup.py:644-659, C2).
+    """
+    save_container(path, 'setup', validate_state(state))
+
+
+def load_setup_file(path):
+    """Read a versioned setup container and return a validated setup dict.
+
+    Validates AGAIN on load (validate-on-load): hand-edited files are
+    normalized -- missing keys forward-filled from DEFAULTS (B4) -- and
+    the operation is idempotent: validate_state(load) == load. Header
+    refusal classes (foreign / newer / misfiled / unparseable) come from
+    load_container as FormatError with clear messages.
+    """
+    return validate_state(load_container(path, 'setup'))

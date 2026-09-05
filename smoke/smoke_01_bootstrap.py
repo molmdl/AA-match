@@ -37,11 +37,28 @@ def winpath(p):
     return p
 
 
-# `__file__` availability inside -cq scripts was uncertain in v1 - proven
-# guard from prior art (PA phase11_gui_diag.py:33-36).
-_HERE = (os.path.dirname(os.path.abspath(__file__))
-         if '__file__' in dir() else os.getcwd())
-_ROOT = os.path.dirname(_HERE)          # repo root = package parent (aamatch/)
+def _find_repo_root():
+    """Anchor the repo root WITHOUT trusting __file__.
+
+    DISCOVERY (2026-09-06, headless probe against Windows PyMOL 2.5.0,
+    chemtools-win10 env): inside a -cq script __file__ EXISTS but points at
+    pymol/__init__.py (the launcher), NOT at this script - so the v1-style
+    `'__file__' in dir()` guard (PA phase11_gui_diag.py:33) is NOT sufficient.
+    Anchor order instead:
+      1. a sys.argv entry naming this script (absolute or cwd-relative);
+      2. os.getcwd() - the frozen runner cds to the repo root before
+         launching cmd.exe and PyMOL inherits that cwd (probe-proven).
+    """
+    mine = 'smoke_01_bootstrap.py'
+    for arg in sys.argv:
+        if arg.endswith(mine) and os.path.exists(arg):
+            # <root>/smoke/<script> -> <root>  (repo root = package parent)
+            return os.path.dirname(os.path.dirname(os.path.abspath(arg)))
+    return os.getcwd()
+
+
+_ROOT = _find_repo_root()
+print('SMOKE-ENV root:', _ROOT)
 
 failures = []
 
@@ -81,8 +98,14 @@ try:
     P.plugin_load('aamatch')            # auto-initialize(-2) on empty registry
     info = P.plugins.get('aamatch')
     check('loader registered', info is not None)
-    check('loader loaded', bool(info and info.loaded))   # True even with the Qt warning
     check('loader module', bool(info and info.module is not None))
+    # Headless, legacyinit raises QtNotAvailableError; the loader catches it,
+    # prints the 'only available with PyQt GUI' warning, and load() STILL
+    # returns True (installed 2.5.0 plugins/__init__.py:287-302).
+    # DISCOVERY (2026-09-06 headless probe): the `loaded` PROPERTY stays
+    # False on that path - loadtime is only set on the fully-successful
+    # branch - so assert the loader's own load() verdict, not the property.
+    check('loader loaded', bool(info and info.load()))
     check('loader name', bool(info) and info.name == 'aamatch')
 except Exception:
     traceback.print_exc()

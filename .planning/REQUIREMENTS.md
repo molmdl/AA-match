@@ -9,7 +9,7 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Installation
 
-- [ ] **INSTALL-01**: User can install AA-match as a standard PyMOL plugin via Plugin Manager, registering an "AA-match" item under the Plugins menu
+- [x] **INSTALL-01**: User can install AA-match as a standard PyMOL plugin via Plugin Manager, registering an "AA-match" item under the Plugins menu
 
 ### Setup
 
@@ -65,7 +65,7 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Persistence
 
-- [ ] **PERSIST-01**: Setup parameters save to / load from a file (versioned format)
+- [x] **PERSIST-01**: Setup parameters save to / load from a file (versioned format)
 - [ ] **PERSIST-02**: Generate-and-export writes a shareable game file that the Game status tab's Import button can load
 - [ ] **PERSIST-03**: Checkpoint save/restore fully reconstructs the game (placed positions/orientations, scores, counters)
 
@@ -115,7 +115,7 @@ Which phases cover which requirements. Updated during roadmap creation (2026-09-
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| INSTALL-01 | Phase 1 | Pending |
+| INSTALL-01 | Phase 1 | Complete |
 | SETUP-01 | Phase 4 | Pending |
 | SETUP-02 | Phase 4 | Pending |
 | SETUP-03 | Phase 4 | Pending |
@@ -153,7 +153,7 @@ Which phases cover which requirements. Updated during roadmap creation (2026-09-
 | SCORE-08 | Phase 7 | Pending |
 | SCORE-09 | Phase 6 | Pending |
 | SCORE-10 | Phase 6 | Pending |
-| PERSIST-01 | Phase 1 | Pending |
+| PERSIST-01 | Phase 1 | Complete |
 | PERSIST-02 | Phase 7 | Pending |
 | PERSIST-03 | Phase 7 | Pending |
 | HELP-01 | Phase 9 | Pending |

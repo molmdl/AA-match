@@ -17,7 +17,7 @@ AA-match ships as a standard PyMOL 2.5.0 plugin implementing an educational smal
 
 ## Phases
 
-- [ ] **Phase 1: Bootstrap & Pure Foundation** — installable plugin skeleton, WSL→Windows toolchain proof, pure setup/persistence/level-spec layer with WSL tests
+- [x] **Phase 1: Bootstrap & Pure Foundation** — installable plugin skeleton, WSL→Windows toolchain proof, pure setup/persistence/level-spec layer with WSL tests
 - [ ] **Phase 2: Headless Game Engine** — human-approved thresholds → detector → always-solvable generator → bundled data → cmd-only generate/place/detect/score, headless end-to-end
 - [ ] **Phase 3: Wizard Gameplay Loop** — click-to-select, move/rotate onto the ligand, Confirm; movement-model decision; no helper visuals
 - [ ] **Phase 4: Qt Setup Window** — modeless setup window: demo dropdown, upload, params, the seven bottom buttons
@@ -42,15 +42,15 @@ AA-match ships as a standard PyMOL 2.5.0 plugin implementing an educational smal
 **Plans**: 9 plans
 
 Plans:
-- [ ] 01-01-PLAN.md — aamatch package skeleton: metadata-first `__init__.py`, Qt-free placeholder, skeleton contract test
-- [ ] 01-02-PLAN.md — persistence container core (magic/version/kind refusals) + atomic JSON I/O (TDD)
-- [ ] 01-03-PLAN.md — backup pure core over injected stores + corruption-recovery proof (TDD)
-- [ ] 01-04-PLAN.md — paths.to_windows_path 14-case matrix + package_data_path (TDD)
-- [ ] 01-05-PLAN.md — setup_state 7-field model + PERSIST-01 versioned round-trip and refusals (TDD)
-- [ ] 01-06-PLAN.md — level_spec schema reserve + detector_version exact-match gate (TDD)
-- [ ] 01-07-PLAN.md — headless smoke-01: loader proof, env-version record, cmd.load path probes
-- [ ] 01-08-PLAN.md — purity gate suite (AST + clean-subprocess) + AGENTS.md standing gates
-- [ ] 01-09-PLAN.md — [HUMAN] Plugin-Manager install checkpoint + setup-defaults confirmation
+- [x] 01-01-PLAN.md — aamatch package skeleton: metadata-first `__init__.py`, Qt-free placeholder, skeleton contract test
+- [x] 01-02-PLAN.md — persistence container core (magic/version/kind refusals) + atomic JSON I/O (TDD)
+- [x] 01-03-PLAN.md — backup pure core over injected stores + corruption-recovery proof (TDD)
+- [x] 01-04-PLAN.md — paths.to_windows_path 14-case matrix + package_data_path (TDD)
+- [x] 01-05-PLAN.md — setup_state 7-field model + PERSIST-01 versioned round-trip and refusals (TDD)
+- [x] 01-06-PLAN.md — level_spec schema reserve + detector_version exact-match gate (TDD)
+- [x] 01-07-PLAN.md — headless smoke-01: loader proof, env-version record, cmd.load path probes
+- [x] 01-08-PLAN.md — purity gate suite (AST + clean-subprocess) + AGENTS.md standing gates
+- [x] 01-09-PLAN.md — [HUMAN] Plugin-Manager install checkpoint + setup-defaults confirmation
 
 ### Phase 2: Headless Game Engine
 **Goal**: The entire game works with no GUI at all: a human-approved threshold table drives a correct, vectorized detector; the seeded generator always produces solvable levels; bundled data materializes into real PyMOL objects; and generate → place → detect → score runs headlessly end-to-end on a scripted placement.
@@ -200,7 +200,7 @@ Lifted from PITFALLS.md "Pitfall-to-Phase Mapping" (topic names → this roadmap
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Bootstrap & Pure Foundation | 0/9 | Not started | - |
+| 1. Bootstrap & Pure Foundation | 9/9 | Complete | 2026-09-06 |
 | 2. Headless Game Engine | 0/TBD | Not started | - |
 | 3. Wizard Gameplay Loop | 0/TBD | Not started | - |
 | 4. Qt Setup Window | 0/TBD | Not started | - |

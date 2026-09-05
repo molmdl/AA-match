@@ -92,10 +92,11 @@ def _unpack(data, key):
     except UnicodeDecodeError:
         raise BackupError(
             "backup corrupt (sha256 header not ascii) for key %r" % (key,))
-    if hashlib.sha256(data[_SHA_HEX_LEN + 1:]).hexdigest() != stored_hex:
+    payload = data[_SHA_HEX_LEN + 1:]
+    if hashlib.sha256(payload).hexdigest() != stored_hex:
         raise BackupError(
             "backup corrupt (sha256 mismatch) for key %r" % (key,))
-    return data[_SHA_HEX_LEN + 1:]
+    return payload
 
 
 def _decode_payload(key, payload_bytes):
@@ -199,12 +200,15 @@ def snapshot(store, key, payload):
 
     Replaces any stale backup under the same key. Returns a manifest dict:
     {'key': key, 'sha256': <64-char lowercase hex>, 'timestamp': <float>}.
+    The manifest sha is read back from the stored header, so the manifest
+    and the stored bytes describe the SAME digest by construction.
     """
     data = _canonical(payload)
-    store.save_bytes(key, _pack(data))
+    stored = _pack(data)
+    store.save_bytes(key, stored)
     return {
         'key': key,
-        'sha256': hashlib.sha256(data).hexdigest(),
+        'sha256': stored[:_SHA_HEX_LEN].decode('ascii'),
         'timestamp': time.time(),
     }
 

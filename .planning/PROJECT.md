@@ -47,7 +47,7 @@ The player can place amino acids onto a small molecule in the PyMOL 3D viewer an
 ## Context
 
 - Spec of record is `spec.md`; README is placeholder-only except the vibe-coding warning which must be kept.
-- Prior art: `tmp/bioCHEMeleon/` — our previous PyMOL 2.5.0 plugin game with similar UI and mechanisms (wizard-based interaction, PyQt5 GUI, pure data layer with unit tests, headless cmd-only smoke tests). Reference only, git-ignored.
+- Prior art: `tmp/bioCHEMeleon/` — our previous PyMOL 2.5.0 plugin game with similar UI and mechanisms (wizard-based interaction, PyQt5 GUI, pure data layer with unit tests, headless cmd-only smoke tests). **Code may be borrowed/adapted from it** (UI and mechanism code: wizard.py, gui_setup.py, gui_game.py, persistence.py, setup_state.py, backup.py); adapt to AA-match naming/layout, do not vendor wholesale. Git-ignored (never committed).
 - Reference repos (git-ignored): `Pymol-script-repo/` (open-source plugins), `pymol-src/` (PyMOL 2.5.0 source for API verification with file:line citations).
 - Dev in WSL Ubuntu; PyMOL 2.5.0 (anaconda) runs in a Windows conda env reachable via `setenv.bat`; headless PyMOL via `cmd.exe /c C:\src\run-conda-pymol.bat -cq <script>`. GUI/Qt paths cannot run from WSL — human-verify checkpoints.
 - Demo set curation protocol: agent proposes candidates (PDB/SDF IDs, protonation/interaction sources) with citations → human verifies and approves → only then fetch/commit. README has ~9 tier slots (Easy ×3, Hard ×3, Challenge, Very challenging ×2).

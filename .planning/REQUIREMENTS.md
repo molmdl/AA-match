@@ -111,17 +111,63 @@ Explicitly excluded. Documented to prevent scope creep.
 
 ## Traceability
 
-Which phases cover which requirements. Updated during roadmap creation.
+Which phases cover which requirements. Updated during roadmap creation (2026-09-05).
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| (populated by roadmap step) | — | Pending |
+| INSTALL-01 | Phase 1 | Pending |
+| SETUP-01 | Phase 4 | Pending |
+| SETUP-02 | Phase 4 | Pending |
+| SETUP-03 | Phase 4 | Pending |
+| SETUP-04 | Phase 4 | Pending |
+| SETUP-05 | Phase 4 | Pending |
+| SETUP-06 | Phase 4 | Pending |
+| SETUP-07 | Phase 4 | Pending |
+| SETUP-08 | Phase 4 | Pending |
+| SETUP-09 | Phase 4 | Pending |
+| SETUP-10 | Phase 4 | Pending |
+| SETUP-11 | Phase 5 | Pending |
+| GEN-01 | Phase 2 | Pending |
+| GEN-02 | Phase 2 | Pending |
+| GEN-03 | Phase 2 | Pending |
+| GEN-04 | Phase 2 | Pending |
+| GEN-05 | Phase 2 | Pending |
+| GEN-06 | Phase 8 | Pending |
+| PLAY-01 | Phase 3 | Pending |
+| PLAY-02 | Phase 3 | Pending |
+| PLAY-03 | Phase 3 | Pending |
+| PLAY-04 | Phase 3 | Pending |
+| PLAY-05 | Phase 5 | Pending |
+| DETECT-01 | Phase 2 | Pending |
+| DETECT-02 | Phase 2 | Pending |
+| DETECT-03 | Phase 2 | Pending |
+| DETECT-04 | Phase 2 | Pending |
+| DETECT-05 | Phase 2 | Pending |
+| SCORE-01 | Phase 6 | Pending |
+| SCORE-02 | Phase 6 | Pending |
+| SCORE-03 | Phase 6 | Pending |
+| SCORE-04 | Phase 5 | Pending |
+| SCORE-05 | Phase 6 | Pending |
+| SCORE-06 | Phase 6 | Pending |
+| SCORE-07 | Phase 6 | Pending |
+| SCORE-08 | Phase 7 | Pending |
+| SCORE-09 | Phase 6 | Pending |
+| SCORE-10 | Phase 6 | Pending |
+| PERSIST-01 | Phase 1 | Pending |
+| PERSIST-02 | Phase 7 | Pending |
+| PERSIST-03 | Phase 7 | Pending |
+| HELP-01 | Phase 9 | Pending |
+| HELP-02 | Phase 8 | Pending |
+| DOCS-01 | Phase 9 | Pending |
+| DOCS-02 | Phase 9 | Pending |
 
 **Coverage:**
-- v1 requirements: 46 total
-- Mapped to phases: 0
-- Unmapped: 46 ⚠️ (roadmap step resolves)
+- v1 requirements: 45 total (corrected from 46 — exact ID audit on 2026-09-05 found 45: 1 INSTALL + 11 SETUP + 6 GEN + 5 PLAY + 5 DETECT + 10 SCORE + 3 PERSIST + 2 HELP + 2 DOCS)
+- Mapped to phases: 45
+- Unmapped: 0 ✓
+
+**Phase map:** Phase 1 (Bootstrap & Pure Foundation) · Phase 2 (Headless Game Engine) · Phase 3 (Wizard Gameplay Loop) · Phase 4 (Qt Setup Window) · Phase 5 (Game Status Tab & Start Sequence) · Phase 6 (Scoring Lifecycle & Endgame) · Phase 7 (Checkpoint & Game-File Persistence) · Phase 8 (Demo Curation & Citations) · Phase 9 (Help, Docs & Release Audit). Each requirement maps to the first phase that could deliver its user-observable behavior; later phases may re-verify or extend earlier deliveries.
 
 ---
 *Requirements defined: 2026-09-05*
-*Last updated: 2026-09-05 after initial definition*
+*Last updated: 2026-09-05 after roadmap creation (traceability filled)*

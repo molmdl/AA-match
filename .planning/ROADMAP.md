@@ -215,7 +215,7 @@ Lifted from PITFALLS.md "Pitfall-to-Phase Mapping" (topic names → this roadmap
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Bootstrap & Pure Foundation | 9/9 | Complete | 2026-09-06 |
-| 2. Headless Game Engine | 1/15 | In progress (DETECT-03 gate approved 2026-09-06) | - |
+| 2. Headless Game Engine | 7/15 | In progress (waves 1-5 done: gate, vec3/spatial, manifest, fixtures, capability, thresholds+detector core, geometry bridge) | - |
 | 3. Wizard Gameplay Loop | 0/TBD | Not started | - |
 | 4. Qt Setup Window | 0/TBD | Not started | - |
 | 5. Game Status Tab & Start Sequence | 0/TBD | Not started | - |

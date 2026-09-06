@@ -10,17 +10,17 @@ See: .planning/PROJECT.md (updated 2026-09-05)
 ## Current Position
 
 Phase: 2 of 9 (Headless Game Engine) — In progress
-Plan: 5 of 15 complete (waves 1-2 done; wave 3 done: 02-04 fixtures + MANIFEST + SMOKE-02, 02-05 capability single typing home — parallel worktrees merged by orchestrator)
-Status: DETECT-03 [GATE] CLOSED (approved 2026-09-06); data supply PROVEN (SMOKE-02 count-exact); typing side frozen — 02-06/02-07 detector code transcribes thresholds into thresholds.py and consumes aamatch/capability.py tables ONLY (DETECT-04 by construction)
-Last activity: 2026-09-06 — Wave 3 complete: 02-04 (benzamide/acetate SDFs, sha256-pinned MANIFEST.json, generalized run_smoke.sh, SMOKE-02 PASS first boot) + 02-05 (capability.py, PURE_MODULES=9, 295/295 tests)
+Plan: 6 of 15 complete (waves 1-3 done; wave 4 done: 02-06 thresholds + detector core — single-plan wave, committed on main)
+Status: DETECT-01/02 underway — 3 of 7 types detect on scripted geometry (h_bond, salt_bridge, hydrophobic); 02-07 adds pi_stacking/cation_pi/halogen/metal on the SAME pipeline (ring/charge/halogen/metal features already precomputed + in the shared cross_pairs set)
+Last activity: 2026-09-06 — Completed 02-06-PLAN.md (thresholds.py constants + detector.py core, TDD, PURE_MODULES=11, 346/346 tests)
 
-Progress: [███░░░░░░░] 33% of Phase 2 (5/15) · [█████▍░░░░] 58% of project (phase 2 of 9; plans 14/24)
+Progress: [█████░░░░░] 40% of Phase 2 (6/15) · [██████▎░░░░] 63% of project (phase 2 of 9; plans 15/24)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 14 (Phase 1: 01-01…01-09; Phase 2: 02-01…02-05)
-- Average duration: ~11 min (02-03); 6 min (02-04); ~29 min (02-05, TDD)
+- Total plans completed: 15 (Phase 1: 01-01…01-09; Phase 2: 02-01…02-06)
+- Average duration: ~11 min (02-03); 6 min (02-04); ~29 min (02-05); 23 min (02-06)
 - Total execution time: —
 
 **By Phase:**
@@ -28,7 +28,7 @@ Progress: [███░░░░░░░] 33% of Phase 2 (5/15) · [███�
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 1 | 9/9 ✓ | — | — |
-| 2 | 5/15 | ~8 min (02-02) + ~25 min (02-01 cont.) + 11 min (02-03) + 6 min (02-04) + 29 min (02-05) | — |
+| 2 | 6/15 | ~8 min (02-02) + ~25 min (02-01 cont.) + 11 min (02-03) + 6 min (02-04) + 29 min (02-05) + 23 min (02-06) | — |
 
 **Recent Trend:**
 - Last 5 plans: —
@@ -74,6 +74,11 @@ Decisions are logged in PROJECT.md Key Decisions table. Seeded from PROJECT.md a
 - (02-05) Ligand typing contract: §5.1 atom records + bond block [(i,j,order)] 0-based; optional `formal_charge` governs charge groups when present, kekulé structure-only when absent (recorded decision; acid-OH guard added Rule 2 — COOH never anion); aromatic = bond orders (6-ring 3 non-adjacent doubles = alternation; 5-ring 2; all-4 markers; unmarked = single per MDL) with 15° dihedral fallback ONLY when cycle orders absent; donors fail-closed (O/N/S needs bonded H); acceptors = any O/N/S; halogen donors Cl/Br/I (C-F excluded); `RING_PLANARITY_FALLBACK_DEG = 15.0` lives in capability.py — 02-06 should reference it, not duplicate.
 - (02-05, recorded tension) Gate §3.3 Met-row halogen cell says Y(S) but §3.5's resolved halogen set (9) excludes Met; the plan's transcription rule + §3.5 were followed (Met excluded) — reconcile the doc row at the next versioned review (§4.7 bump event, never silent).
 - (02-05, for 02-13) side_chain naming = heavy atoms beyond CB + polar Hs (plan examples pin it; ALA/GLY empty; carbon Hs omitted); chempy fragments digit-prefix HIS ring H ('2HE' per probe) vs standard-PDB names transcribed — SMOKE-03 field-verifies and reconciles atom names in capability.py (never thresholds).
+- (02-06) thresholds.py = the approved table as 18 named constants, one `source:` comment per constant (row # + published source + 2026-09-06 approval date; provenance scan test makes the truthfulness rule mechanical); MAX_CUTOFF computed from distance rows (=6.0); AA_PREFILTER_MARGIN=7.5 (research §5.2.2 headroom, >= MAX_CUTOFF pinned); METAL_ELEMENTS + the 15-deg fallback are RE-EXPORTS of capability's objects (assertIs) — single homes, never duplicates; docstring carries the §4.7 bump policy + the spatial cell-cutoff note.
+- (02-06) detector core: features precompute ONCE (donor-H pairs, acceptors, hydrophobes, aromatic rings with row-9 center/normal/radius, charge-group centers, halogen C-X donors, metals) — halogen-X + metal atoms already sit in the shared cross_pairs point set so 02-07 adds classification only; candidates ONLY via cross_pairs over (near-AA side-chain atoms incl. CB) x (ligand typed atoms) at cell==cutoff; charge/ring feature pairs enumerated directly; NO full atom-set double loop.
+- (02-06, recorded) Ligand guanidino center = centroid of the 3 bonded Ns (gate §2.3's "midpoint of 2 Ns" is the protein-side Arg pattern; isolated guanidinium has 3 equivalent Ns) — docstring-documented; revisit = DETECTOR_VERSION event. Ligand phosphate/sulfonate NOT typed (capability doesn't type them — DETECT-04 parity; extension = versioned capability change).
+- (02-06, recorded) One record per (donor heavy, acceptor) with the best-angle attached H (ties -> lowest H id); hydrophobic = one binary-presence record per (AA, ligand) with carbon-set atom_ids; AA donor-H pairing GEOMETRIC (AA_H_ATTACH_MAX=1.5, typing-internal, naming-agnostic for chempy '2HE'); unclassified_aa_atoms = non-H atoms outside side_chain ∪ {N,CA,C,O,OXT,CB} — SMOKE-03 asserts zero on materialized geometry (cap-atom names may extend the known set during 02-13 field verification).
+- (02-06, Rule 2 additions) apply_altloc_policy implemented pure-side (research §7.2 assigned it, plans didn't name it) + fail-closed validation: bond indices out of range / unknown side ('aa'|'lig' only — waters can never silently join) raise ValueError.
 
 ### Pending Todos
 
@@ -88,14 +93,14 @@ Decisions are logged in PROJECT.md Key Decisions table. Seeded from PROJECT.md a
 
 ## Session Continuity
 
-Last session: 2026-09-06 (wave-3 executors: 02-04 on exec/02-04, 02-05 on exec/02-05 after one silent-failure re-spawn; both merged to main by orchestrator)
-Stopped at: Wave 3 complete — 02-04 (SMOKE-01+02 PASS via generalized runner, 211/211) + 02-05 (capability.py, 295/295, PURE_MODULES=9)
+Last session: 2026-09-06 (02-06 executor on main — single-plan wave, no worktree needed; prior silent-failure re-run completed cleanly)
+Stopped at: Completed 02-06-PLAN.md — thresholds.py + detector.py core (3 of 7 types), PURE_MODULES=11, 346/346 tests
 Resume file: None
 
 ## Next Actions
 
-- Orchestrator: proceed to wave 4 — 02-06 (thresholds.py + detector core): transcribe the 10 gate-doc rows as named constants with source comments; reference `capability.RING_PLANARITY_FALLBACK_DEG` for row 8; candidate pairs via spatial.cross_pairs + AA bounding-sphere prefilter
-- 02-07 (detector pt 2): consume capability.py typed sets + ligand typing ONLY (no parallel tables); h_bond enumerates donor-side vs acceptor-side per the direction-refined capability; OQ-4 anti-artifact rule binds ligand-side cations
+- Orchestrator: proceed to wave 5 — 02-07 (detector pt 2): pi_stacking/cation_pi/halogen/metal. Ring features (center/normal/radius), ligand charge groups, halogen C-X donors, and metal atoms are ALREADY precomputed in extract_features and included in the shared cross_pairs set — 02-07 adds _pi_stacking/_cation_pi/_halogen/_metal classifiers + the 7-type detect() wrapper; canonical order = _TYPE_ORDER (INTERACTION_TYPES position); OQ-4 anti-artifact rule binds the ligand-cation case only
 - 02-08 (generator): solvability consumes residue_capabilities + ligand_support + ligand_has_metal; enumerate_entries candidates; DETECT-05 target via largest_entry (-> benzamide)
+- SMOKE-03 (02-13): assert features['unclassified_aa_atoms'] == 0 per materialized AA; reconcile cap-atom naming by extending the detector's known non-side-chain set if needed (never thresholds)
 - SMOKE-03/04/05 need NO runner changes (marker-deriving run_smoke.sh handles any smoke_NN_name.py)
 - Fixture geometry (benzamide xy-plane pose, acetate tetrahedral methyl) is stable for 02-13 placement scripting and 02-14 E2E poses

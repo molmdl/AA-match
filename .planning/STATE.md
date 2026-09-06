@@ -10,17 +10,17 @@ See: .planning/PROJECT.md (updated 2026-09-05)
 ## Current Position
 
 Phase: 2 of 9 (Headless Game Engine) — In progress
-Plan: 3 of 15 complete (wave 2: 02-03 pure manifest module done; next: 02-04 fixtures + MANIFEST.json + SMOKE-02)
-Status: DETECT-03 [GATE] CLOSED (approved 2026-09-06); manifest schema now frozen — 02-04's MANIFEST.json must satisfy aamatch/manifest.py validation exactly
-Last activity: 2026-09-06 — Completed 02-03-PLAN.md (manifest parse/validate/enumerate, 'manifest' kind, PURE_MODULES=8; 211/211 tests)
+Plan: 4 of 15 complete in phase (wave 3: 02-05 single typing home done on exec/02-05; sibling 02-04 fixtures + MANIFEST.json + SMOKE-02 running in parallel on exec/02-04)
+Status: DETECT-03 [GATE] CLOSED (approved 2026-09-06); typing side now frozen too — 02-06/02-07 detector code transcribes thresholds into thresholds.py and consumes aamatch/capability.py tables ONLY (DETECT-04 by construction)
+Last activity: 2026-09-06 — Completed 02-05-PLAN.md (capability.py single typing home, PURE_MODULES=9; 295/295 tests)
 
-Progress: [██░░░░░░░░] 20% of Phase 2 (3/15) · [█████░░░░░] 50% of project (phase 2 of 9; plans 12/24)
+Progress: [██▋░░░░░░░] 27% of Phase 2 (4/15) · [█████▍░░░░] 54% of project (phase 2 of 9; plans 13/24)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 12 (Phase 1: 01-01…01-09; Phase 2: 02-01, 02-02, 02-03)
-- Average duration: ~11 min (02-03)
+- Total plans completed: 13 (Phase 1: 01-01…01-09; Phase 2: 02-01, 02-02, 02-03, 02-05)
+- Average duration: ~29 min (02-05, TDD)
 - Total execution time: —
 
 **By Phase:**
@@ -28,7 +28,7 @@ Progress: [██░░░░░░░░] 20% of Phase 2 (3/15) · [███�
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 1 | 9/9 ✓ | — | — |
-| 2 | 3/15 | ~8 min (02-02) + ~25 min (02-01 cont.) + 11 min (02-03) | — |
+| 2 | 4/15 | ~8 min (02-02) + ~25 min (02-01 cont.) + 11 min (02-03) + 29 min (02-05) | — |
 
 **Recent Trend:**
 - Last 5 plans: —
@@ -68,6 +68,10 @@ Decisions are logged in PROJECT.md Key Decisions table. Seeded from PROJECT.md a
 - (02-02) PURE_MODULES now 7 (`+ vec3, spatial`); ALLOWED_STDLIB untouched (math already whitelisted; spatial imports only `from .vec3 import dist`; itertools stays out per 02-01). Phase-2 pure-module pattern established: RED test commit → GREEN feat commit → PURE_MODULES registration as test commit.
 - (02-03) Manifest schema FROZEN for 02-04/02-08: 14 required entry keys per 02-RESEARCH-materialization.md §3.2; `file` must be forward-slash package-relative (backslash/absolute/`X:` drive refused — PITFALL 2); counts are real ints (bools refused), bond_order_counts = digit-string → positive int, flags real bools; negative formal_charge_sum legal. manifest_version gate strict `_is_int` + refuse-newer/accept-older like FORMAT_VERSION.
 - (02-03) set_id/entry_id must be non-empty strings (enumerate_entries sort keys — non-strings would TypeError in sorted(), so they are validated with clear refusals); enumerate_entries returns new dicts + set_id sorted by (set_id, entry_id); largest_entry = max heavy_atom_count, ties-first (DETECT-05 selector, no special-cased field). KINDS += 'manifest' (additive; refusal messages unchanged). PURE_MODULES = 8. Empty sets list allowed (supply emptiness is the generator's concern).
+- (02-05) capability.py = THE single typing home (gate §4.2), transcribed row-for-row from the gate doc with `source:` comments; per-type capable sets + counts (h_bond 12, salt 4, pi 4, cation_pi 6, hydrophobic 8, halogen 9, metal 9) test-pinned; '>= 2 capable AAs per type' is a permanent invariant test. API: aa_capable(resn, itype, ligand_profile) is polarity-aware (D3 salt-bridge sign; D4 cation-pi either direction; h_bond DIRECTION-REFINED — AA donor needs ligand acceptor and vice versa, Rule-2 addition closing a solvability hole). AA_TOKENS = the one generator-token → fragment/resn/charge_class vocabulary (20 tokens; protonation variants additive-later). PURE_MODULES = 9.
+- (02-05) Ligand typing contract: §5.1 atom records + bond block [(i,j,order)] 0-based; optional `formal_charge` governs charge groups when present, kekulé structure-only when absent (recorded decision; acid-OH guard added Rule 2 — COOH never anion); aromatic = bond orders (6-ring 3 non-adjacent doubles = alternation; 5-ring 2; all-4 markers; unmarked = single per MDL) with 15° dihedral fallback ONLY when cycle orders absent; donors fail-closed (O/N/S needs bonded H); acceptors = any O/N/S; halogen donors Cl/Br/I (C-F excluded); `RING_PLANARITY_FALLBACK_DEG = 15.0` lives in capability.py — 02-06 should reference it, not duplicate.
+- (02-05, recorded tension) Gate §3.3 Met-row halogen cell says Y(S) but §3.5's resolved halogen set (9) excludes Met; the plan's transcription rule + §3.5 were followed (Met excluded) — reconcile the doc row at the next versioned review (§4.7 bump event, never silent).
+- (02-05, for 02-13) side_chain naming = heavy atoms beyond CB + polar Hs (plan examples pin it; ALA/GLY empty; carbon Hs omitted); chempy fragments digit-prefix HIS ring H ('2HE' per probe) vs standard-PDB names transcribed — SMOKE-03 field-verifies and reconciles atom names in capability.py (never thresholds).
 
 ### Pending Todos
 
@@ -83,12 +87,13 @@ Decisions are logged in PROJECT.md Key Decisions table. Seeded from PROJECT.md a
 
 ## Session Continuity
 
-Last session: 2026-09-06 (02-03 executed directly on main — single-plan wave; TDD RED/GREEN commits 0e6c059, 0636d08, 8ab01f7, 771b71b, c9629cb)
-Stopped at: Completed 02-03-PLAN.md — 02-03-SUMMARY.md written, full suite 211/211 green
+Last session: 2026-09-06 (02-05 executed on worktree branch exec/02-05 — parallel wave 3; TDD RED/GREEN commits 1badcb5, 13d3876, f3d8f43, cbce5ab, 625793a)
+Stopped at: Completed 02-05-PLAN.md — 02-05-SUMMARY.md written, full suite 295/295 green (incl. purity gates over capability, PURE_MODULES=9)
 Resume file: None
 
 ## Next Actions
 
-- Orchestrator: proceed to 02-04 (fixture ligands + aamatch/data/MANIFEST.json + generalized smoke runner + SMOKE-02) — MANIFEST.json MUST satisfy the frozen aamatch/manifest.py schema (14 keys, digit-string bond_order_counts keys, forward-slash relative 'file')
-- Then waves per plan frontmatter; 02-08 consumes enumerate_entries as candidate list; DETECT-05 target via largest_entry
-- Detector plans 02-06/07 consume `spatial.cross_pairs` + `vec3` per-candidate math; capability/threshold plans transcribe from docs/DETECTION_THRESHOLDS.md
+- Orchestrator: merge exec/02-05 (and sibling exec/02-04) back to the integration branch in dependency order, then proceed to wave 4
+- 02-06 (thresholds.py): transcribe the 10 gate-doc rows as named constants with source comments; reference `capability.RING_PLANARITY_FALLBACK_DEG` for row 8
+- 02-07 (detector): consume capability.py typed sets + ligand typing ONLY (no parallel tables); h_bond enumerates donor-side vs acceptor-side per the direction-refined capability; OQ-4 anti-artifact rule binds ligand-side cations
+- 02-08 (generator): solvability consumes residue_capabilities + ligand_support + ligand_has_metal; enumerate_entries candidates; DETECT-05 target via largest_entry

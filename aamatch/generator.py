@@ -92,6 +92,9 @@ modules (capability, level_spec, setup_state) ONLY. NO file I/O here.
 import math
 import random
 
+from .capability import AA_RESIDUES, AA_TOKENS, aa_capable, ligand_support
+from .setup_state import INTERACTION_TYPES
+
 # ---------------------------------------------------------------------------
 # Engineering constants (generation research §5/§6 -- tune freely, the
 # invariant tests pin their honesty, not chemistry).
@@ -285,3 +288,229 @@ def _sub_seeds(master_rng, n_units):
     """
     return [master_rng.randint(0, _SUB_SEED_MAX)
             for _ in range(n_units)]
+
+
+# ---------------------------------------------------------------------------
+# Required-set derivation (GEN-04, OQ-1 semantics) + slot allocation.
+# ---------------------------------------------------------------------------
+
+# The 20 standard AAs in canonical sorted order -- the ONE list every
+# RNG touch uses (distractor draws, capable pools). Derived from the
+# capability table (never re-derived typing), cross-checked against the
+# materialization vocabulary AA_TOKENS so every emitted 'aa' can be
+# loaded by the materializer.
+ALL_AA = sorted(AA_RESIDUES)
+
+_MATERIALIZABLE_RESNS = frozenset(
+    entry['resn'] for entry in AA_TOKENS.values())
+
+
+def _checked_allowed(setup):
+    """setup['allowed_interactions'] as a canonical list, defensively
+    validated: members outside INTERACTION_TYPES are refused loudly
+    (validate_state already filters silently -- a RAW dict past the
+    validated setup must not degrade silently here)."""
+    allowed = setup.get('allowed_interactions')
+    if not isinstance(allowed, (list, tuple)):
+        raise GenerationError(
+            "setup 'allowed_interactions' must be a list of interaction "
+            "types (found %s)" % type(allowed).__name__)
+    unknown = [t for t in allowed if t not in INTERACTION_TYPES]
+    if unknown:
+        raise GenerationError(
+            "setup 'allowed_interactions' carries unknown interaction "
+            "type(s): %s" % ', '.join(str(t) for t in unknown))
+    return list(allowed)
+
+
+def derive_required(setup, ligand_profile, rng, n_required_types):
+    """Resolve the required interaction set for one molecule.
+
+    Approved OQ-1 mode semantics (docs/DETECTION_THRESHOLDS.md §4.3,
+    2026-09-06 -- binding) + OQ-5 hydrophobic sampling exclusion (§4.5):
+
+    - ``exclusive`` = "any interaction formed", SCOPED BY
+      ``allowed_interactions``: returns ``{'mode': 'any', 'items': []}``.
+      Empty allowed list -> GenerationError naming the setup field.
+      Ligand supports zero of the allowed types -> GenerationError.
+    - ``block_exclusive`` = required set is EXACTLY the checked
+      interactions (human-checked set): items are the allowed list in
+      canonical INTERACTION_TYPES order, count 1 each. A checked type the
+      ligand cannot support -> GenerationError NAMING the type(s) (never
+      silently degrade). Empty allowed -> GenerationError ("no
+      interactions checked"). Hydrophobic IS reachable here (explicit
+      check -- the only route per OQ-5).
+    - ``unset`` = random required set: the draw pool is the
+      ligand-SUPPORTED subset of the vocabulary (allowed list, or ALL
+      types when allowed is empty -- unset means "the game picks"),
+      MINUS hydrophobic (OQ-5: hydrophobic can appear ONLY via
+      block_exclusive explicit check). k = min(n_required_types,
+      len(pool)); ``rng.sample`` over the canonical-ordered pool; items
+      re-emitted in canonical order. Pool empty -> GenerationError
+      naming the cause (only-hydrophobic names the OQ-5 policy).
+
+    Edge-case rulings (generation research §4.3, verbatim):
+
+    | Edge case | Ruling |
+    |-----------|--------|
+    | block_exclusive checked set includes an unsupported type | Refuse, naming the type(s); silent degradation would corrupt the game's contract |
+    | unset random draw includes an unsupported type | Cannot happen -- the draw is from the supported subset |
+    | exclusive ("any") + ligand supports zero of the allowed types | Refuse ("molecule supports none of the allowed interactions") |
+    | Ligand with a metal: metal supportable only then; without metal never sampled | ligand_support() predicate -- DETECT-02 "conditional on metal present" |
+    | Ligand without halogens: halogen never supportable (donors are ligand-side only) | Same predicate |
+    | Required AA pool smaller than count | Guarded in allocate_slots; impossible in practice (>= 4 capable AAs per type) |
+    | n^2 < needed + 1 | Refuse ("grid too small") in allocate_slots |
+    | Empty allowed_interactions in block/unset modes | block: refuse ("no interactions checked"); unset: draw from all types (OQ-1), hydrophobic still excluded (OQ-5) |
+
+    ``count`` semantics: v1 ALWAYS count = 1 (generation research §4.1);
+    the field exists for future multi-instance requirements. ``rng`` is
+    consumed ONLY via ``rng.sample`` over the canonical-ordered pool (a
+    fixed-order list -- never a set/dict).
+    """
+    allowed = _checked_allowed(setup)
+    mode = setup.get('interaction_mode')
+
+    if mode == 'exclusive':
+        if not allowed:
+            raise GenerationError(
+                "exclusive mode requires the setup field "
+                "'allowed_interactions' to be non-empty -- check the "
+                "interactions the game should teach in Setup")
+        supported = [t for t in allowed
+                     if ligand_support(t, ligand_profile)]
+        if not supported:
+            raise GenerationError(
+                "molecule supports none of the allowed interactions (%s)"
+                % ', '.join(allowed))
+        return {'mode': 'any', 'items': []}
+
+    if mode == 'block_exclusive':
+        if not allowed:
+            raise GenerationError(
+                "block_exclusive mode requires 'allowed_interactions': "
+                "no interactions checked")
+        missing = [t for t in allowed
+                   if not ligand_support(t, ligand_profile)]
+        if missing:
+            raise GenerationError(
+                "molecule cannot support required interaction(s): %s"
+                % ', '.join(missing))
+        return {'mode': 'list',
+                'items': [{'type': t, 'count': 1} for t in allowed]}
+
+    if mode == 'unset':
+        vocabulary = allowed if allowed \
+            else [t for t in INTERACTION_TYPES if t != 'hydrophobic']
+        # OQ-5: hydrophobic is EXCLUDED from unset sampling, always.
+        pool = [t for t in vocabulary
+                if t != 'hydrophobic' and ligand_support(t, ligand_profile)]
+        if not pool:
+            supported = [t for t in vocabulary
+                         if ligand_support(t, ligand_profile)]
+            if supported:
+                raise GenerationError(
+                    "molecule supports only %s; hydrophobic is excluded "
+                    "from unset-mode sampling (DETECTION_THRESHOLDS OQ-5) "
+                    "-- check explicit interactions in Setup"
+                    % ', '.join(supported))
+            raise GenerationError(
+                "molecule supports none of the sampleable interactions "
+                "(vocabulary: %s)"
+                % (', '.join(vocabulary) if vocabulary else 'empty'))
+        k = min(n_required_types, len(pool))
+        picked = rng.sample(pool, k)          # pool: canonical-order list
+        return {'mode': 'list',
+                'items': [{'type': t, 'count': 1} for t in pool
+                          if t in picked]}
+
+    raise GenerationError(
+        "unknown interaction_mode %r (expected one of exclusive, "
+        "block_exclusive, unset)" % (mode,))
+
+
+def allocate_slots(required_items, n, ligand_profile, rng):
+    """One global allocation pass for one molecule (generation research
+    §4.2): every required item gets a DEDICATED slot with
+    ``role='required'`` and truthful ``can_form=[type]``; every remaining
+    slot is a ``role='distractor'`` drawn from ALL 20 AAs.
+
+    Solvability by construction: a single AA instance is never assigned
+    two required types (simpler accounting; the required-slot guarantee
+    is atomic). Distractors may coincide with capable AAs -- fine: the
+    dedicated required slots guarantee solvability IN ADDITION to
+    whatever distractors happen to support, and incapable distractors
+    are the challenge. ``can_form`` semantics: "the interaction types
+    this slot was CHOSEN to guarantee" -- a generation-time provenance
+    record, NOT the Hint's data source (Hint recomputes capability live
+    via the shared capability module, PLAY-05).
+
+    RNG contract: consumed ONLY via sample (required-slot positions over
+    the fixed-order (row, col) list), shuffle (required-item pairing),
+    and choice (capable pools / the sorted 20-AA list) -- never over
+    sets or dicts.
+
+    Refusals (each names the cause): grid too small (n*n < needed + 1 --
+    keeps at least one distractor slot; cannot trigger in v1 with n >= 3
+    and <= 7 single-count types but guards future count>1 modes); no
+    capable AA for a required type; required counts other than 1 (v1);
+    capability/materialization vocabulary drift.
+    """
+    total = n * n
+    needed = len(required_items)
+    if needed + 1 > total:
+        raise GenerationError(
+            "grid %dx%d too small for %d required interactions "
+            "(at least one distractor slot must remain)" % (n, n, needed))
+
+    vocab_drift = [aa for aa in ALL_AA if aa not in _MATERIALIZABLE_RESNS]
+    if vocab_drift:
+        raise GenerationError(
+            "capability/materialization vocabulary drift: %s have no "
+            "AA_TOKENS entry (the materializer could not load them)"
+            % ', '.join(vocab_drift))
+
+    pools = {}
+    for item in required_items:
+        itype = item['type']
+        count = item.get('count', 1)
+        if count != 1:
+            raise GenerationError(
+                "required item counts other than 1 are not supported in "
+                "v1 (found count=%r for %r)" % (count, itype))
+        if itype not in pools:
+            pools[itype] = [aa for aa in ALL_AA
+                            if aa_capable(aa, itype, ligand_profile)]
+        if len(pools[itype]) < 1:
+            raise GenerationError(
+                "no amino acid can form %r with this molecule" % (itype,))
+
+    # WHERE the required AAs sit: one sample over the fixed-order slot
+    # list (deterministic -- never iterated from a set/dict).
+    slot_coords = [(row, col) for row in range(n) for col in range(n)]
+    required_coords = rng.sample(slot_coords, needed)
+
+    items = list(required_items)
+    rng.shuffle(items)          # pairing shuffle over a list copy
+    assignments = {}
+    for coord, item in zip(sorted(required_coords), items):
+        aa = rng.choice(pools[item['type']])
+        assignments[coord] = {
+            'aa': aa, 'role': 'required', 'can_form': [item['type']]}
+
+    slots = []
+    for coord in slot_coords:             # fixed row-major order
+        row, col = coord
+        assignment = assignments.get(coord)
+        if assignment is None:            # distractor fill, fixed order
+            assignment = {
+                'aa': rng.choice(ALL_AA), 'role': 'distractor',
+                'can_form': []}
+        slots.append({
+            'slot_id': 'r%dc%d' % (row, col),
+            'row': row,
+            'col': col,
+            'aa': assignment['aa'],
+            'role': assignment['role'],
+            'can_form': list(assignment['can_form']),
+        })
+    return slots

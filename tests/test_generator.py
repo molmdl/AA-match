@@ -24,16 +24,19 @@ import math
 import random
 import unittest
 
-from aamatch import generator
+from aamatch import capability, detector, generator
 from aamatch.generator import (
     GenerationError,
     GRID_SPACING,
     GAP_MARGIN,
     INTER_GRID_MARGIN,
+    allocate_slots,
+    derive_required,
     difficulty_params,
     placement_offset,
     slot_position,
 )
+from aamatch.setup_state import INTERACTION_TYPES
 
 EPS = 1e-9
 
@@ -311,6 +314,326 @@ class TestSubSeedDerivation(unittest.TestCase):
         random.Random(seeds[0]).randint(0, 10 ** 6)   # consume another unit
         second = random.Random(seeds[1]).randint(0, 10 ** 6)
         self.assertEqual(first, second)
+
+
+# ---------------------------------------------------------------------------
+# Task 2: required-set derivation (OQ-1 semantics) + slot allocation
+# (GEN-04) + the generator<->detector agreement cross-check (DETECT-04).
+# Ligand profiles mirror the shape capability.ligand_profile() returns
+# (hand-built; the generator never sees atoms).
+# ---------------------------------------------------------------------------
+
+def profile(has_donor=False, has_acceptor=False, charge_signs=(),
+            ring_count=0, has_hydrophobe=False, has_halogen_donor=False,
+            has_metal=False):
+    """Hand-built ligand chemistry profile (capability.ligand_profile
+    shape) for polarity/support tests."""
+    return {
+        'has_donor': has_donor,
+        'has_acceptor': has_acceptor,
+        'charge_signs': set(charge_signs),
+        'ring_count': ring_count,
+        'has_hydrophobe': has_hydrophobe,
+        'has_halogen_donor': has_halogen_donor,
+        'has_metal': has_metal,
+    }
+
+
+# A ligand carrying every feature: all 7 types supportable.
+RICH = profile(has_donor=True, has_acceptor=True, charge_signs=('+', '-'),
+               ring_count=2, has_hydrophobe=True, has_halogen_donor=True,
+               has_metal=True)
+
+ALL_TYPES = list(INTERACTION_TYPES)
+
+
+def setup_of(mode, allowed, molecules=1, difficulty=3):
+    """A validated setup_state dict (the generator's real input shape)."""
+    from aamatch.setup_state import validate_state
+    return validate_state({
+        'interaction_mode': mode,
+        'allowed_interactions': list(allowed),
+        'molecules_per_level': molecules,
+        'difficulty_levels': difficulty,
+    })
+
+
+class TestDeriveRequiredModeSemantics(unittest.TestCase):
+    """OQ-1 mode semantics (gate §4.3) + OQ-5 hydrophobic exclusion
+    (gate §4.5), transcribed row for row from the APPROVED gate doc."""
+
+    def test_exclusive_is_any_scoped_by_allowed(self):
+        setup = setup_of('exclusive', ['h_bond', 'pi_stacking'])
+        required = derive_required(setup, RICH, random.Random(1), 3)
+        self.assertEqual(required, {'mode': 'any', 'items': []})
+
+    def test_exclusive_empty_allowed_refused_naming_the_field(self):
+        setup = setup_of('exclusive', [])
+        with self.assertRaises(GenerationError) as ctx:
+            derive_required(setup, RICH, random.Random(1), 3)
+        self.assertIn('allowed_interactions', str(ctx.exception))
+
+    def test_exclusive_unsupported_allowed_refused(self):
+        setup = setup_of('exclusive', ['halogen'])
+        apolar = profile()                       # supports nothing
+        with self.assertRaises(GenerationError) as ctx:
+            derive_required(setup, apolar, random.Random(1), 3)
+        self.assertIn('supports none', str(ctx.exception))
+
+    def test_block_exclusive_items_are_exactly_the_checked_set(self):
+        setup = setup_of('block_exclusive',
+                         ['h_bond', 'salt_bridge', 'pi_stacking'])
+        required = derive_required(setup, RICH, random.Random(1), 3)
+        self.assertEqual(required['mode'], 'list')
+        self.assertEqual(required['items'], [
+            {'type': 'h_bond', 'count': 1},
+            {'type': 'salt_bridge', 'count': 1},
+            {'type': 'pi_stacking', 'count': 1},
+        ])                                   # canonical INTERACTION_TYPES order
+
+    def test_block_exclusive_unsupported_type_refused_naming_it(self):
+        setup = setup_of('block_exclusive', ['h_bond', 'halogen'])
+        no_halogen = profile(has_donor=True, has_acceptor=True)
+        with self.assertRaises(GenerationError) as ctx:
+            derive_required(setup, no_halogen, random.Random(1), 3)
+        self.assertIn('halogen', str(ctx.exception))
+
+    def test_block_exclusive_hydrophobic_reachable_via_explicit_check(self):
+        # OQ-5: hydrophobic can appear ONLY via block_exclusive explicit
+        # check -- and here it must NOT be silently degraded.
+        setup = setup_of('block_exclusive', ['hydrophobic'])
+        apolar = profile(has_hydrophobe=True)
+        required = derive_required(setup, apolar, random.Random(1), 3)
+        self.assertEqual(required['items'],
+                         [{'type': 'hydrophobic', 'count': 1}])
+
+    def test_block_exclusive_empty_allowed_refused(self):
+        setup = setup_of('block_exclusive', [])
+        with self.assertRaises(GenerationError) as ctx:
+            derive_required(setup, RICH, random.Random(1), 3)
+        self.assertIn('no interactions checked', str(ctx.exception))
+
+    def test_unset_samples_from_supported_intersection(self):
+        setup = setup_of('unset', ALL_TYPES)
+        two_feature = profile(has_donor=True, has_acceptor=True,
+                              charge_signs=('-',))
+        required = derive_required(setup, two_feature, random.Random(4), 7)
+        self.assertEqual(required['mode'], 'list')
+        # supported (minus hydrophobic per OQ-5): h_bond + salt_bridge;
+        # k clamps down to 2 -- a 2-feature ligand at tier 9 still gets 2.
+        self.assertEqual([item['type'] for item in required['items']],
+                         ['h_bond', 'salt_bridge'])
+        self.assertTrue(all(item['count'] == 1
+                            for item in required['items']))
+
+    def test_unset_excludes_hydrophobic_from_sampling(self):
+        # OQ-5 example from the plan: a ligand supporting only
+        # hydrophobic + h_bond samples from the REMAINDER.
+        setup = setup_of('unset', ALL_TYPES)
+        hb_hydro = profile(has_donor=True, has_acceptor=True,
+                           has_hydrophobe=True)
+        for seed in range(20):
+            required = derive_required(setup, hb_hydro,
+                                       random.Random(seed), 2)
+            types = [item['type'] for item in required['items']]
+            self.assertNotIn('hydrophobic', types)
+            self.assertEqual(types, ['h_bond'])   # the only remainder
+
+    def test_unset_only_hydrophobic_refused_naming_the_policy(self):
+        setup = setup_of('unset', ALL_TYPES)
+        apolar = profile(has_hydrophobe=True)
+        with self.assertRaises(GenerationError) as ctx:
+            derive_required(setup, apolar, random.Random(1), 3)
+        self.assertIn('hydrophobic', str(ctx.exception))
+
+    def test_unset_empty_allowed_draws_from_all_types(self):
+        # OQ-1: unset + empty allowed -> the game picks (from the
+        # non-hydrophobic types; OQ-5 still binds the sampling pool).
+        setup = setup_of('unset', [])
+        outcomes = set()
+        for seed in range(20):
+            required = derive_required(setup, RICH, random.Random(seed), 3)
+            types = [item['type'] for item in required['items']]
+            self.assertNotIn('hydrophobic', types)
+            self.assertEqual(types, [t for t in ALL_TYPES if t in types])
+            outcomes.add(tuple(types))
+        self.assertTrue(outcomes,
+                        'unset + empty allowed must still draw items')
+        self.assertGreater(len(outcomes), 1,
+                           'multiple seeds must be able to differ')
+
+    def test_unset_empty_allowed_featureless_ligand_refused(self):
+        setup = setup_of('unset', [])
+        with self.assertRaises(GenerationError):
+            derive_required(setup, profile(), random.Random(1), 3)
+
+    def test_unset_items_stay_within_allowed_and_canonical(self):
+        setup = setup_of('unset', ['pi_stacking', 'h_bond', 'cation_pi'])
+        for seed in range(20):
+            required = derive_required(setup, RICH, random.Random(seed), 2)
+            types = [item['type'] for item in required['items']]
+            for t in types:
+                self.assertIn(t, ('h_bond', 'pi_stacking', 'cation_pi'))
+            self.assertEqual(types, sorted(types, key=ALL_TYPES.index))
+
+    def test_unset_deterministic_per_seed(self):
+        setup = setup_of('unset', ALL_TYPES)
+        first = derive_required(setup, RICH, random.Random(11), 3)
+        second = derive_required(setup, RICH, random.Random(11), 3)
+        self.assertEqual(first, second)
+
+    def test_unknown_mode_refused(self):
+        setup = setup_of('unset', ALL_TYPES)
+        setup['interaction_mode'] = 'bogus'
+        with self.assertRaises(GenerationError):
+            derive_required(setup, RICH, random.Random(1), 3)
+
+
+class TestAllocateSlots(unittest.TestCase):
+    """GEN-04 solvability by construction: one dedicated capable slot per
+    required item, distractors from all 20 AAs, truthful can_form."""
+
+    def _items(self, types):
+        return [{'type': t, 'count': 1} for t in types]
+
+    def test_one_dedicated_required_slot_per_item(self):
+        items = self._items(['h_bond', 'pi_stacking', 'salt_bridge'])
+        slots = allocate_slots(items, 3, RICH, random.Random(2))
+        self.assertEqual(len(slots), 9)
+        required = [s for s in slots if s['role'] == 'required']
+        self.assertEqual(len(required), 3)
+        self.assertEqual(sorted(s['can_form'][0] for s in required),
+                         ['h_bond', 'pi_stacking', 'salt_bridge'])
+        # required slots are unique and carry can_form=[their type]
+        self.assertEqual(len(set(s['slot_id'] for s in required)), 3)
+        for slot in required:
+            self.assertEqual(len(slot['can_form']), 1)
+
+    def test_grid_shape_and_ids_cover_full_range(self):
+        slots = allocate_slots(self._items(['h_bond']), 4, RICH,
+                               random.Random(3))
+        self.assertEqual(len(slots), 16)
+        ids = set()
+        coords = set()
+        for slot in slots:
+            ids.add(slot['slot_id'])
+            coords.add((slot['row'], slot['col']))
+            self.assertEqual(slot['slot_id'],
+                             'r%dc%d' % (slot['row'], slot['col']))
+        self.assertEqual(len(ids), 16)
+        self.assertEqual(coords,
+                         set((r, c) for r in range(4) for c in range(4)))
+
+    def test_can_form_is_truthful_against_capability(self):
+        for seed in range(5):
+            slots = allocate_slots(
+                self._items(['h_bond', 'metal', 'cation_pi']), 4, RICH,
+                random.Random(seed))
+            for slot in slots:
+                for t in slot['can_form']:
+                    self.assertTrue(
+                        capability.aa_capable(slot['aa'], t, RICH),
+                        'can_form lie: %s cannot form %s'
+                        % (slot['aa'], t))
+                self.assertIn(slot['aa'], capability.AA_RESIDUES)
+
+    def test_distractors_drawn_from_all_20_aas(self):
+        slots = allocate_slots(self._items(['h_bond']), 3, RICH,
+                               random.Random(4))
+        distractors = [s for s in slots if s['role'] == 'distractor']
+        self.assertEqual(len(distractors), 8)
+        for slot in distractors:
+            self.assertEqual(slot['can_form'], [])
+            self.assertIn(slot['aa'], sorted(capability.AA_RESIDUES))
+
+    def test_grid_too_small_refused(self):
+        items = self._items(ALL_TYPES + ['h_bond', 'pi_stacking'])  # 9
+        with self.assertRaises(GenerationError) as ctx:
+            allocate_slots(items, 3, RICH, random.Random(5))
+        self.assertIn('too small', str(ctx.exception))
+
+    def test_no_capable_aa_refused_naming_the_type(self):
+        items = self._items(['salt_bridge'])
+        no_charges = profile(has_donor=True, has_acceptor=True)
+        with self.assertRaises(GenerationError) as ctx:
+            allocate_slots(items, 3, no_charges, random.Random(6))
+        self.assertIn('salt_bridge', str(ctx.exception))
+
+    def test_deterministic_per_seed(self):
+        items = self._items(['h_bond', 'pi_stacking'])
+        first = allocate_slots(items, 3, RICH, random.Random(7))
+        second = allocate_slots(items, 3, RICH, random.Random(7))
+        self.assertEqual(first, second)
+
+    def test_seeds_vary_the_grid(self):
+        items = self._items(['h_bond'])
+        seen = set()
+        for seed in range(6):
+            slots = allocate_slots(items, 3, RICH, random.Random(seed))
+            seen.add(tuple((s['slot_id'], s['aa']) for s in slots))
+        self.assertGreater(len(seen), 1, 'seeds must vary the allocation')
+
+
+class TestDetectorAgreement(unittest.TestCase):
+    """DETECT-04 cross-check on synthetic geometry (real dependency on
+    02-06): a required slot's AA placed within h_bond geometry of a
+    synthetic ligand donor must BOTH be capability-capable AND yield a
+    detector h_bond record -- "capable" and "detectable" agree through
+    the SAME capability tables."""
+
+    @staticmethod
+    def _scene(resn):
+        """SER (acceptor OG) or VAL (no typed role) at the origin; a
+        ligand O-H donor collinear at 3.0 A (D...A <= 4.0, angle at H
+        = 180 >= 140)."""
+        aa = {'side': 'aa', 'object': '_aam_aa_r0c0', 'id': 1,
+              'name': 'OG', 'elem': 'O', 'resn': resn, 'resi': 1,
+              'alt': '', 'x': 0.0, 'y': 0.0, 'z': 0.0}
+        lig_o = {'side': 'lig', 'object': '_aam_lig', 'id': 1,
+                 'name': 'O1', 'elem': 'O', 'resn': 'LIG', 'resi': 1,
+                 'alt': '', 'x': 3.0, 'y': 0.0, 'z': 0.0}
+        lig_h = {'side': 'lig', 'object': '_aam_lig', 'id': 2,
+                 'name': 'H1', 'elem': 'H', 'resn': 'LIG', 'resi': 1,
+                 'alt': '', 'x': 2.04, 'y': 0.0, 'z': 0.0}
+        return [aa, lig_o, lig_h], [(0, 1, 1)]
+
+    def test_capable_aa_is_detectable(self):
+        atoms, bonds = self._scene('SER')
+        prof = capability.ligand_profile(
+            [a for a in atoms if a['side'] == 'lig'], bonds)
+        self.assertTrue(capability.aa_capable('SER', 'h_bond', prof),
+                        'capability says SER cannot h_bond a donor '
+                        'ligand -- table/detector drift')
+        records = detector.detect_part1(atoms, bonds)
+        hits = [r for r in records
+                if r['type'] == 'h_bond' and r['aa']['resn'] == 'SER']
+        self.assertEqual(len(hits), 1,
+                         'detector missed the SER h_bond: %r' % (records,))
+        self.assertEqual(hits[0]['aa']['role'], 'acceptor')
+
+    def test_incapable_aa_is_not_detected(self):
+        atoms, bonds = self._scene('VAL')
+        prof = capability.ligand_profile(
+            [a for a in atoms if a['side'] == 'lig'], bonds)
+        self.assertFalse(capability.aa_capable('VAL', 'h_bond', prof))
+        records = detector.detect_part1(atoms, bonds)
+        hits = [r for r in records if r['type'] == 'h_bond']
+        self.assertEqual(hits, [],
+                         'detector fired where capability says incapable')
+
+    def test_detector_result_feeds_allocate_pool(self):
+        # The full agreement chain: the profile typed from the SAME
+        # synthetic ligand puts SER in allocate_slots' capable pool.
+        atoms, bonds = self._scene('SER')
+        prof = capability.ligand_profile(
+            [a for a in atoms if a['side'] == 'lig'], bonds)
+        slots = allocate_slots([{'type': 'h_bond', 'count': 1}], 3, prof,
+                               random.Random(8))
+        required = [s for s in slots if s['role'] == 'required']
+        self.assertEqual(len(required), 1)
+        self.assertIn(required[0]['aa'],
+                      ('SER', 'THR', 'TYR', 'ASN', 'GLN', 'ASP', 'GLU',
+                       'HIS', 'CYS', 'LYS', 'ARG'))
 
 
 if __name__ == '__main__':

@@ -63,20 +63,21 @@ Plans:
   4. [HEADLESS] End-to-end smoke (exit 0, count-asserted): generate → materialize grid + ligand (specified protonation state; bond orders/valence preserved from SDF/MOL2; sentinel + reserved-prefix conventions) → scripted placement → detection → binary-per-interaction fraction score. (GEN-02)
   5. [HEADLESS] Detection perf smoke on the largest bundled molecule: full geometry-extract + detect pass inside the perf budget, vectorized/spatially pruned (no naive per-atom-pair loops — code-audited); a detector-version stamp is embedded in generated specs so stale games are refused. (DETECT-05)
 **Research notes**: PITFALLS topics *detection-engine* + *grid-generation* live here. DETECT-05's "numpy vectorized" is reconciled with PITFALL 3: vectorization + spatial pruning (cell lists) implemented stdlib-pure (WSL-testable); numpy permitted only in cmd-tier helpers on the Windows side; perf verified headless. The threshold table is the critical-path human gate — sequence it as the phase's first plan. Chemistry policy (alt-conf, waters, frames, protonation) documented in the detector module.
-**Plans**: 15 plans
+**Plans**: 16 plans
 
 Plans:
-- [ ] 02-01-PLAN.md — [GATE] threshold + capability decision document (D1, OQ-1 recorded) + human approval checkpoint (DETECT-03)
-- [ ] 02-02-PLAN.md — pure vec3 + spatial cell-list primitives with 100-seed equivalence proof (TDD)
-- [ ] 02-03-PLAN.md — pure manifest module + 'manifest' container kind (TDD)
-- [ ] 02-04-PLAN.md — fixture ligands + MANIFEST.json + generalized smoke runner + SMOKE-02 every-manifest-id proof
-- [ ] 02-05-PLAN.md — pure capability.py: single typing home (AA table + ligand typing + support predicates) (TDD)
-- [ ] 02-06-PLAN.md — thresholds.py constants + detector core (features, prefilter, candidates, h_bond/salt_bridge/hydrophobic) (TDD)
-- [ ] 02-07-PLAN.md — detector part 2: pi_stacking/cation_pi/halogen/metal + canonical 7-type surface (TDD)
-- [ ] 02-08-PLAN.md — pure seeded generator: difficulty, grid geometry, mode semantics, solvable allocation, payload assembly (TDD)
-- [ ] 02-09-PLAN.md — cmd-tier geometry.py extraction bridge (records + bond block + bounds)
+- [x] 02-01-PLAN.md — [GATE] threshold + capability decision document (D1, OQ-1 recorded) + human approval checkpoint (DETECT-03)
+- [x] 02-02-PLAN.md — pure vec3 + spatial cell-list primitives with 100-seed equivalence proof (TDD)
+- [x] 02-03-PLAN.md — pure manifest module + 'manifest' container kind (TDD)
+- [x] 02-04-PLAN.md — fixture ligands + MANIFEST.json + generalized smoke runner + SMOKE-02 every-manifest-id proof
+- [x] 02-05-PLAN.md — pure capability.py: single typing home (AA table + ligand typing + support predicates) (TDD)
+- [x] 02-06-PLAN.md — thresholds.py constants + detector core (features, prefilter, candidates, h_bond/salt_bridge/hydrophobic) (TDD)
+- [ ] 02-07-PLAN.md — detector part 2a: pi_stacking + cation_pi (TDD; split from original 02-07 after repeated silent spawn failures)
+- [ ] 02-07b-PLAN.md — detector part 2b: halogen + metal + canonical 7-type surface (TDD; depends 02-07)
+- [x] 02-08-PLAN.md — pure seeded generator: difficulty, grid geometry, mode semantics, solvable allocation, payload assembly (TDD)
+- [x] 02-09-PLAN.md — cmd-tier geometry.py extraction bridge (records + bond block + bounds)
 - [ ] 02-10-PLAN.md — pure game_state.py: score fraction semantics + runtime container (TDD)
-- [ ] 02-11-PLAN.md — detector invariance/sensitivity property battery + WSL perf regression guard
+- [ ] 02-11-PLAN.md — detector invariance/sensitivity property battery + WSL perf regression guard (wave 8; needs complete detector)
 - [ ] 02-12-PLAN.md — generator >=100-seed invariant suite (ROADMAP criterion 3)
 - [ ] 02-13-PLAN.md — cmd-tier placement.py (materialize/sentinels/reset/cleanup) + SMOKE-03
 - [ ] 02-14-PLAN.md — engine.py composition root + SMOKE-04 count-asserted E2E (place/detect/score, rotation invariance, reset)
@@ -215,7 +216,7 @@ Lifted from PITFALLS.md "Pitfall-to-Phase Mapping" (topic names → this roadmap
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Bootstrap & Pure Foundation | 9/9 | Complete | 2026-09-06 |
-| 2. Headless Game Engine | 7/15 | In progress (waves 1-5 done: gate, vec3/spatial, manifest, fixtures, capability, thresholds+detector core, geometry bridge) | - |
+| 2. Headless Game Engine | 8/16 | In progress (waves 1-6 done except 02-07 split part 1; DETECT-03 gate approved 2026-09-06) | - |
 | 3. Wizard Gameplay Loop | 0/TBD | Not started | - |
 | 4. Qt Setup Window | 0/TBD | Not started | - |
 | 5. Game Status Tab & Start Sequence | 0/TBD | Not started | - |

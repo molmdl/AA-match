@@ -10,9 +10,9 @@ See: .planning/PROJECT.md (updated 2026-09-05)
 ## Current Position
 
 Phase: 2 of 9 (Headless Game Engine) — In progress
-Plan: 7 of 15 complete (waves 1-4 done; wave 5: 02-09 geometry bridge done + merged — 02-07 detector pt 2 + 02-08 generator MOVED to wave 6 after repeated silent subagent failures; waves re-assigned 2026-09-06: 02-07/02-08 -> 6, 02-10..02-13 -> 7, 02-14 -> 8, 02-15 -> 9)
-Status: Geometry boundary complete — extraction (detector-contract records), bond block + index→id map, ligand bounding sphere, pose helpers; probe-proven on real objects (=== PROBE-GEOM DONE ===, benzamide 16 atoms / 16 bonds)
-Last activity: 2026-09-06 — Completed 02-09-PLAN.md (aamatch/geometry.py cmd-tier bridge, 346/346 tests, purity untouched)
+Plan: 8 of 16 complete (waves 1-5 + 02-08; 02-07 SPLIT 2026-09-06 into 02-07 [pi+cation-pi, wave 6] + 02-07b [halogen+metal+canonical, wave 7] after 6 silent spawn failures across models/prompt shapes; downstream re-waved: 02-11 -> wave 8 needs 02-07b, 02-14 adds 02-07b dep)
+Status: PAUSED 2026-09-06 — split committed, awaiting opencode restart (model switch) before respawning 02-07; exec/02-08 branch holds the completed generator (unmerged: 7 commits, 423/423, 9 recorded deviations — deviation 3 binds the cmd tier: ligand_data must carry 'profile', engine (02-14) wires capability.ligand_profile over extracted records)
+Last activity: 2026-09-06 — 02-08 (generator, exec/02-08) + 02-09 (geometry, merged) complete; split + re-wave committed
 
 Progress: [█████░░░░░] 47% of Phase 2 (7/15) · [███████████░] 92% of project (phase 2 of 9; plans 22/24)
 
@@ -103,7 +103,7 @@ Resume file: None
 
 ## Next Actions
 
-- Orchestrator: execute wave 6 = 02-07 (detector pt 2) + 02-08 (generator) — compact plan-file prompts (long inlined prompts correlate with silent spawn failures); then wave 7 = 02-10/02-11/02-12/02-13, wave 8 = 02-14, wave 9 = 02-15
+- Orchestrator (AFTER opencode restart / model switch): spawn 02-07 (pi+cation-pi only — small scope); merge exec/02-08 + exec/02-07 when both return (STATE.md conflict expected — combine); then wave 7 = 02-07b / 02-10 / 02-12 / 02-13, wave 8 = 02-11 / 02-14, wave 9 = 02-15
 - 02-10 (engine): wire detect() = extract_game_atoms() + ligand_bonds() with the probe-pinned remap — bond position i → index_to_id[i+1] → atom id → position in the (object, id)-sorted ligand records; bounding_sphere() output feeds generate(..., ligand_data, ...) as {'centroid', 'radius'}
 - SMOKE-03 (02-13): assert features['unclassified_aa_atoms'] == 0 per materialized AA; reconcile cap-atom naming by extending the detector's known non-side-chain set if needed (never thresholds)
 - SMOKE-03/04/05 need NO runner changes (marker-deriving run_smoke.sh handles any smoke_NN_name.py); geometry helpers are import-ready for all three

@@ -1,6 +1,8 @@
 # Detection Thresholds & AA Capability — DETECT-03 [GATE] Document
 
-**Status:** DRAFT — PENDING HUMAN APPROVAL (phase-2 plan 02-01 checkpoint:human-verify)
+**Status:** APPROVED — 2026-09-06 (human gate, phase-2 plan 02-01 checkpoint). Units and
+atom typing verified at approval time; provisional pending Phase-8 dataset revisit —
+see §6 Approval record.
 
 **Purpose:** This is the DETECT-03 gate document — the single source of truth that every
 downstream Phase-2 plan transcribes into code. The project's truthfulness rule forbids
@@ -21,10 +23,11 @@ that bind the detector, generator, and scoring plans.
 - Generator required-set semantics (plan 02-08) and score `any` semantics (plan 02-10)
   consume Policy Decision 4.3 (OQ-1 mode semantics).
 
-**Approval protocol:** each threshold row below carries an `Approval:` placeholder. The
-human fills (or vetoes) at the 02-01 checkpoint; Task 2 of plan 02-01 records the real
-date + approver. **No detector code freezes before the approval record exists** (see the
-final Approval record section, added at Task 2).
+**Approval protocol:** each threshold row below carries an `Approval:` line. The human
+approved (with a units + atom-typing verification condition) at the 02-01 checkpoint on
+2026-09-06; the real date + approver are recorded per row and in the final Approval
+record section (§6). **No detector code freezes before the approval record exists — it
+does now (§6), so detector code (plans 02-05..02-08) freezes against this table.**
 
 ---
 
@@ -65,8 +68,8 @@ and acceptor directions (∠D-H···A). Verified from code: PLIP `detection.py`
 (`vecangle(vector(h→d), vector(h→acc)) > HBOND_DON_ANGLE_MIN` → > 100°); BINANA
 `_hydrogen_halogen_bonds.py` (deviation-from-linear ≤ 40° ⇔ ≥ 140° — the
 `INTERACTIONS.md` prose "no greater than 40 degrees" is loose wording for *deviation from
-linear*; the source is unambiguous); ProLIF `interactions.py` (`DHA_angle = (130, 180)`,
-the `[Acceptor]...[Hydrogen]-[Donor]` angle). The three H-bond criteria therefore differ
+linear*; the source is unambiguous); ProLIF `interactions.py` (`DHA_angle = (130, 180)` — degrees — the
+`[Acceptor]...[Hydrogen]-[Donor]` angle). The three H-bond criteria therefore differ
 **only in numbers** (distance 4.1 / 4.0 / 3.5 Å; angle > 100° / ≥ 140° / ≥ 130°).
 
 ---
@@ -83,30 +86,30 @@ the `[Acceptor]...[Hydrogen]-[Donor]` angle). The three H-bond criteria therefor
 ### 2.2 The rows
 
 Values marked [V] were verified from the cited primary source on 2026-09-06 (file-level
-citations in the research files). Each row carries an `Approval:` placeholder to be
-filled at the checkpoint.
+citations in the research files). Each row carries an `Approval:` line recorded at the
+2026-09-06 human checkpoint.
 
 #### Row 1 — Hydrogen bond
 
 - **Adopted criterion:** D···A ≤ **4.0 Å** AND ∠D-H···A ≥ **140°** (both measured
   heavy-donor to heavy-acceptor / at H; angle convention §1.3). **Needs explicit polar H
   on both sides** (see §5, fail-closed donor typing).
-- **Source of the value:** BINANA pair (4.0, ≥ 140) [V].
+- **Source of the value:** BINANA pair (4.0 Å, ≥ 140°) [V].
 - **Rationale / rejected alternatives:** One-source pair, internally consistent; generous
-  distance (kind to hand placement), decisive direction. Rejected: PLIP 4.1/100° (too
-  permissive — sloppy placements would count; the 100° floor admits near-perpendicular
-  donors), ProLIF 3.5/130° (distance tight for unguided play).
-- Approval: date: ____ approver: ____
+   distance (kind to hand placement), decisive direction. Rejected: PLIP 4.1 Å/100° (too
+   permissive — sloppy placements would count; the 100° floor admits near-perpendicular
+   donors), ProLIF 3.5 Å/130° (distance tight for unguided play).
+- Approval: date: 2026-09-06 approver: human gate, phase-2 plan 02-01 checkpoint
 
 #### Row 2 — Salt bridge (ionic folded in)
 
 - **Adopted criterion:** opposite charge-**group centers** ≤ **5.5 Å**.
-- **Source of the value:** PLIP = BINANA = 5.5 [V].
+- **Source of the value:** PLIP = BINANA = 5.5 Å [V].
 - **Rationale / rejected alternatives:** Unanimous distance; group-center form (both PLIP
-  & BINANA) is more chemically faithful than ProLIF's atom-atom 4.5 and matches the
+  & BINANA) is more chemically faithful than ProLIF's atom-atom 4.5 Å and matches the
   charge-group table we need anyway. Charge-group definitions: BINANA's verified table
   (see §2.3) as the in-house standard.
-- Approval: date: ____ approver: ____
+- Approval: date: 2026-09-06 approver: human gate, phase-2 plan 02-01 checkpoint
 
 #### Row 3 — π-stacking (parallel + T-shaped as ONE category)
 
@@ -114,67 +117,67 @@ filled at the checkpoint.
   parallel OR within **30°** of perpendicular) AND projected-center offset < **2.0 Å** —
   single test covers both sub-geometries; reported type is always `pi_stacking`
   (sub-type P/T recorded as a metric only).
-- **Source of the value:** PLIP set (5.5 / 30 / 2.0) [V].
+- **Source of the value:** PLIP set (5.5 Å / 30° / 2.0 Å) [V].
 - **Rationale / rejected alternatives:** One uniform test for both orientations (fewest
-  rules — P4); published as one table. Rejected: BINANA 7.5 (catches distant stacks —
+   rules — P4); published as one table. Rejected: BINANA 7.5 Å (catches distant stacks —
   makes the type easy; also needs two different lateral tests), ProLIF FaceToFace +
   EdgeToFace (two parameter sets + intersect computation). Both T-shaped and parallel
   count as the same category per spec (EXT-02 defers the split).
-- Approval: date: ____ approver: ____
+- Approval: date: 2026-09-06 approver: human gate, phase-2 plan 02-01 checkpoint
 
 #### Row 4 — Cation-π
 
 - **Adopted criterion:** charge center ↔ ring center ≤ **6.0 Å** AND projected charge
   offset < **2.0 Å**; direction recorded (AA-cation→lig-ring vs lig-cation→AA-ring).
-- **Source of the value:** distance: PLIP + BINANA 6.0 (majority — P3); offset: PLIP 2.0
+- **Source of the value:** distance: PLIP + BINANA 6.0 Å (majority — P3); offset: PLIP 2.0 Å
   (same helper as row 3) [V].
 - **Rationale / rejected alternatives:** The 2.0 Å offset ≈ BINANA's padded benzene disk
-  (1.4 + 0.75) — near-equivalent, cheaper to implement. Rejected: ProLIF 4.5 (too strict
+  (1.4 Å + 0.75 Å) — near-equivalent, cheaper to implement. Rejected: ProLIF 4.5 Å (too strict
   for a game) and its axis-angle test (harder to reason about for students). PLIP's
   ligand-tertiary-amine anti-artifact rule (amine-plane normal vs ring normal ≤ 30° to
   count) **adopted only when the small molecule carries the cation** — mirrors PLIP's
   ligand-side-only rule; documented asymmetry, recorded as Policy Decision 4.4 (OQ-4).
-- Approval: date: ____ approver: ____
+- Approval: date: 2026-09-06 approver: human gate, phase-2 plan 02-01 checkpoint
 
 #### Row 5 — Hydrophobic contact
 
 - **Adopted criterion:** ≥ 1 pair of qualifying carbons with d ≤ **4.0 Å**; qualifying
   carbon = element C with all bonded neighbors ∈ {C, H}. **Binary presence semantics**
   ("≥ 1 qualifying contact between this AA and the ligand").
-- **Source of the value:** distance: PLIP + BINANA 4.0 (majority — P3); typing: PLIP's
+- **Source of the value:** distance: PLIP + BINANA 4.0 Å (majority — P3); typing: PLIP's
   graph rule [V].
 - **Rationale / rejected alternatives:** Graph rule is computable from the SDF/MOL2 bond
   block without atom-type tables (ProLIF's SMARTS excludes C-N/O/F — same spirit,
   majority-verified). Binary presence deliberately sidesteps PLIP's documented count
   explosion and dedup machinery — counts are irrelevant to fraction scoring. Gameplay
   flag: hydrophobic is easy to satisfy → Policy Decision 4.5 (OQ-5).
-- Approval: date: ____ approver: ____
+- Approval: date: 2026-09-06 approver: human gate, phase-2 plan 02-01 checkpoint
 
 #### Row 6 — Halogen bond (donors ligand-side only)
 
 - **Adopted criterion:** acceptor atom ··· halogen ≤ **4.0 Å** AND ∠(A···X-D) ∈
-  **135°–195°** (165 ± 30) AND ∠(Y-A···X) ∈ **90°–150°** (120 ± 30); donors
+  **135°–195°** (165° ± 30°) AND ∠(Y-A···X) ∈ **90°–150°** (120° ± 30°); donors
   **ligand-side only**, X ∈ **{Cl, Br, I}** — **C-F donors EXCLUDED**; acceptors AA-side
   O/N/S.
-- **Source of the value:** PLIP full set (4.0 / 165 ± 30 / 120 ± 30) [V]; C-F exclusion
+- **Source of the value:** PLIP full set (4.0 Å / 165° ± 30° / 120° ± 30°) [V]; C-F exclusion
   is an in-house resolution — ProLIF precedent (`[#6,#7,Si,F,Cl,Br,I]-[Cl,Br,I,At]`
   excludes C-F) [V].
 - **Rationale / rejected alternatives:** One source (P1) for the geometry; two-angle form
-  encodes σ-hole chemistry; 4.0 Å is the kindest verified distance (BINANA's 5.5 is loose
-  enough to fire on casual proximity; ProLIF's 3.5 frustrates). Donor-side restriction is
+  encodes σ-hole chemistry; 4.0 Å is the kindest verified distance (BINANA's 5.5 Å is
+  loose enough to fire on casual proximity; ProLIF's 3.5 Å frustrates). Donor-side restriction is
   the spec's own rule (both PLIP and BINANA treat proteins as halogen-free in practice —
   the spec makes it explicit). **[RESOLVE] C-F donor disagreement:** PLIP includes
   C-X with X = F; ProLIF's verified donor pattern excludes C-F. **Adopted: EXCLUDE C-F**
   — halogen bonding to F is weak/disputed and ProLIF's Auffinger-based pattern is the
   stricter precedent. (Research draft row 6 listed X ∈ {F, Cl, Br, I}; this resolution
   supersedes it and is recorded here for the human's review.)
-- Approval: date: ____ approver: ____
+- Approval: date: 2026-09-06 approver: human gate, phase-2 plan 02-01 checkpoint
 
 #### Row 7 — Metal coordination (only when the ligand carries a metal)
 
 - **Adopted criterion:** metal ··· coordinating atom ≤ **3.0 Å**, **distance-only** (no
   geometry fitting); metals gated to ligand-side presence; donors AA-side N/O/S.
-- **Source of the value:** distance: PLIP 3.0 (between ProLIF 2.8 and BINANA 3.5);
+- **Source of the value:** distance: PLIP 3.0 Å (between ProLIF 2.8 Å and BINANA 3.5 Å);
   no-angles: BINANA's published rationale [V].
 - **Rationale / rejected alternatives:** BINANA explicitly documents why angle/geometry
   checks are omitted (many geometries, wide real-world L-M-L deviation, vacant sites) —
@@ -183,7 +186,7 @@ filled at the checkpoint.
   biologically common intersection/union core of the three verified lists (all members
   verified in the research §2.7); full union available at the gate if the human wants
   broader coverage.
-- Approval: date: ____ approver: ____
+- Approval: date: 2026-09-06 approver: human gate, phase-2 plan 02-01 checkpoint
 
 #### Row 8 — Aromatic ring identification (support rule for rows 3–4)
 
@@ -197,7 +200,7 @@ filled at the checkpoint.
   only. Rejected: PLIP 5.0° fallback (strict; irrelevant if bond orders present). AA-side
   rings come from the residue table (Phe/Tyr: 1 six-ring; His: 1 five-ring; Trp: **two**
   rings — BINANA's verified assignment).
-- Approval: date: ____ approver: ____
+- Approval: date: 2026-09-06 approver: human gate, phase-2 plan 02-01 checkpoint
 
 #### Row 9 — Ring geometry (support rule)
 
@@ -206,15 +209,15 @@ filled at the checkpoint.
 - **Source of the value:** BINANA definitions [V].
 - **Rationale / rejected alternatives:** Matches PLIP's center computation (mean) too —
   consistent across sources.
-- Approval: date: ____ approver: ____
+- Approval: date: 2026-09-06 approver: human gate, phase-2 plan 02-01 checkpoint
 
 #### Row 10 — Minimum distance (global)
 
 - **Adopted criterion:** all pair distances must be > **0.5 Å**.
-- **Source of the value:** PLIP MIN_DIST = 0.5 [V].
+- **Source of the value:** PLIP MIN_DIST = 0.5 Å [V].
 - **Rationale / rejected alternatives:** Cheap guard against coincident/duplicate atoms
   (defensive; game data shouldn't produce these).
-- Approval: date: ____ approver: ____
+- Approval: date: 2026-09-06 approver: human gate, phase-2 plan 02-01 checkpoint
 
 ### 2.3 Charge-group definitions (in-house standard = BINANA's verified table)
 
@@ -344,7 +347,7 @@ capable AAs → solvability sampling never starves at any grid size; the "≥ 2 
 per type" invariant is asserted as a permanent test.
 
 Approval (capability table §3 as a whole, including all resolutions):
-Approval: date: ____ approver: ____
+Approval: date: 2026-09-06 approver: human gate, phase-2 plan 02-01 checkpoint
 
 ---
 
@@ -483,5 +486,26 @@ here for the gate (from the detection research §7):
 
 ## 6. Approval record
 
-*(To be added at plan 02-01 Task 2, after the human checkpoint: date, approver, and the
-freeze statement. No detector code freezes before this section exists.)*
+- **Date:** 2026-09-06
+- **Approver:** human gate, phase-2 plan 02-01 checkpoint (DETECT-03 [GATE],
+  checkpoint:human-verify)
+- **Scope approved:** the full document — the 10 threshold rows (§2, each row's
+  `Approval:` line), the charge-group table (§2.3), the AA capability table §3 as a
+  whole including all recorded resolutions (§3.3–§3.5), and the policy decisions
+  (§4.1–§4.7).
+- **Freeze statement:** Detector implementation (plans 02-05..02-08) freezes against
+  this table; any later change requires a DETECTOR_VERSION bump.
+- **Units + atom-typing verification (the human's approval condition, checked
+  2026-09-06 before recording):** every distance criterion is explicitly in Ångström
+  (Å) and every angle criterion explicitly in degrees; atom-typing element sets are
+  unambiguous (H-bond donor/acceptor O/N/S rules, halogen donors = Cl/Br/I with C-F
+  excluded, metal list {MG, ZN, FE, CA, MN, CU, NI, CO, CD}, hydrophobe carbon rule
+  `element C with all bonded neighbors ∈ {C, H}`, ring-atom rules). No adopted value
+  was changed during the check; only explicit units were added to values that lacked
+  them, and all values were cross-checked against the verified research §3
+  (02-RESEARCH-detection.md) with no contradiction found.
+- **Provisional scope (human caveat, recorded in substance):** approved with the
+  condition that units and atom typing were checked at approval time, and values may
+  need to be adjusted depending on the final curated dataset to be used. Such a
+  revisit is a DETECTOR_VERSION bump event (§4.7) — never a silent edit.
+

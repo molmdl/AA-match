@@ -10,9 +10,9 @@ See: .planning/PROJECT.md (updated 2026-09-05)
 ## Current Position
 
 Phase: 2 of 9 (Headless Game Engine) — In progress
-Plan: 9 of 16 complete (waves 1-6: 02-01..02-09 + 02-07 split part 1 + 02-08 generator — both merged from their worktree branches by the orchestrator)
-Status: Detector 5 of 7 types (pi_stacking + cation_pi merged; halogen/metal/canonical = 02-07b next) + pure seeded generator complete (423/423 tests, PURE_MODULES = 12); wave 7 = 02-07b / 02-10 / 02-12 / 02-13
-Last activity: 2026-09-06 — 02-07 (detector part 2a, 361/361 → merged) + 02-08 (generator, 423/423 → merged); 02-08 deviation 3 ligand_data contract binds 02-13/02-14
+Plan: 10 of 16 (waves 1-6 merged; wave 7 in flight: 02-10 scoring/GameState DONE on exec/02-10 [this branch's view]; 02-07b / 02-12 / 02-13 on their own branches)
+Status: Pure scoring + GameState runtime container complete (464/464 tests on exec/02-10, PURE_MODULES = 13); wave 7 remainder pending merge
+Last activity: 2026-09-06 — 02-10 (score fraction semantics + GameState container, TDD 4 commits, 438→464 tests; exec/02-10 branch, not yet merged)
 
 Progress: [█████▌░░░░] 56% of Phase 2 (9/16) · [███████████░] 92% of project (phase 2 of 9; plans 24/25)
 
@@ -95,6 +95,8 @@ Decisions are logged in PROJECT.md Key Decisions table. Seeded from PROJECT.md a
 - (02-07) cation_pi record contract final: roles cation/ring per direction, metrics {d_center, offset, direction} with direction ∈ {'aa_cation_over_lig_ring', 'aa_ring_under_lig_cation'} (D4 both directions; distance <= 6.0 inclusive, offset < 2.0 strict — transcribed from the thresholds row comments).
 - (02-07) detect_part1 emits 5 of 7 types; ligand ammonium groups carry a 'substituents' feature annotation (non-H neighbor points) consumed only by the veto — feature extension, not a typing change; plan case-(e) prose inversion recorded as a Rule-1 deviation in 02-07-SUMMARY.md (gate doc is authoritative).
 - (02-07) Ring-type tests always scope asserts with _of_type: scripted aromatic ligand ring carbons qualify as hydrophobes, so an unscoped 'no records' assert can be faked by a hydrophobic hit; veto proofs use the perpendicular/parallel CONTROL PAIR pattern.
+- (02-10) SCORE-01 in game_state.py: score consumes ONLY r['type'] from canonical records ('any' binary 0.0/1.0; 'list' = formed items / items; binary per item — record counts NEVER inflate); fail-closed refusals: empty items in 'list' mode (empty is the exclusive 'any' representation only), record missing 'type'/type outside INTERACTION_TYPES/non-dict, unknown mode.
+- (02-10) GameState = plain data only (purity-kept: PURE_MODULES = 13, imports time + setup_state): record_molecule_result stores score + canonical-order formed types in ONE call (score/debrief can never drift); molecule key 'L{level}M{molecule}'; skip-path guidance = record partial score via the same call + increment skip_count; start_timer(now=None) stores a float anchor, rendering is a later QTimer phase's job; to_dict/from_dict lossless NOW (Phase 7 wraps it, never reshapes).
 
 ### Pending Todos
 
@@ -109,8 +111,8 @@ Decisions are logged in PROJECT.md Key Decisions table. Seeded from PROJECT.md a
 
 ## Session Continuity
 
-Last session: 2026-09-06 (wave-6 executors: 02-07 on exec/02-07 [kimi-k3, first silent-failure-free run], 02-08 on exec/02-08; both merged to main by orchestrator)
-Stopped at: Waves 1-6 complete — detector 5/7 types + pure seeded generator; wave 7 next (02-07b / 02-10 / 02-12 / 02-13)
+Last session: 2026-09-06 (wave-7 executor: 02-10 on exec/02-10 [scoring/GameState complete, awaiting orchestrator merge])
+Stopped at: 02-10 complete on exec/02-10 (f5818c2/a7bca4c/bcf4f7f/f93fa38 + docs commit); wave 7 siblings 02-07b/02-12/02-13 on their own branches
 Resume file: None
 
 ## Next Actions

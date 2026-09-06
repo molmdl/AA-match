@@ -1,12 +1,13 @@
-"""Unit tests for aamatch.detector — pipeline core + 5 of 7 types.
+"""Unit tests for aamatch.detector — pipeline core + the full 7-type
+surface (DETECT-01 / DETECT-02 complete).
 
 Plan 02-06 scope: extract_features (typed features, computed ONCE), the
 AA bounding-sphere prefilter, spatial.cross_pairs candidate enumeration,
 and the h_bond / salt_bridge / hydrophobic tests with explicit partner
 sides. Plans 02-07 (pi_stacking, cation_pi — the ring-geometry types)
-and 02-07b (halogen, metal, canonical detect; 02-07 split 2026-09-06)
-extend this file on the SAME pipeline — every geometry here is
-hand-placed and runs under bare python3.6 with ZERO PyMOL (pure-layer
+and 02-07b (halogen, metal, canonical 7-type detect(); 02-07 split
+2026-09-06) extend this file on the SAME pipeline — every geometry here
+is hand-placed and runs under bare python3.6 with ZERO PyMOL (pure-layer
 contract).
 
 All criteria asserted at scripted boundaries come from the APPROVED
@@ -22,6 +23,7 @@ lig atom_ids); same input twice -> identical list.
 
 import math
 import unittest
+from unittest import mock
 
 from aamatch import capability
 from aamatch import detector
@@ -432,6 +434,126 @@ def _tert_ammonium_ligand(n_pos, sub_positions):
                            n_pos[0], n_pos[1], n_pos[2] - 1.01))
     bonds.append((0, len(atoms) - 1, 1))
     return atoms, bonds
+
+
+# --- halogen/metal geometry helpers (plan 02-07b) ------------------------
+
+_C_X_BOND = 1.77        # scripted C-X covalent length
+_C_CB_BOND = 1.43       # scripted O...C bond length (acceptor's Y partner)
+
+
+def _c_x_ligand(c_pos, x_pos, x_elem='CL'):
+    """Minimal halogen donor: C0 bonded to X1 (default Cl) + three H on
+    the C. The C is NOT a qualifying hydrophobe (neighbor X not in
+    {C, H}); X alone is typed by row-6 donor typing (C-X, X in
+    Cl/Br/I — C-F is excluded at TYPING, gate row 6)."""
+    atoms = [_lig_atom(0, 'C1', 'C', c_pos[0], c_pos[1], c_pos[2]),
+             _lig_atom(1, 'X2', x_elem, x_pos[0], x_pos[1], x_pos[2])]
+    bonds = [(0, 1, 1)]
+    for k, off in enumerate(((-0.66, 0.77, 0.0), (-0.66, -0.77, 0.0),
+                             (0.0, 0.0, -1.09))):
+        atoms.append(_lig_atom(len(atoms), 'H%d' % (k + 3), 'H',
+                               c_pos[0] + off[0], c_pos[1] + off[1],
+                               c_pos[2] + off[2]))
+        bonds.append((0, len(atoms) - 1, 1))
+    return atoms, bonds
+
+
+def _halogen_positions(d_ax, donor_deg, acc_deg):
+    """Scripted row-6 geometry: acceptor A at the ORIGIN, halogen X at
+    (d_ax, 0, 0); the donor C is placed so the angle A-X-C at X equals
+    ``donor_deg``, and the acceptor's Y partner at 1.43 A so the angle
+    Y-A-X at A equals ``acc_deg``. All points in the xy-plane.
+    Returns (c_pos, y_pos)."""
+    donor_rad = math.radians(donor_deg)
+    acc_rad = math.radians(acc_deg)
+    # X->A is (-1, 0, 0); X->C is (-cos(donor), sin(donor), 0) so the
+    # angle at X is exactly donor_deg.
+    c_pos = (d_ax - _C_X_BOND * math.cos(donor_rad),
+             _C_X_BOND * math.sin(donor_rad), 0.0)
+    y_pos = (_C_CB_BOND * math.cos(acc_rad),
+             _C_CB_BOND * math.sin(acc_rad), 0.0)
+    return c_pos, y_pos
+
+
+def _serine_og_cb(obj, og, cb):
+    """SER fragment with OG at ``og`` and its bonded partner CB at
+    ``cb`` (the row-6 acceptor angle needs Y); NO HG (acceptor-only
+    side). CB is 1.43 A from OG; the backbone is scripted ~2.5/3.2 A
+    from OG along +y so NOTHING heavy except CB sits within the
+    detector's 2.0 A internal Y-pairing epsilon."""
+    atoms, next_id = _aa_backbone(obj, 100, 'SER', 1,
+                                  (og[0], og[1] + 4.6, og[2]))
+    atoms.append(_aa_atom(obj, next_id, 'CB', 'C', 'SER', 1,
+                          cb[0], cb[1], cb[2]))
+    next_id += 1
+    atoms.append(_aa_atom(obj, next_id, 'HB1', 'H', 'SER', 1,
+                          cb[0] + 0.9, cb[1] + 0.5, cb[2]))
+    next_id += 1
+    atoms.append(_aa_atom(obj, next_id, 'HB2', 'H', 'SER', 1,
+                          cb[0] - 0.7, cb[1] + 0.6, cb[2]))
+    next_id += 1
+    atoms.append(_aa_atom(obj, next_id, 'OG', 'O', 'SER', 1,
+                          og[0], og[1], og[2]))
+    return atoms
+
+
+def _methionine_sd(obj, sd, cg):
+    """MET fragment: backbone + CB + CG + SD at scripted positions.
+    MET carries NO acceptors (thioether-S excluded from the halogen
+    acceptor set, gate §3.5 — do not revisit), so SD at perfect C-X
+    geometry must still form nothing."""
+    atoms, next_id = _aa_backbone(obj, 400, 'MET', 4,
+                                  (sd[0], sd[1] + 4.6, sd[2]))
+    for name, pos in (('CB', (cg[0] - 1.35, cg[1], cg[2])),
+                      ('CG', cg), ('SD', sd)):
+        atoms.append(_aa_atom(obj, next_id, name,
+                              'S' if name == 'SD' else 'C', 'MET', 4,
+                              pos[0], pos[1], pos[2]))
+        next_id += 1
+    return atoms
+
+
+def _aa_c_x_fragment(obj, c_pos, x_pos):
+    """Bogus 'SER'-labeled fragment carrying a C..CL pair (CB + an atom
+    named 'CL'): no capability table can EVER type an AA-side halogen
+    donor — plan case (e) asserts nothing forms even at textbook
+    flipped geometry. The 'CL' atom counts as unclassified."""
+    atoms, next_id = _aa_backbone(obj, 300, 'SER', 3,
+                                  (c_pos[0] + 10.0, c_pos[1] + 10.0,
+                                   c_pos[2]))
+    atoms.append(_aa_atom(obj, next_id, 'CB', 'C', 'SER', 3,
+                          c_pos[0], c_pos[1], c_pos[2]))
+    next_id += 1
+    atoms.append(_aa_atom(obj, next_id, 'CL', 'CL', 'SER', 3,
+                          x_pos[0], x_pos[1], x_pos[2]))
+    return atoms
+
+
+def _histidine(obj, nd1_pos, start_id=500):
+    """HIS fragment (neutral HIE-like, OQ-3/D2): backbone + CB + CG +
+    ND1 at ``nd1_pos`` — ND1 is the ring-N acceptor the metal type
+    chelates (capability HIS acceptors = ('ND1',); the metal row is
+    DISTANCE-ONLY, no polar H needed anywhere)."""
+    atoms, next_id = _aa_backbone(obj, start_id, 'HIS', 5,
+                                  (nd1_pos[0] - 5.0, nd1_pos[1] - 5.0,
+                                   nd1_pos[2]))
+    atoms.append(_aa_atom(obj, next_id, 'CB', 'C', 'HIS', 5,
+                          nd1_pos[0] - 2.5, nd1_pos[1] + 2.0,
+                          nd1_pos[2]))
+    next_id += 1
+    atoms.append(_aa_atom(obj, next_id, 'CG', 'C', 'HIS', 5,
+                          nd1_pos[0] - 1.38, nd1_pos[1], nd1_pos[2]))
+    next_id += 1
+    atoms.append(_aa_atom(obj, next_id, 'ND1', 'N', 'HIS', 5,
+                          nd1_pos[0], nd1_pos[1], nd1_pos[2]))
+    return atoms
+
+
+def _metal_ligand(elem, m_pos):
+    """Single-atom ligand carrying element ``elem`` at ``m_pos``
+    (ZN = approved row-7 metal; NA = NOT in METAL_ELEMENTS)."""
+    return [_lig_atom(0, elem, elem, m_pos[0], m_pos[1], m_pos[2])], []
 
 
 def _scene(lig_atoms, lig_bonds, aa_atom_lists):
@@ -1244,6 +1366,241 @@ class TestCationPi(unittest.TestCase):
                                               cat_profile))
         self.assertFalse(capability.aa_capable('ALA', 'cation_pi',
                                                cat_profile))
+
+
+# ---------------------------------------------------------------------------
+# 02-07b RED spec 1 — halogen (row 6: A...X <= 4.0 AND two angle windows;
+# enumeration STRUCTURALLY (AA acceptor O/N/S) x (ligand C-X, X in
+# Cl/Br/I); C-F excluded at typing; Met excluded per §3.5; AA-side
+# halogen donors unrepresentable)
+# ---------------------------------------------------------------------------
+
+class TestHalogen(unittest.TestCase):
+    """Row 6 (gate §2.2): SER OG acceptor vs a ligand C-Cl donor, both
+    angle windows scripted exactly via _halogen_positions (A at origin,
+    X on +x, everything in the xy-plane)."""
+
+    def _detect(self, d_ax, donor_deg, acc_deg, x_elem='CL'):
+        c_pos, y_pos = _halogen_positions(d_ax, donor_deg, acc_deg)
+        lig_atoms, lig_bonds = _c_x_ligand(c_pos, (d_ax, 0.0, 0.0),
+                                           x_elem)
+        ser = _serine_og_cb('aa_ser', (0.0, 0.0, 0.0), y_pos)
+        atoms, bonds = _scene(lig_atoms, lig_bonds, [ser])
+        return detector.detect(atoms, bonds)
+
+    def test_formed_3p5_both_windows(self):
+        # (a) d = 3.5, donor angle 165 (165 +- 30), acceptor 120
+        # (120 +- 30) -> FORMED.
+        records = self._detect(3.5, 165.0, 120.0)
+        self.assertEqual(len(records), 1)
+        record = records[0]
+        self.assertEqual(record['type'], 'halogen')
+        self.assertEqual(record['aa']['role'], 'acceptor')
+        self.assertEqual(record['lig']['role'], 'donor')
+        self.assertEqual(record['aa']['resn'], 'SER')
+        # scripted ids: OG = 109; ligand C1 = 0, X2 = 1
+        self.assertEqual(record['aa']['atom_ids'], [109])
+        self.assertEqual(record['lig']['atom_ids'], [0, 1])
+        self.assertAlmostEqual(record['metrics']['d_ax'], 3.5, places=6)
+        self.assertAlmostEqual(record['metrics']['donor_angle_deg'],
+                               165.0, places=6)
+        self.assertAlmostEqual(record['metrics']['acc_angle_deg'],
+                               120.0, places=6)
+        self.assertEqual(set(record['metrics']),
+                         {'d_ax', 'donor_angle_deg', 'acc_angle_deg'})
+        self.assertTrue(record['formed'])
+
+    def test_donor_angle_100_not_formed(self):
+        # (b) donor angle 100 out of the (135, 195) window; acceptor
+        # angle still passes.
+        self.assertEqual(self._detect(3.5, 100.0, 120.0), [])
+
+    def test_acceptor_angle_60_not_formed(self):
+        # (c) acceptor angle 60 out of the (90, 150) window; donor
+        # angle still passes.
+        self.assertEqual(self._detect(3.5, 165.0, 60.0), [])
+
+    def test_c_f_excluded_at_typing_no_candidates(self):
+        # (d) IDENTical geometry to (a) but X = F: C-F donors are
+        # excluded at TYPING (row 6) — no candidates exist at all.
+        c_pos, y_pos = _halogen_positions(3.5, 165.0, 120.0)
+        lig_atoms, lig_bonds = _c_x_ligand(c_pos, (3.5, 0.0, 0.0), 'F')
+        ser = _serine_og_cb('aa_ser', (0.0, 0.0, 0.0), y_pos)
+        atoms, bonds = _scene(lig_atoms, lig_bonds, [ser])
+        features = detector.extract_features(atoms, bonds)
+        self.assertEqual(features['lig']['halogen_donors'], [])
+        self.assertEqual(detector.detect(atoms, bonds), [])
+
+    def test_aa_side_halogen_donor_never_enumerated(self):
+        # (e) flipped sides: ligand carbonyl O at the ACCEPTOR position,
+        # an AA-side C...CL at textbook donor positions/angles.
+        # Enumeration is strictly (AA acceptor) x (ligand C-X), and no
+        # capability table types an AA halogen donor — nothing can form.
+        x_pos = (1.77, 0.0, 0.0)
+        rad = math.radians(165.0)
+        a_pos = ((x_pos[0] - 3.5 * math.cos(rad)),
+                 3.5 * math.sin(rad), 0.0)
+        lig_atoms, lig_bonds = _carbonyl_ligand(a_pos)
+        aa = _aa_c_x_fragment('aa_ser', (0.0, 0.0, 0.0), x_pos)
+        atoms, bonds = _scene(lig_atoms, lig_bonds, [aa])
+        self.assertEqual(detector.detect(atoms, bonds), [])
+        # feature-level structural proof: nothing typed on either side
+        features = detector.extract_features(atoms, bonds)
+        self.assertEqual(features['lig']['halogen_donors'], [])
+        self.assertEqual(features['aa']['aa_ser']['acceptors'], [])
+        self.assertEqual(features['unclassified_aa_atoms'], 1)  # the CL
+
+    def test_met_thioether_s_excluded_per_3p5_ruling(self):
+        # §3.5 ruling (do not revisit): MET SD at PERFECT row-6 geometry
+        # forms nothing — MET carries no acceptor names at all, so the
+        # candidate is rejected at classification (not geometry).
+        c_pos, y_pos = _halogen_positions(3.5, 165.0, 120.0)
+        lig_atoms, lig_bonds = _c_x_ligand(c_pos, (3.5, 0.0, 0.0))
+        met = _methionine_sd('aa_met', (0.0, 0.0, 0.0), y_pos)
+        atoms, bonds = _scene(lig_atoms, lig_bonds, [met])
+        features = detector.extract_features(atoms, bonds)
+        self.assertEqual(features['aa']['aa_met']['acceptors'], [])
+        self.assertEqual(detector.detect(atoms, bonds), [])
+
+    def test_distance_boundary_4p0_yes_4p1_no(self):
+        # Row 6 distance is (<=) like row 1: exactly 4.0 forms, 4.1 not.
+        self.assertEqual(
+            len(_of_type(self._detect(4.0, 165.0, 120.0), 'halogen')), 1)
+        self.assertEqual(_of_type(self._detect(4.1, 165.0, 120.0),
+                                  'halogen'), [])
+
+    def test_donor_window_boundary_134_not_formed(self):
+        self.assertEqual(self._detect(3.5, 134.0, 120.0), [])
+
+    def test_min_dist_guard_rejects_coincident_geometry(self):
+        self.assertEqual(self._detect(0.4, 165.0, 120.0), [])
+
+
+# ---------------------------------------------------------------------------
+# 02-07b RED spec 2 — metal (row 7: metal...chelator <= 3.0 A,
+# DISTANCE-ONLY; gated by ligand_has_metal; chelators = AA side-chain
+# N/O/S acceptor atoms)
+# ---------------------------------------------------------------------------
+
+class TestMetal(unittest.TestCase):
+
+    def _detect(self, lig_atoms, lig_bonds, aa_lists):
+        atoms, bonds = _scene(lig_atoms, lig_bonds, aa_lists)
+        return detector.detect(atoms, bonds)
+
+    def test_formed_zn_his_nd1_2p5(self):
+        # (a) approved ZN + HIS ring N at 2.5 A -> FORMED, aa role
+        # 'chelator' (distance-only: no angles exist in row 7).
+        lig_atoms, lig_bonds = _metal_ligand('ZN', (0.0, 0.0, 0.0))
+        his = _histidine('aa_his', (2.5, 0.0, 0.0))
+        records = self._detect(lig_atoms, lig_bonds, [his])
+        self.assertEqual(len(records), 1)
+        record = records[0]
+        self.assertEqual(record['type'], 'metal')
+        self.assertEqual(record['aa']['role'], 'chelator')
+        self.assertEqual(record['lig']['role'], 'metal')
+        self.assertEqual(record['aa']['resn'], 'HIS')
+        # scripted ids: ND1 = 514 (500 start + 14), ligand metal = 0
+        self.assertEqual(record['aa']['atom_ids'], [514])
+        self.assertEqual(record['lig']['atom_ids'], [0])
+        self.assertEqual(set(record['metrics']), {'d_metal'})
+        self.assertAlmostEqual(record['metrics']['d_metal'], 2.5,
+                               places=6)
+        self.assertTrue(record['formed'])
+
+    def test_boundary_3p0_formed(self):
+        lig_atoms, lig_bonds = _metal_ligand('ZN', (0.0, 0.0, 0.0))
+        his = _histidine('aa_his', (3.0, 0.0, 0.0))
+        records = _of_type(self._detect(lig_atoms, lig_bonds, [his]),
+                           'metal')
+        self.assertEqual(len(records), 1)
+        self.assertAlmostEqual(records[0]['metrics']['d_metal'], 3.0,
+                               places=6)
+
+    def test_3p2_not_formed(self):
+        # (b) 3.2 A exceeds METAL_D_MAX (3.0).
+        lig_atoms, lig_bonds = _metal_ligand('ZN', (0.0, 0.0, 0.0))
+        his = _histidine('aa_his', (3.2, 0.0, 0.0))
+        self.assertEqual(self._detect(lig_atoms, lig_bonds, [his]), [])
+
+    def test_no_metal_in_ligand_gate_not_even_enumerated(self):
+        # (c) SAME geometry but the ligand carries NO metal: no record,
+        # and the metal branch is not even enumerated — the gate is
+        # capability.ligand_has_metal (detection research §7.6).
+        lig_atoms, lig_bonds = _carbonyl_ligand((2.5, 0.0, 0.0))
+        his = _histidine('aa_his', (2.5, 0.0, 0.0))
+        atoms, bonds = _scene(lig_atoms, lig_bonds, [his])
+        with mock.patch.object(detector, '_metal_records',
+                               wraps=detector._metal_records) as spy:
+            records = detector.detect(atoms, bonds)
+        self.assertEqual(spy.call_count, 0)
+        self.assertEqual(records, [])
+
+    def test_element_not_in_metal_elements_no_record(self):
+        # (d) 'NA' is not in the approved METAL_ELEMENTS list (OQ-7) —
+        # not typed as a metal AT ALL, so nothing can coordinate.
+        lig_atoms, lig_bonds = _metal_ligand('NA', (0.0, 0.0, 0.0))
+        his = _histidine('aa_his', (2.5, 0.0, 0.0))
+        atoms, bonds = _scene(lig_atoms, lig_bonds, [his])
+        features = detector.extract_features(atoms, bonds)
+        self.assertEqual(features['lig']['metals'], [])
+        self.assertEqual(detector.detect(atoms, bonds), [])
+
+    def test_non_chelator_aa_no_record(self):
+        # ALA carries no side-chain N/O/S acceptor atoms: CB at 2.5 A
+        # from ZN forms nothing (chelators = acceptor atoms only).
+        lig_atoms, lig_bonds = _metal_ligand('ZN', (0.0, 0.0, 0.0))
+        ala = _alanine('aa_ala', (2.5, 0.0, 0.0))
+        self.assertEqual(self._detect(lig_atoms, lig_bonds, [ala]), [])
+
+    def test_min_dist_guard_rejects_coincident_metal(self):
+        lig_atoms, lig_bonds = _metal_ligand('ZN', (0.0, 0.0, 0.0))
+        his = _histidine('aa_his', (0.3, 0.0, 0.0))
+        self.assertEqual(self._detect(lig_atoms, lig_bonds, [his]), [])
+
+
+class TestHalogenMetalCapabilityParity(unittest.TestCase):
+    """DETECT-04 for rows 6/7: every formed record's (resn, type) must
+    be capable under capability.aa_capable with the same profile, and
+    the scripted exclusions (Met, metal-free ligand) stay incapable."""
+
+    def test_halogen_capability_parity(self):
+        c_pos, y_pos = _halogen_positions(3.5, 165.0, 120.0)
+        lig_atoms, lig_bonds = _c_x_ligand(c_pos, (3.5, 0.0, 0.0))
+        ser = _serine_og_cb('aa_ser', (0.0, 0.0, 0.0), y_pos)
+        atoms, bonds = _scene(lig_atoms, lig_bonds, [ser])
+        profile = capability.ligand_profile(atoms[:5], bonds)
+        self.assertTrue(profile['has_halogen_donor'])
+        self.assertFalse(profile['has_metal'])
+        records = detector.detect(atoms, bonds)
+        self.assertEqual(len(records), 1)
+        self.assertTrue(capability.aa_capable(
+            records[0]['aa']['resn'], 'halogen', profile))
+        # the recorded exclusions:
+        self.assertTrue(capability.aa_capable('SER', 'halogen', profile))
+        self.assertFalse(capability.aa_capable('MET', 'halogen',
+                                               profile))   # §3.5
+        self.assertFalse(capability.aa_capable('ALA', 'halogen',
+                                               profile))
+
+    def test_metal_capability_parity(self):
+        lig_atoms, lig_bonds = _metal_ligand('ZN', (0.0, 0.0, 0.0))
+        his = _histidine('aa_his', (2.5, 0.0, 0.0))
+        atoms, bonds = _scene(lig_atoms, lig_bonds, [his])
+        profile = capability.ligand_profile(atoms[:1], bonds)
+        self.assertTrue(profile['has_metal'])
+        self.assertEqual(profile['metal_elements'], ['ZN'])
+        records = detector.detect(atoms, bonds)
+        self.assertEqual(len(records), 1)
+        self.assertTrue(capability.aa_capable(
+            records[0]['aa']['resn'], 'metal', profile))
+        self.assertTrue(capability.aa_capable('HIS', 'metal', profile))
+        self.assertFalse(capability.aa_capable('MET', 'metal', profile))
+        self.assertFalse(capability.aa_capable('ALA', 'metal', profile))
+        # metal-free ligand mirrors the detection gate in capability:
+        cf_atoms = [_lig_atom(0, 'C1', 'C', 0.0, 0.0, 0.0)]
+        self.assertFalse(capability.aa_capable(
+            'HIS', 'metal', capability.ligand_profile(cf_atoms, [])))
 
 
 if __name__ == '__main__':

@@ -64,8 +64,11 @@ if REPO_ROOT not in sys.path:
 # Phase 1: setup_state, level_spec, persistence, backup, paths.
 # Phase 2 (02-02): vec3 (tuple vector math), spatial (cell-list pruning).
 # Phase 2 (02-03): manifest (bundled-data manifest parse/validate/enumerate).
+# Phase 2 (02-05): capability (single typing home; imports math via vec3,
+#                   .vec3 for the row-8 planarity fallback, and
+#                   .setup_state INTERACTION_TYPES — the ONE enum home).
 PURE_MODULES = ['setup_state', 'level_spec', 'persistence', 'backup',
-                'paths', 'vec3', 'spatial', 'manifest']
+                'paths', 'vec3', 'spatial', 'manifest', 'capability']
 
 # Roots that must NEVER appear in any import of a pure module, in ANY
 # scope (module level or function body -- B7). dataclasses is 3.7+.

@@ -265,6 +265,19 @@ class TestGateDPyCompileSyntax(unittest.TestCase):
                     % (name, _stderr_tail(proc.stderr)))
 
 
+class TestGeneratorRegistration(unittest.TestCase):
+    """Plan 02-08 Task 3: the seeded generator joins the gated pure
+    modules. Gates silently SKIP unregistered modules (01-08), so the
+    registration itself is pinned -- removing 'generator' from the list
+    without re-reviewing its imports must fail here."""
+
+    def test_generator_registered_in_pure_modules(self):
+        self.assertIn(
+            'generator', PURE_MODULES,
+            'aamatch/generator.py must be registered in PURE_MODULES '
+            '(unregistered pure modules are silently ungated)')
+
+
 class TestNegativeControl(unittest.TestCase):
     """Proves Gate A can FAIL, and that docstring prose is immune (P2)."""
 

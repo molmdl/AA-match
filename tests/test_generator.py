@@ -20,6 +20,7 @@ only `math`, `random` and pure aamatch modules (purity Gate A; registered
 in tests/test_purity.py PURE_MODULES by Task 3).
 """
 
+import json
 import math
 import random
 import unittest
@@ -33,8 +34,14 @@ from aamatch.generator import (
     allocate_slots,
     derive_required,
     difficulty_params,
+    generate,
     placement_offset,
     slot_position,
+)
+from aamatch.level_spec import DETECTOR_VERSION, LEVEL_SPEC_VERSION
+from aamatch.level_spec import (
+    make_level_spec_container,
+    parse_level_spec_dict,
 )
 from aamatch.setup_state import INTERACTION_TYPES
 
@@ -634,6 +641,356 @@ class TestDetectorAgreement(unittest.TestCase):
         self.assertIn(required[0]['aa'],
                       ('SER', 'THR', 'TYR', 'ASN', 'GLN', 'ASP', 'GLU',
                        'HIS', 'CYS', 'LYS', 'ARG'))
+
+
+# ---------------------------------------------------------------------------
+# Task 3: generate() payload assembly + determinism + round-trip.
+# ---------------------------------------------------------------------------
+
+SET_ID = 'demo-dev-1'
+
+
+def candidate(entry_id, size_class='small', protonation='as-recorded',
+              **over):
+    """One manifest-shaped candidate row (enumerate_entries shape: the
+    entry's fields plus 'set_id'; manifest schema frozen at 02-03)."""
+    heavy = {'small': 9, 'medium': 40, 'large': 80}[size_class]
+    row = {
+        'set_id': SET_ID,
+        'entry_id': entry_id,
+        'file': 'ligands/%s.sdf' % entry_id,
+        'format': 'sdf',
+        'sha256': 'a' * 64,
+        'protonation': protonation,
+        'atom_count': heavy + 7,
+        'heavy_atom_count': heavy,
+        'bond_count': heavy + 7,
+        'bond_order_counts': {'1': 12, '2': 4},
+        'formal_charge_sum': 0,
+        'states_expected': 1,
+        'metal_present': False,
+        'halogen_present': False,
+        'size_class': size_class,
+    }
+    row.update(over)
+    return row
+
+
+# Across-bucket pool: 3 small, 2 medium, 1 large (sorted by identity).
+CANDIDATES = sorted([
+    candidate('acetate'),
+    candidate('benzamide'),
+    candidate('toluene'),
+    candidate('naphthalene', 'medium'),
+    candidate('anthracene', 'medium'),
+    candidate('coronene', 'large'),
+], key=lambda c: (c['set_id'], c['entry_id']))
+
+# ligand_data keyed by (set_id, entry_id): geometry + chemistry profile
+# (capability.ligand_profile shape) per candidate.
+LIGAND_DATA = dict(
+    ((c['set_id'], c['entry_id']),
+     {'centroid': (0.0, 0.0, 0.0), 'radius': 4.0, 'profile': RICH})
+    for c in CANDIDATES)
+
+SMALL_ONLY = [candidate('acetate'), candidate('benzamide'),
+              candidate('toluene'), candidate('phenol')]
+
+
+def ligand_bytes(molecule):
+    """Canonical byte form of one molecule payload (for identity
+    comparisons across two generate() calls)."""
+    return json.dumps(molecule, sort_keys=True)
+
+
+class TestGeneratePayload(unittest.TestCase):
+    """GEN-01: complete, stamped, byte-deterministic payloads."""
+
+    def _payload(self, seed=42, setup=None, candidates=None,
+                 ligand_data=None, difficulty=3):
+        return generate(
+            seed,
+            setup if setup is not None
+            else setup_of('unset', ALL_TYPES, molecules=1, difficulty=3),
+            CANDIDATES if candidates is None else candidates,
+            LIGAND_DATA if ligand_data is None else ligand_data,
+            difficulty)
+
+    def test_top_level_shape_and_version_stamps(self):
+        payload = self._payload(seed=1234)
+        self.assertEqual(sorted(payload),
+                         ['detector_version', 'format_version', 'levels',
+                          'seed'])
+        self.assertEqual(payload['detector_version'], DETECTOR_VERSION)
+        self.assertEqual(payload['format_version'], LEVEL_SPEC_VERSION)
+        self.assertEqual(payload['seed'], 1234)
+        self.assertTrue(isinstance(payload['seed'], int))
+        self.assertEqual(len(payload['levels']), 3)
+        for level_index, level in enumerate(payload['levels']):
+            self.assertEqual(level['level_index'], level_index)
+            self.assertEqual(level['difficulty'],
+                             difficulty_params(3, level_index))
+
+    def test_molecule_payload_shape(self):
+        payload = self._payload(seed=7)
+        molecule = payload['levels'][0]['molecules'][0]
+        self.assertEqual(sorted(molecule),
+                         ['grid', 'ligand', 'molecule_id', 'placement',
+                          'required'])
+        self.assertEqual(molecule['molecule_id'], 'mol-001')
+        ligand = molecule['ligand']
+        self.assertEqual(sorted(ligand),
+                         ['entry_id', 'file', 'provenance', 'protonation',
+                          'set_id', 'sha256', 'source'])
+        self.assertEqual(ligand['source'], 'demo')   # setup source_mode
+        self.assertEqual(ligand['set_id'], SET_ID)
+        self.assertTrue(ligand['file'].startswith('ligands/'))
+        self.assertEqual(ligand['provenance'], '')   # not recorded yet
+        grid = molecule['grid']
+        n = payload['levels'][0]['difficulty']['grid_n']
+        self.assertEqual(grid['n'], n)
+        self.assertEqual(len(grid['slots']), n * n)
+        self.assertEqual(molecule['placement']['offset'],
+                         [0.0, 0.0, 0.0])
+
+    def test_second_molecule_gets_plus_x_offset(self):
+        payload = self._payload(
+            seed=7, setup=setup_of('unset', ALL_TYPES, molecules=2,
+                                   difficulty=1))
+        molecules = payload['levels'][0]['molecules']
+        self.assertEqual([m['molecule_id'] for m in molecules],
+                         ['mol-001', 'mol-002'])
+        n = payload['levels'][0]['difficulty']['grid_n']
+        expected = list(placement_offset(1, n))
+        self.assertEqual(molecules[1]['placement']['offset'], expected)
+        self.assertGreater(molecules[1]['placement']['offset'][0], 0.0)
+
+    def test_grid_pose_positions_match_the_formula(self):
+        payload = self._payload(seed=9, difficulty=2)
+        for level in payload['levels']:
+            n = level['difficulty']['grid_n']
+            for molecule in level['molecules']:
+                identity = (molecule['ligand']['set_id'],
+                            molecule['ligand']['entry_id'])
+                geom = LIGAND_DATA[identity]
+                for slot in molecule['grid']['slots']:
+                    want = slot_position(slot['row'], slot['col'], n,
+                                         geom['centroid'], geom['radius'])
+                    got = slot['grid_pose']['position']
+                    self.assertEqual(len(got), 3)
+                    for a, b in zip(got, want):
+                        self.assertTrue(close(a, b),
+                                        'slot %s pose %r != %r'
+                                        % (slot['slot_id'], got, want))
+                    for value in got:
+                        self.assertTrue(math.isfinite(value))
+
+    def test_determinism_same_seed_byte_identical(self):
+        setup = setup_of('unset', ALL_TYPES, molecules=2, difficulty=2)
+        first = generate(99, setup, CANDIDATES, LIGAND_DATA, 2)
+        second = generate(99, setup, CANDIDATES, LIGAND_DATA, 2)
+        self.assertEqual(first, second)
+        self.assertEqual(json.dumps(first, sort_keys=True),
+                         json.dumps(second, sort_keys=True))
+
+    def test_different_seeds_differ(self):
+        setup = setup_of('unset', ALL_TYPES, molecules=1, difficulty=2)
+        a = json.dumps(generate(1, setup, CANDIDATES, LIGAND_DATA, 2),
+                       sort_keys=True)
+        b = json.dumps(generate(2, setup, CANDIDATES, LIGAND_DATA, 2),
+                       sort_keys=True)
+        self.assertNotEqual(a, b)
+
+    def test_round_trip_through_phase1_gates(self):
+        payload = self._payload(seed=5, difficulty=2)
+        container = make_level_spec_container(payload)
+        self.assertEqual(parse_level_spec_dict(container), payload)
+
+    def test_bool_seed_refused_explicitly(self):
+        setup = setup_of('unset', ALL_TYPES, molecules=1, difficulty=1)
+        with self.assertRaises(GenerationError) as ctx:
+            generate(True, setup, CANDIDATES, LIGAND_DATA, 1)
+        self.assertIn('seed', str(ctx.exception))
+        with self.assertRaises(GenerationError):
+            generate('42', setup, CANDIDATES, LIGAND_DATA, 1)
+        with self.assertRaises(GenerationError):
+            generate(4.0, setup, CANDIDATES, LIGAND_DATA, 1)
+
+    def test_bad_difficulty_refused(self):
+        setup = setup_of('unset', ALL_TYPES, molecules=1, difficulty=1)
+        for bad in (0, -1, '3', True, 3.0):
+            with self.assertRaises(GenerationError):
+                generate(1, setup, CANDIDATES, LIGAND_DATA, bad)
+
+    def test_missing_ligand_data_identity_refused(self):
+        setup = setup_of('unset', ALL_TYPES, molecules=1, difficulty=1)
+        partial = dict(LIGAND_DATA)
+        del partial[(SET_ID, 'benzamide')]
+        with self.assertRaises(GenerationError) as ctx:
+            generate(1, setup, CANDIDATES, partial, 1)
+        self.assertIn('ligand_data', str(ctx.exception))
+
+    def test_shared_geometry_convenience(self):
+        # One {'centroid', 'radius', 'profile'} dict applies to every
+        # molecule (single-ligand smokes/tests; 02-13 pattern).
+        setup = setup_of('unset', ALL_TYPES, molecules=2, difficulty=1)
+        shared = {'centroid': (1.0, 2.0, 3.0), 'radius': 5.0,
+                  'profile': RICH}
+        payload = generate(3, setup, CANDIDATES, shared, 1)
+        self.assertEqual(len(payload['levels'][0]['molecules']), 2)
+
+    def test_nan_geometry_refused_through_generate(self):
+        setup = setup_of('unset', ALL_TYPES, molecules=1, difficulty=1)
+        bad = {'centroid': (0.0, 0.0, float('nan')), 'radius': 4.0,
+               'profile': RICH}
+        with self.assertRaises(GenerationError):
+            generate(1, setup, CANDIDATES, bad, 1)
+
+    def test_protonation_string_recorded_verbatim(self):
+        payload = self._payload(seed=11, difficulty=1)
+        molecule = payload['levels'][0]['molecules'][0]
+        self.assertEqual(molecule['ligand']['protonation'], 'as-recorded')
+
+    def test_protonation_list_choice_sorted_deterministic(self):
+        rows = [candidate('acetate',
+                          protonation=['zwitterionic', 'standard'])]
+        data = {(SET_ID, 'acetate'):
+                {'centroid': (0.0, 0.0, 0.0), 'radius': 4.0,
+                 'profile': RICH}}
+        setup = setup_of('unset', ALL_TYPES, molecules=1, difficulty=1)
+        seen = set()
+        for seed in range(6):
+            payload = generate(seed, setup, rows, data, 1)
+            value = payload['levels'][0]['molecules'][0]['ligand'][
+                'protonation']
+            self.assertIn(value, ('standard', 'zwitterionic'))
+            seen.add(value)
+            again = generate(seed, setup, rows, data, 1)
+            self.assertEqual(
+                value, again['levels'][0]['molecules'][0]['ligand'][
+                    'protonation'])
+        self.assertGreater(len(seen), 1, 'rng.choice must be able to vary')
+
+    def test_missing_protonation_refused(self):
+        rows = [candidate('acetate', protonation=None)]
+        data = {(SET_ID, 'acetate'):
+                {'centroid': (0.0, 0.0, 0.0), 'radius': 4.0,
+                 'profile': RICH}}
+        setup = setup_of('unset', ALL_TYPES, molecules=1, difficulty=1)
+        with self.assertRaises(GenerationError) as ctx:
+            generate(1, setup, rows, data, 1)
+        self.assertIn('protonation', str(ctx.exception))
+
+    def test_sub_seed_isolation_adding_molecule_keeps_existing_bytes(self):
+        # Generation research §7.1 / PITFALL 11.2: sub-seeds are drawn in
+        # a fixed order with a fixed stride, so adding a molecule to a
+        # level cannot shift the existing molecules' streams.
+        setup_one = setup_of('unset', ALL_TYPES, molecules=1, difficulty=2)
+        setup_two = setup_of('unset', ALL_TYPES, molecules=2, difficulty=2)
+        pool = list(SMALL_ONLY)
+        data = dict(((c['set_id'], c['entry_id']),
+                     {'centroid': (0.0, 0.0, 0.0), 'radius': 4.0,
+                      'profile': RICH}) for c in pool)
+        solo = generate(77, setup_one, pool, data, 2)
+        duo = generate(77, setup_two, pool, data, 2)
+        for level_index in range(2):
+            solo_mol = solo['levels'][level_index]['molecules'][0]
+            identity = (solo_mol['ligand']['set_id'],
+                        solo_mol['ligand']['entry_id'])
+            duo_mol = [m for m in duo['levels'][level_index]['molecules']
+                       if (m['ligand']['set_id'],
+                           m['ligand']['entry_id']) == identity][0]
+            self.assertEqual(ligand_bytes(solo_mol), ligand_bytes(duo_mol),
+                             'level %d molecule %r shifted when a second '
+                             'molecule was added'
+                             % (level_index, identity))
+        # and the two molecules inside one level are distinct picks
+        duo_ids = [(m['ligand']['entry_id'])
+                   for m in duo['levels'][0]['molecules']]
+        self.assertEqual(len(set(duo_ids)), 2)
+
+    def test_size_class_bucket_filter_respected(self):
+        payload = self._payload(seed=13, difficulty=1)   # tier 0: small
+        molecule = payload['levels'][0]['molecules'][0]
+        self.assertEqual(molecule['ligand']['entry_id'] in
+                         ('acetate', 'benzamide', 'toluene'), True)
+
+    def test_size_class_fallback_when_bucket_empty(self):
+        # Supply-side fallback (documented deviation): with only small
+        # candidates, tiers targeting medium/large still generate --
+        # the difficulty dict keeps RECORDING the target size class.
+        data = dict(((c['set_id'], c['entry_id']),
+                     {'centroid': (0.0, 0.0, 0.0), 'radius': 4.0,
+                      'profile': RICH}) for c in SMALL_ONLY)
+        setup = setup_of('unset', ALL_TYPES, molecules=1, difficulty=3)
+        payload = generate(21, setup, SMALL_ONLY, data, 3)
+        self.assertEqual([level['difficulty']['molecule_size_class']
+                          for level in payload['levels']],
+                         ['small', 'medium', 'large'])
+
+    def test_no_candidates_refused(self):
+        setup = setup_of('unset', ALL_TYPES, molecules=1, difficulty=1)
+        with self.assertRaises(GenerationError):
+            generate(1, setup, [], LIGAND_DATA, 1)
+
+    def test_insufficient_distinct_candidates_refused(self):
+        rows = [candidate('acetate')]
+        data = {(SET_ID, 'acetate'):
+                {'centroid': (0.0, 0.0, 0.0), 'radius': 4.0,
+                 'profile': RICH}}
+        setup = setup_of('unset', ALL_TYPES, molecules=2, difficulty=1)
+        with self.assertRaises(GenerationError) as ctx:
+            generate(1, setup, rows, data, 1)
+        self.assertIn('distinct', str(ctx.exception))
+
+    def test_candidates_unsorted_input_resorted_defensively(self):
+        # Candidates come pre-sorted per manifest enumerate_entries order;
+        # generate re-sorts by (set_id, entry_id) defensively -- a
+        # shuffled input must produce the SAME payload bytes.
+        setup = setup_of('unset', ALL_TYPES, molecules=1, difficulty=1)
+        shuffled = list(reversed(CANDIDATES))
+        a = generate(31, setup, CANDIDATES, LIGAND_DATA, 1)
+        b = generate(31, setup, shuffled, LIGAND_DATA, 1)
+        self.assertEqual(json.dumps(a, sort_keys=True),
+                         json.dumps(b, sort_keys=True))
+
+    def test_unset_mode_end_to_end_via_generate(self):
+        # The DEFAULT-ish game (unset, empty allowed, 2 molecules) must
+        # produce solvable levels: non-empty required lists, hydrophobic
+        # never sampled (OQ-5), truthful can_form, solvable grids.
+        setup = setup_of('unset', [], molecules=2, difficulty=2)
+        payload = self._payload(seed=55, setup=setup, difficulty=2)
+        for level in payload['levels']:
+            for molecule in level['molecules']:
+                required = molecule['required']
+                self.assertEqual(required['mode'], 'list')
+                self.assertTrue(required['items'])
+                for item in required['items']:
+                    self.assertNotEqual(item['type'], 'hydrophobic')
+                profile_used = LIGAND_DATA[
+                    (molecule['ligand']['set_id'],
+                     molecule['ligand']['entry_id'])]['profile']
+                slots = molecule['grid']['slots']
+                for item in required['items']:
+                    matching = [s for s in slots
+                                if s['role'] == 'required'
+                                and item['type'] in s['can_form']]
+                    self.assertGreaterEqual(len(matching), item['count'])
+                for slot in slots:
+                    for t in slot['can_form']:
+                        self.assertTrue(capability.aa_capable(
+                            slot['aa'], t, profile_used))
+
+    def test_block_exclusive_infeasible_refused_through_generate(self):
+        setup = setup_of('block_exclusive', ['halogen'], molecules=1,
+                         difficulty=1)
+        no_halogen = profile(has_donor=True, has_acceptor=True)
+        data = dict(((c['set_id'], c['entry_id']),
+                     {'centroid': (0.0, 0.0, 0.0), 'radius': 4.0,
+                      'profile': no_halogen}) for c in CANDIDATES)
+        with self.assertRaises(GenerationError) as ctx:
+            generate(1, setup, CANDIDATES, data, 1)
+        self.assertIn('halogen', str(ctx.exception))
 
 
 if __name__ == '__main__':

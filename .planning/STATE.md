@@ -10,17 +10,17 @@ See: .planning/PROJECT.md (updated 2026-09-05)
 ## Current Position
 
 Phase: 2 of 9 (Headless Game Engine) — In progress
-Plan: 6 of 15 complete (waves 1-3 done; wave 4 done: 02-06 thresholds + detector core — single-plan wave, committed on main)
-Status: DETECT-01/02 underway — 3 of 7 types detect on scripted geometry (h_bond, salt_bridge, hydrophobic); 02-07 adds pi_stacking/cation_pi/halogen/metal on the SAME pipeline (ring/charge/halogen/metal features already precomputed + in the shared cross_pairs set)
-Last activity: 2026-09-06 — Completed 02-06-PLAN.md (thresholds.py constants + detector.py core, TDD, PURE_MODULES=11, 346/346 tests)
+Plan: 7 of 15 complete (waves 1-4 done; wave 5: 02-09 geometry bridge done on exec/02-09 — 02-07 detector pt 2 + 02-08 generator are parallel siblings on their own branches, pending merge)
+Status: Geometry boundary complete — extraction (detector-contract records), bond block + index→id map, ligand bounding sphere, pose helpers; probe-proven on real objects (=== PROBE-GEOM DONE ===, benzamide 16 atoms / 16 bonds)
+Last activity: 2026-09-06 — Completed 02-09-PLAN.md (aamatch/geometry.py cmd-tier bridge, 346/346 tests, purity untouched)
 
-Progress: [█████░░░░░] 40% of Phase 2 (6/15) · [██████▎░░░░] 63% of project (phase 2 of 9; plans 15/24)
+Progress: [█████░░░░░] 47% of Phase 2 (7/15) · [███████████░] 92% of project (phase 2 of 9; plans 22/24)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 15 (Phase 1: 01-01…01-09; Phase 2: 02-01…02-06)
-- Average duration: ~11 min (02-03); 6 min (02-04); ~29 min (02-05); 23 min (02-06)
+- Total plans completed: 16 (Phase 1: 01-01…01-09; Phase 2: 02-01…02-06, 02-09)
+- Average duration: ~11 min (02-03); 6 min (02-04); ~29 min (02-05); 23 min (02-06); 4 min (02-09)
 - Total execution time: —
 
 **By Phase:**
@@ -28,7 +28,7 @@ Progress: [█████░░░░░] 40% of Phase 2 (6/15) · [███�
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 1 | 9/9 ✓ | — | — |
-| 2 | 6/15 | ~8 min (02-02) + ~25 min (02-01 cont.) + 11 min (02-03) + 6 min (02-04) + 29 min (02-05) + 23 min (02-06) | — |
+| 2 | 7/15 | ~8 min (02-02) + ~25 min (02-01 cont.) + 11 min (02-03) + 6 min (02-04) + 29 min (02-05) + 23 min (02-06) + 4 min (02-09) | — |
 
 **Recent Trend:**
 - Last 5 plans: —
@@ -79,6 +79,10 @@ Decisions are logged in PROJECT.md Key Decisions table. Seeded from PROJECT.md a
 - (02-06, recorded) Ligand guanidino center = centroid of the 3 bonded Ns (gate §2.3's "midpoint of 2 Ns" is the protein-side Arg pattern; isolated guanidinium has 3 equivalent Ns) — docstring-documented; revisit = DETECTOR_VERSION event. Ligand phosphate/sulfonate NOT typed (capability doesn't type them — DETECT-04 parity; extension = versioned capability change).
 - (02-06, recorded) One record per (donor heavy, acceptor) with the best-angle attached H (ties -> lowest H id); hydrophobic = one binary-presence record per (AA, ligand) with carbon-set atom_ids; AA donor-H pairing GEOMETRIC (AA_H_ATTACH_MAX=1.5, typing-internal, naming-agnostic for chempy '2HE'); unclassified_aa_atoms = non-H atoms outside side_chain ∪ {N,CA,C,O,OXT,CB} — SMOKE-03 asserts zero on materialized geometry (cap-atom names may extend the known set during 02-13 field verification).
 - (02-06, Rule 2 additions) apply_altloc_policy implemented pure-side (research §7.2 assigned it, plans didn't name it) + fail-closed validation: bond indices out of range / unknown side ('aa'|'lig' only — waters can never silently join) raise ValueError.
+- (02-09) geometry.py = THE cmd-tier geometry boundary (NEVER in PURE_MODULES; Gate D compiles it): extract_game_atoms = ONE iterate_state pass over the ' or '-joined '_aam_'-prefixed objects (explicit space dict, no round(), uppercase ID) → 12-key detector-contract records sorted by (object, id); record['resi'] comes from the resv INT accessor (expression-space resi is a str — blank for SDF, insertion-coded for PDB — contract requires int).
+- (02-09) get_bonds mapping pinned empirically: bond endpoints are 0-based walk positions; whole-object selection ⇒ position i → index_to_id[i+1] (probe showed walk order == index property 1..N). 02-10 remaps bond positions into sorted ligand record order via that map; detector validates fail-closed. Fragment AA atom ids may start at 0 — identity stays (object, id), never assume 1-based ids.
+- (02-09) bounding_sphere filters side=='lig' internally and raises ValueError on ligand-less records (fail-closed: empty bounds would silently size grids / hand NaN to the generator's save guard); world frame == ligand-file frame under Phase-2 baked coords.
+- (02-09, probe rule) pose read-back asserts use tolerance 1e-6 — PyMOL stores coords as float32, translate/untranslate roundtrips accumulate ~1e-7 (research §6.2's stated tolerance).
 
 ### Pending Todos
 
@@ -93,14 +97,14 @@ Decisions are logged in PROJECT.md Key Decisions table. Seeded from PROJECT.md a
 
 ## Session Continuity
 
-Last session: 2026-09-06 (02-06 executor on main — single-plan wave, no worktree needed; prior silent-failure re-run completed cleanly)
-Stopped at: Completed 02-06-PLAN.md — thresholds.py + detector.py core (3 of 7 types), PURE_MODULES=11, 346/346 tests
+Last session: 2026-09-06 (02-09 executor on worktree branch exec/02-09 — wave-5 parallel protocol; do NOT merge/push from the agent)
+Stopped at: Completed 02-09-PLAN.md — aamatch/geometry.py cmd-tier bridge (probe-proven, 346/346 tests, purity untouched)
 Resume file: None
 
 ## Next Actions
 
-- Orchestrator: proceed to wave 5 — 02-07 (detector pt 2): pi_stacking/cation_pi/halogen/metal. Ring features (center/normal/radius), ligand charge groups, halogen C-X donors, and metal atoms are ALREADY precomputed in extract_features and included in the shared cross_pairs set — 02-07 adds _pi_stacking/_cation_pi/_halogen/_metal classifiers + the 7-type detect() wrapper; canonical order = _TYPE_ORDER (INTERACTION_TYPES position); OQ-4 anti-artifact rule binds the ligand-cation case only
-- 02-08 (generator): solvability consumes residue_capabilities + ligand_support + ligand_has_metal; enumerate_entries candidates; DETECT-05 target via largest_entry (-> benzamide)
+- Orchestrator: merge wave 5 in dependency order — 02-07 (detector pt 2) and 02-08 (generator) branches, then exec/02-09 (this branch: geometry bridge; only file aamatch/geometry.py — disjoint from 02-07/02-08 per frontmatter)
+- 02-10 (engine): wire detect() = extract_game_atoms() + ligand_bonds() with the probe-pinned remap — bond position i → index_to_id[i+1] → atom id → position in the (object, id)-sorted ligand records; bounding_sphere() output feeds generate(..., ligand_data, ...) as {'centroid', 'radius'}
 - SMOKE-03 (02-13): assert features['unclassified_aa_atoms'] == 0 per materialized AA; reconcile cap-atom naming by extending the detector's known non-side-chain set if needed (never thresholds)
-- SMOKE-03/04/05 need NO runner changes (marker-deriving run_smoke.sh handles any smoke_NN_name.py)
-- Fixture geometry (benzamide xy-plane pose, acetate tetrahedral methyl) is stable for 02-13 placement scripting and 02-14 E2E poses
+- SMOKE-03/04/05 need NO runner changes (marker-deriving run_smoke.sh handles any smoke_NN_name.py); geometry helpers are import-ready for all three
+- Fixture geometry (benzamide xy-plane pose, acetate tetrahedral methyl) is stable for 02-13 placement scripting and 02-14 E2E poses; pose asserts use 1e-6 tolerance (float32)

@@ -10,17 +10,17 @@ See: .planning/PROJECT.md (updated 2026-09-05)
 ## Current Position
 
 Phase: 2 of 9 (Headless Game Engine) — In progress
-Plan: 3 of 15 complete (wave 2: 02-03 pure manifest module done; next: 02-04 fixtures + MANIFEST.json + SMOKE-02)
-Status: DETECT-03 [GATE] CLOSED (approved 2026-09-06); manifest schema now frozen — 02-04's MANIFEST.json must satisfy aamatch/manifest.py validation exactly
-Last activity: 2026-09-06 — Completed 02-03-PLAN.md (manifest parse/validate/enumerate, 'manifest' kind, PURE_MODULES=8; 211/211 tests)
+Plan: 4 of 15 complete (wave 3: 02-04 fixtures + MANIFEST.json + generalized runner + SMOKE-02 done; next: 02-05 detector constants transcription)
+Status: In progress — data supply PROVEN (SMOKE-02 count-exact on both fixtures; manifest schema frozen and exercised)
+Last activity: 2026-09-06 — Completed 02-04-PLAN.md (benzamide/acetate SDFs, sha256-pinned MANIFEST.json accepted by the 02-03 gate, run_smoke.sh NN-deriving, SMOKE-02 PASS first boot; 211/211 tests)
 
-Progress: [██░░░░░░░░] 20% of Phase 2 (3/15) · [█████░░░░░] 50% of project (phase 2 of 9; plans 12/24)
+Progress: [███░░░░░░░] 27% of Phase 2 (4/15) · [█████░░░░░] 54% of project (phase 2 of 9; plans 13/24)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 12 (Phase 1: 01-01…01-09; Phase 2: 02-01, 02-02, 02-03)
-- Average duration: ~11 min (02-03)
+- Total plans completed: 13 (Phase 1: 01-01…01-09; Phase 2: 02-01, 02-02, 02-03, 02-04)
+- Average duration: ~11 min (02-03); 6 min (02-04)
 - Total execution time: —
 
 **By Phase:**
@@ -28,7 +28,7 @@ Progress: [██░░░░░░░░] 20% of Phase 2 (3/15) · [███�
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 1 | 9/9 ✓ | — | — |
-| 2 | 3/15 | ~8 min (02-02) + ~25 min (02-01 cont.) + 11 min (02-03) | — |
+| 2 | 4/15 | ~8 min (02-02) + ~25 min (02-01 cont.) + 11 min (02-03) + 6 min (02-04) | — |
 
 **Recent Trend:**
 - Last 5 plans: —
@@ -68,11 +68,12 @@ Decisions are logged in PROJECT.md Key Decisions table. Seeded from PROJECT.md a
 - (02-02) PURE_MODULES now 7 (`+ vec3, spatial`); ALLOWED_STDLIB untouched (math already whitelisted; spatial imports only `from .vec3 import dist`; itertools stays out per 02-01). Phase-2 pure-module pattern established: RED test commit → GREEN feat commit → PURE_MODULES registration as test commit.
 - (02-03) Manifest schema FROZEN for 02-04/02-08: 14 required entry keys per 02-RESEARCH-materialization.md §3.2; `file` must be forward-slash package-relative (backslash/absolute/`X:` drive refused — PITFALL 2); counts are real ints (bools refused), bond_order_counts = digit-string → positive int, flags real bools; negative formal_charge_sum legal. manifest_version gate strict `_is_int` + refuse-newer/accept-older like FORMAT_VERSION.
 - (02-03) set_id/entry_id must be non-empty strings (enumerate_entries sort keys — non-strings would TypeError in sorted(), so they are validated with clear refusals); enumerate_entries returns new dicts + set_id sorted by (set_id, entry_id); largest_entry = max heavy_atom_count, ties-first (DETECT-05 selector, no special-cased field). KINDS += 'manifest' (additive; refusal messages unchanged). PURE_MODULES = 8. Empty sets list allowed (supply emptiness is the generator's concern).
+- (02-04) Fixtures are SCRIPT-BUILT (tmp/build_fixtures.py, git-ignored): SDF counts consistent by construction; manifest counts derived from the same lists; sha256 taken over written bytes in the same run — NEVER hand-edit an SDF after manifest creation, regenerate instead. Benzamide carries the script-derived counts (16 atoms/16 bonds {"1":12,"2":4}), not the plan sketch (11 bonds omitted the 5 ring C-H); acetate matches its sketch exactly. Both ligands flag-free (metal/halogen false) per DETECT-03 policy; license=''/provenance={} are Phase-8 placeholders; set_id 'demo-dev-1' tier 'easy' = development set (not curated demo data).
+- (02-04) run_smoke.sh generalization CLOSED the 02-02 pending todo: SMOKE-NN derived from basename via sed (empty -> 01 legacy fallback); optional TIMEOUT arg (default 120); SMOKE-01 recipe unchanged in behavior. SMOKE-02 shape frozen for reuse: pure container parsed INSIDE PyMOL, per-entry private _aam_tmp* object with delete-in-finally, get_bonds order-MULTISET comparison (0-based index caveat irrelevant — orders only), iterate with explicit space dict and no round() in the expression, element-scan cross-check of metal/halogen flags, final get_names('objects') leak check.
 
 ### Pending Todos
 
 - Keep `aamatch/` pycache-free (live plugin-path loading runs from the repo; human cleans after local test runs).
-- Generalize `smoke/run_smoke.sh` marker grep beyond SMOKE-01 when Phase 2 smokes arrive.
 - (Optional) Annotate 01-RESEARCH-plugin-install.md §1.3/§3.1: `load()` return ≠ `loaded` property; `__file__` unusable in `-cq` scripts.
 
 ### Blockers/Concerns Carried Forward
@@ -83,12 +84,12 @@ Decisions are logged in PROJECT.md Key Decisions table. Seeded from PROJECT.md a
 
 ## Session Continuity
 
-Last session: 2026-09-06 (02-03 executed directly on main — single-plan wave; TDD RED/GREEN commits 0e6c059, 0636d08, 8ab01f7, 771b71b, c9629cb)
-Stopped at: Completed 02-03-PLAN.md — 02-03-SUMMARY.md written, full suite 211/211 green
+Last session: 2026-09-06 (02-04 executed in worktree tmp/exec-02-04 on branch exec/02-04 — wave-3 parallel protocol; task commits 6a65dc8, fe7fb92, 4962551)
+Stopped at: Completed 02-04-PLAN.md — 02-04-SUMMARY.md written, SMOKE-01+SMOKE-02 both PASS via generalized runner, full suite 211/211 green
 Resume file: None
 
 ## Next Actions
 
-- Orchestrator: proceed to 02-04 (fixture ligands + aamatch/data/MANIFEST.json + generalized smoke runner + SMOKE-02) — MANIFEST.json MUST satisfy the frozen aamatch/manifest.py schema (14 keys, digit-string bond_order_counts keys, forward-slash relative 'file')
-- Then waves per plan frontmatter; 02-08 consumes enumerate_entries as candidate list; DETECT-05 target via largest_entry
-- Detector plans 02-06/07 consume `spatial.cross_pairs` + `vec3` per-candidate math; capability/threshold plans transcribe from docs/DETECTION_THRESHOLDS.md
+- Orchestrator: merge exec/02-04 back in wave-3 dependency order, then proceed per plan frontmatter — 02-05..02-07 (detector/capability constants transcribed row-by-row from docs/DETECTION_THRESHOLDS.md), 02-08 (generator consumes enumerate_entries over aamatch/data/MANIFEST.json; DETECT-05 target via largest_entry -> benzamide)
+- SMOKE-03/04/05 need NO runner changes (marker-deriving run_smoke.sh handles any smoke_NN_name.py)
+- Fixture geometry (benzamide xy-plane pose, acetate tetrahedral methyl) is stable for 02-13 placement scripting and 02-14 E2E poses

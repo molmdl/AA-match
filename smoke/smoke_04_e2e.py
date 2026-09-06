@@ -441,7 +441,57 @@ if payload is not None and records_a is not None:
 else:
     check('part B rotation', False, 'skipped: part A did not complete')
 
-# (Part C appended by Task 3.)
+# ============================ PART C: RESET REPLAY + TEARDOWN =============
+if registry is not None:
+    try:
+        engine.reset_to_grid()
+        molecule = registry['molecules'][0]
+        offset = molecule['offset']
+        worst = 0.0
+        reset_fail = []
+        for slot in mol_payload['grid']['slots']:
+            target = placement.effective_position(
+                slot['grid_pose']['position'], offset)
+            centroid = geometry.centroid_of(
+                molecule['slots'][slot['slot_id']][0])
+            drift = max(abs(centroid[i] - target[i]) for i in range(3))
+            worst = max(worst, drift)
+            if drift > TOL:
+                reset_fail.append('%s(%.2g)' % (slot['slot_id'], drift))
+        check('reset_to_grid restores grid poses', not reset_fail,
+              'worst=%.2g tol=%.0e%s'
+              % (worst, TOL,
+                 ' FAIL: ' + ', '.join(reset_fail) if reset_fail else ''))
+
+        records_c = engine.detect()
+        pi_c = [r for r in records_c if r['type'] == 'pi_stacking']
+        check('reset clears the interaction', not pi_c,
+              'records=%d pi=%d (grid is beyond the gap)'
+              % (len(records_c), len(pi_c)))
+        score_c, formed_c = engine.score_current(0, 0, required,
+                                                 records=records_c)
+        check('score back to zero after reset',
+              score_c == 0.0 and formed_c == [],
+              'score=%r formed=%r' % (score_c, formed_c))
+
+        result = placement.cleanup_game_objects()
+        post_names = list(cmd.get_names('objects'))
+        check('cleanup count',
+              result['deleted'] == 1 + n * n,
+              'deleted=%d want %d' % (result['deleted'], 1 + n * n))
+        check('teardown leaves scene pre-game',
+              post_names == pre_names and not any(
+                  n0.startswith(geometry.GAME_PREFIX)
+                  for n0 in post_names),
+              'post=%s' % post_names)
+    except Exception:
+        traceback.print_exc()
+        check('part C reset/teardown', False,
+              'raised (see traceback above)')
+        placement.cleanup_game_objects()   # never leave game objects
+else:
+    check('part C reset/teardown', False,
+          'skipped: part A did not complete')
 
 # --- Verdict marker (the SOLE verdict carrier) -------------------------------
 print('=== SMOKE-04 %s ==='

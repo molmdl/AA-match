@@ -127,6 +127,13 @@ def _set(**overrides):
     return lambda entry: entry.update(overrides)
 
 
+def _make_remover(key):
+    """Entry mutator for assert_entry_refused: remove one key."""
+    def _remove(entry):
+        entry.pop(key)
+    return _remove
+
+
 class _EntryRefusalMixin(object):
     """Shared helper: mutate entry 0 of the default set, expect FormatError
     whose message names the offending fragments (set/entry/field)."""
@@ -413,19 +420,12 @@ class TestEntryValidation(_EntryRefusalMixin, unittest.TestCase):
 
     def test_file_windows_drive_refused(self):
         self.assert_entry_refused(_set(file='C:/demos/mol-001.sdf'),
-                                  'file', 'absolute')
+                                  'file', 'Windows drive')
 
     def test_file_must_be_nonempty_string(self):
         for bad in ('', 42, None):
             with self.subTest(file=bad):
                 self.assert_entry_refused(_set(file=bad), 'file')
-
-
-def _make_remover(key):
-    """Entry mutator for assert_entry_refused: remove one key."""
-    def _remove(entry):
-        entry.pop(key)
-    return _remove
 
 
 # --------------------------------------------------------------------------

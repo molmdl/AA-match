@@ -282,6 +282,17 @@ class TestGeneratorRegistration(unittest.TestCase):
             '(unregistered pure modules are silently ungated)')
 
 
+class TestGameStateRegistration(unittest.TestCase):
+    """Plan 02-10 Task 2: the scoring/runtime-state module joins the
+    gated pure modules (same registration-pin pattern as the generator)."""
+
+    def test_game_state_registered_in_pure_modules(self):
+        self.assertIn(
+            'game_state', PURE_MODULES,
+            'aamatch/game_state.py must be registered in PURE_MODULES '
+            '(unregistered pure modules are silently ungated)')
+
+
 class TestNegativeControl(unittest.TestCase):
     """Proves Gate A can FAIL, and that docstring prose is immune (P2)."""
 

@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-09-05)
 ## Current Position
 
 Phase: 2 of 9 (Headless Game Engine) — In progress
-Plan: 9 of 16 complete (waves 1-6: 02-01..02-09 + 02-07 split part 1 + 02-08 generator — both merged from their worktree branches by the orchestrator)
-Status: Detector 5 of 7 types (pi_stacking + cation_pi merged; halogen/metal/canonical = 02-07b next) + pure seeded generator complete (423/423 tests, PURE_MODULES = 12); wave 7 = 02-07b / 02-10 / 02-12 / 02-13
-Last activity: 2026-09-06 — 02-07 (detector part 2a, 361/361 → merged) + 02-08 (generator, 423/423 → merged); 02-08 deviation 3 ligand_data contract binds 02-13/02-14
+Plan: 9 of 16 complete on main (waves 1-6 merged); wave 7 in flight: 02-07b DONE on branch exec/02-07b (awaiting orchestrator merge), 02-10 / 02-12 / 02-13 parallel
+Status: **Detector COMPLETE — all 7 types via detect()** (halogen + metal + canonical surface, 463/463 on branch) + pure seeded generator complete (PURE_MODULES = 12)
+Last activity: 2026-09-06 — 02-07b executor (detector part 2b) finished on exec/02-07b | 2026-09-06 — 02-07 + 02-08 merged
 
-Progress: [█████▌░░░░] 56% of Phase 2 (9/16) · [███████████░] 92% of project (phase 2 of 9; plans 24/25)
+Progress: [██████░░░░] 63% of Phase 2 (10/16 pending merge) · [███████████░] 92% of project (phase 2 of 9; plans 24/25)
 
 ## Performance Metrics
 
@@ -95,6 +95,10 @@ Decisions are logged in PROJECT.md Key Decisions table. Seeded from PROJECT.md a
 - (02-07) cation_pi record contract final: roles cation/ring per direction, metrics {d_center, offset, direction} with direction ∈ {'aa_cation_over_lig_ring', 'aa_ring_under_lig_cation'} (D4 both directions; distance <= 6.0 inclusive, offset < 2.0 strict — transcribed from the thresholds row comments).
 - (02-07) detect_part1 emits 5 of 7 types; ligand ammonium groups carry a 'substituents' feature annotation (non-H neighbor points) consumed only by the veto — feature extension, not a typing change; plan case-(e) prose inversion recorded as a Rule-1 deviation in 02-07-SUMMARY.md (gate doc is authoritative).
 - (02-07) Ring-type tests always scope asserts with _of_type: scripted aromatic ligand ring carbons qualify as hydrophobes, so an unscoped 'no records' assert can be faked by a hydrophobic hit; veto proofs use the perpendicular/parallel CONTROL PAIR pattern.
+- (02-07b) **detect() = THE complete 7-type surface** (DETECT-01/02 done): shared `_pipeline` preamble + `_part1_records`; detect_part1 kept byte-identical 5-of-7 for 02-06..02-08 consumers. Halogen row 6: structurally (AA capability-named acceptor) × (ligand typed C-X); C-F has NO candidate (typing), AA-side halogen unrepresentable; windows INCLUSIVE tuples from thresholds; donor upper bound 195 inert on acos∈[0,180].
+- (02-07b) Row-6 Y anchor (acceptor bond partner) paired GEOMETRICALLY: nearest non-H same-object atom within `HALOGEN_Y_ATTACH_MAX=2.0` (typing-internal epsilon, Rule-2 like AA_H_ATTACH_MAX; no partner → no candidate, fail-closed) — AA fragments have no bond block, so Y cannot come from connectivity. Recorded as new typing policy in detector docstring.
+- (02-07b) Metal row 7: distance-only ≤3.0, chelator = capability acceptors only; GATED on `capability.ligand_has_metal` before enumeration (spy-pinned: metal-free ligand → `_metal_records` call_count==0). MET exclusion per §3.5 falls out of `acceptors=()` — no special-case code anywhere.
+- (02-07b) Record contract FINAL: halogen {d_ax, donor_angle_deg, acc_angle_deg} roles acceptor/donor lig ids [C,X sorted]; metal {d_metal} roles chelator/metal. detect() output closed-set: len(INTERACTION_TYPES)==7 + canonical sort (enum position, aa object, aa ids, lig ids) + AA-permutation determinism — 438→463 green.
 
 ### Pending Todos
 
@@ -109,14 +113,16 @@ Decisions are logged in PROJECT.md Key Decisions table. Seeded from PROJECT.md a
 
 ## Session Continuity
 
-Last session: 2026-09-06 (wave-6 executors: 02-07 on exec/02-07 [kimi-k3, first silent-failure-free run], 02-08 on exec/02-08; both merged to main by orchestrator)
-Stopped at: Waves 1-6 complete — detector 5/7 types + pure seeded generator; wave 7 next (02-07b / 02-10 / 02-12 / 02-13)
+Last session: 2026-09-06 (wave-7 executor: 02-07b on exec/02-07b [kimi-k3] — COMPLETE, commits 7752fb1/c582405/a5caf41 + docs commit; 02-10/02-12/02-13 parallel on their branches)
+Stopped at: 02-07b done on branch (detector all 7 types, 463/463) — orchestrator merges wave-7 branches in dependency order
 Resume file: None
 
 ## Next Actions
 
-- Orchestrator: wave 7 = 02-07b / 02-10 / 02-12 / 02-13 (parallel worktrees; compact plan-file prompts; kimi-k3 executor), then wave 8 = 02-11 / 02-14, wave 9 = 02-15
+- Orchestrator: merge wave-7 branches in dependency order — **exec/02-07b first (touches only tests/test_detector.py + aamatch/detector.py + planning docs; 02-10/02-13 consume its detect() surface)** — then wave 8 = 02-11 / 02-14, wave 9 = 02-15
 - **02-13/02-14 MUST pass chemistry profiles in ligand_data (02-08 deviation 3):** per loaded ligand, `profile = capability.ligand_profile(lig_atoms, lig_bonds)` merged into the geometry dict next to bounding_sphere's {'centroid', 'radius'} — geometry-only ligand_data degrades fail-closed and unset/block_exclusive modes refuse
+- **02-10 scoring binds to `detector.detect()`** (NOT detect_part1): presence-based fraction scoring consumes record types; the record contract is final for all 7 types (halogen {d_ax, donor_angle_deg, acc_angle_deg}; metal {d_metal}; roles pinned in 02-07b-SUMMARY)
+- **02-13 SMOKE-03 note (new, from 02-07b):** a materialized AA fragment whose acceptor atom sits > 2.0 A from every non-H same-object atom is malformed — `HALOGEN_Y_ATTACH_MAX` doubles as a fragment sanity bound alongside the unclassified-atoms assertion
 - 02-10 (engine): wire detect() = extract_game_atoms() + ligand_bonds() with the probe-pinned remap — bond position i → index_to_id[i+1] → atom id → position in the (object, id)-sorted ligand records; bounding_sphere() output + ligand_profile feed generate(..., ligand_data, ...) keyed by (set_id, entry_id)
 - SMOKE-03 (02-13): assert features['unclassified_aa_atoms'] == 0 per materialized AA; reconcile cap-atom naming by extending the detector's known non-side-chain set if needed (never thresholds)
 - SMOKE-03/04/05 need NO runner changes (marker-deriving run_smoke.sh handles any smoke_NN_name.py); geometry helpers are import-ready for all three

@@ -10,17 +10,17 @@ See: .planning/PROJECT.md (updated 2026-09-05)
 ## Current Position
 
 Phase: 2 of 9 (Headless Game Engine) — In progress
-Plan: 13 of 16 complete on main — **wave 7 COMPLETE** (02-07b + 02-10 + 02-12 + 02-13 all merged; waves 1-6 before that)
-Status: **Detector COMPLETE — all 7 types via detect()** (DETECT-01/02 done) + pure seeded generator + score/GameState + >=100-seed invariant suite (criterion 3 SATISFIED) + cmd-tier placement with SMOKE-03 PASS 28/28 (ligand_data profile contract PROVEN end-to-end); PURE_MODULES = 13
-Last activity: 2026-09-06 — 02-13 (placement.py + SMOKE-03) merged; wave 8 = 02-11 / 02-14 next
+Plan: 14 of 16 — **02-14 COMPLETE (this worktree, exec/02-14; orchestrator merges after wave 8)**; wave 7 = 02-07b/02-10/02-12/02-13 merged before that; 02-11 sibling parallel branch
+Status: **ENGINE COMPLETE — SMOKE-04 PASS 26/26 (E2E + rotation invariance + spec-replay reset; ROADMAP criterion 4 GREEN)** + detector COMPLETE (7 types) + pure seeded generator + score/GameState + >=100-seed invariant suite (criterion 3 SATISFIED); PURE_MODULES = 13 (engine.py is CMD tier, never registered)
+Last activity: 2026-09-06 — 02-14 (engine.py + SMOKE-04) executed; wave 9 = 02-15 last
 
-Progress: [████████░░] 81% of Phase 2 (13/16) · [███████████░] 92% of project (phase 2 of 9; plans 26/25)
+Progress: [█████████░] 88% of Phase 2 (14/16) · [███████████░] 93% of project (phase 2 of 9; plans 27/28)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 19 (Phase 1: 01-01…01-09; Phase 2: 02-01…02-09, 02-13)
-- Average duration: ~11 min (02-03); 6 min (02-04); ~29 min (02-05); 23 min (02-06); 4 min (02-09); 11 min (02-07); 17 min (02-08); ~20 min (02-13)
+- Total plans completed: 20 (Phase 1: 01-01…01-09; Phase 2: 02-01…02-09, 02-13, 02-14)
+- Average duration: ~11 min (02-03); 6 min (02-04); ~29 min (02-05); 23 min (02-06); 4 min (02-09); 11 min (02-07); 17 min (02-08); ~20 min (02-13); 16 min (02-14)
 - Total execution time: —
 
 **By Phase:**
@@ -28,7 +28,7 @@ Progress: [████████░░] 81% of Phase 2 (13/16) · [███�
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 1 | 9/9 ✓ | — | — |
-| 2 | 10/16 (02-12 pending merge) | ~8 min (02-02) + ~25 min (02-01 cont.) + 11 min (02-03) + 6 min (02-04) + 29 min (02-05) + 23 min (02-06) + 4 min (02-09) + 11 min (02-07) + 17 min (02-08) + 45 min (02-12) | — |
+| 2 | 11/16 (02-11/02-12 bookkeeping per wave-7/8 merges) | ~8 min (02-02) + ~25 min (02-01 cont.) + 11 min (02-03) + 6 min (02-04) + 29 min (02-05) + 23 min (02-06) + 4 min (02-09) + 11 min (02-07) + 17 min (02-08) + 45 min (02-12) + ~20 min (02-13) + 16 min (02-14) | — |
 
 **Recent Trend:**
 - Last 5 plans: —
@@ -106,6 +106,10 @@ Decisions are logged in PROJECT.md Key Decisions table. Seeded from PROJECT.md a
 - (02-13) placement.py = the cmd-tier materializer (NEVER in PURE_MODULES): materialize(payload, level_index=0) builds ONE level (fresh `_aam_lig`/`_aam_aa` names — never load-into-existing), sentinel-tags every atom (segi='AAM', b=-999.0), bakes AAs to effective poses (grid_pose + placement.offset, camera=0, world frame); registry = slot_id -> (object, sorted ids) + pre_game_names snapshot. reset_to_grid = spec REPLAY re-bake (never matrix_reset — probe-proven reverter); cleanup_game_objects = prefix-only deletion. Banned-call docstring list binds 02-15's audit.
 - (02-13) SMOKE-03 field-verified capability atom naming: materialized chempy fragments classify with unclassified_aa_atoms == 0 against the live detector — NO reconciliation edits to detector.py/_KNOWN_NON_SIDE_CHAIN or capability.py were needed (the pre-authorized escape hatch stayed unused, a STRONGER outcome than planned).
 - (02-13) SMOKE-03 candidates are restricted to the benzamide row by construction: block_exclusive (correctly) refuses checked-but-unsupported types on aromatic-less molecules, so passing both manifest entries would make the smoke seed-fragile; diversity proofs stay with SMOKE-02.
+- (02-14) engine.py = the Phase-2 composition root (CMD tier, never PURE_MODULES): new_game / materialize / place_aa / reset_to_grid / detect / score_current / confirm; module-level runtime (_payload/_registry/_game) with the state-split rule (spec = source of truth; runtime in GameState; PyMOL holds atoms + sentinels only); detect() wires extract_game_atoms + the probe-pinned (object, id)-keyed bond remap -> detector.detect (7-type, NOT detect_part1)
+- (02-14) Scripted aromatic placement needs an EXPLICIT orientation step: a pure translate preserves orientation and chempy fragments have no guaranteed ring-plane orientation (seed-42 TYR natural line angle 79.606 deg — outside BOTH the <=30-deg parallel and >=60-deg perpendicular windows); SMOKE-04 bakes a Rodrigues alignment (transform_baked about the ring center) before the 4.5 A-above-ring-center translate. Any Phase-3 pose scripting or pose-hint feature must do likewise.
+- (02-14) Rigid-transform invariance asserts: structural record identity (types/objects/ids/roles) byte-equal EXACTLY + numeric metric drift inside a documented float32 budget (SMOKE-04 pins 5e-6 A / 3e-4 deg; observed 2.6e-9 / 0.0) — a uniform 1e-6 metric assert is not float32-realizable for angles.
+- (02-14) new_game carries an optional candidates override (deterministic smoke candidate restriction, SMOKE-03 precedent); default path parses MANIFEST.json with the demo_set_id filter. Every engine op runs headless with count/scan asserts; SMOKE-04 26/26 PASS = ROADMAP Phase-2 criterion 4 ([HEADLESS] E2E) GREEN.
 
 ### Pending Todos
 
@@ -120,17 +124,15 @@ Decisions are logged in PROJECT.md Key Decisions table. Seeded from PROJECT.md a
 
 ## Session Continuity
 
-Last session: 2026-09-06 (wave-7 executors on kimi-k3: 02-07b / 02-10 / 02-12 / 02-13 — all four COMPLETE, all merged by orchestrator)
-Stopped at: Wave 7 COMPLETE (13/16) — wave 8 next = 02-11 / 02-14, then wave 9 = 02-15
+Last session: 2026-09-06 (02-14 executor: engine.py + SMOKE-04 PASS 26/26, 16 min; sibling 02-11 ran in its own worktree — orchestrator merges wave 8)
+Stopped at: 02-14 COMPLETE (14/16 plans executed) — wave 9 = 02-15 (perf smoke + AST audit + detector-version stamp)
 Resume file: None
 
 ## Next Actions
 
-- Orchestrator: wave 8 = 02-11 (detector invariance/sensitivity suite) + 02-14 (engine + SMOKE-04) in parallel worktrees, then wave 9 = 02-15 (perf smoke + AST audit + detector-version stamp)
-- **02-14 (SMOKE-04) reuses SMOKE-03's ligand_data pattern verbatim:** temp _aam_tmp load -> extract_game_atoms -> bounding_sphere + ligand_profile over remapped get_bonds -> {'centroid','radius','profile'} (02-08 deviation 3 contract, PROVEN end-to-end by SMOKE-03); scripted placement consumes translate_to/transform_baked; rotation-invariance Part B bakes whole-scene rotates with camera=0
-- **02-14 (engine) wires detect() = extract_game_atoms() + ligand_bonds()** with the probe-pinned remap — bond position i → index_to_id[i+1] → atom id → position in the (object, id)-sorted ligand records; bounding_sphere() + ligand_profile feed generate(..., ligand_data, ...) keyed by (set_id, entry_id); productionize the smoke-local ligand_data build + bond remap helpers; scoring binds to detector.detect() (NOT detect_part1 — the 7-type surface)
-- **02-13 SMOKE-03 note for 02-11/02-14:** a materialized AA fragment whose acceptor atom sits > 2.0 A from every non-H same-object atom is malformed — `HALOGEN_Y_ATTACH_MAX` doubles as a fragment sanity bound alongside the unclassified-atoms assertion
-- **Banned-call audit for 02-15:** `grep matrix_reset|get_object_ttt aamatch/` must hit only placement.py's docstring prohibition list
+- Orchestrator: wave 9 = 02-15 (SMOKE-05 perf + banned-call AST audit + detector-version stamp) — the LAST Phase-2 plan
+- **02-15 banned-call audit:** `grep -n "matrix_reset\|get_object_ttt" aamatch/ smoke/` must hit only DOCSTRING prohibition mentions — placement.py's list plus TWO prose mentions in engine.py docstrings (`(never matrix_reset)`); NO call sites anywhere (Gate-C prose rule: inspect, never blind-fail)
+- **02-15 (SMOKE-05) inherits the proven shape:** engine/geometry surfaces are import-ready (runner handles any smoke_NN_name.py); largest_entry selector from manifest.py; perf budget extract+detect < 1000 ms on the largest Phase-2 bundled molecule
+- **Phase 3 spawn notes:** Confirm handler = engine.confirm(...) wrapper; pose scripting/hints must include the explicit baked ring-alignment step (02-14 decision: fragments have no guaranteed orientation); Reset = engine.reset_to_grid()
+- Fixture geometry (benzamide xy-plane pose, acetate tetrahedral methyl) is stable for E2E poses; pose asserts use 1e-6 tolerance (float32); metric-drift asserts use the SMOKE-04 float32 budget (5e-6 A / 3e-4 deg, printed)
 - SMOKE-03 reconciler result: materialized chempy fragments classify 100% against capability atom naming (unclassified_aa_atoms == 0) — _KNOWN_NON_SIDE_CHAIN untouched; the pre-authorized detector.py escape hatch stayed UNUSED
-- SMOKE-03/04/05 need NO runner changes (marker-deriving run_smoke.sh handles any smoke_NN_name.py); geometry helpers are import-ready for all three
-- Fixture geometry (benzamide xy-plane pose, acetate tetrahedral methyl) is stable for 02-14 E2E poses; pose asserts use 1e-6 tolerance (float32)

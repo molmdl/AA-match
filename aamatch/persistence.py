@@ -33,7 +33,8 @@ from .setup_state import validate_state
 
 AAM_MAGIC = "AAMATCH"
 FORMAT_VERSION = 1
-KINDS = ('setup', 'level_spec', 'game', 'checkpoint')
+# 'manifest': bundled demo-data manifest (Phase 2); see aamatch/manifest.py
+KINDS = ('setup', 'level_spec', 'game', 'checkpoint', 'manifest')
 
 
 class FormatError(ValueError):

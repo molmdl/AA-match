@@ -43,7 +43,8 @@ class TestModuleContract(unittest.TestCase):
     def test_constants(self):
         self.assertEqual(AAM_MAGIC, 'AAMATCH')
         self.assertEqual(FORMAT_VERSION, 1)
-        self.assertEqual(KINDS, ('setup', 'level_spec', 'game', 'checkpoint'))
+        self.assertEqual(KINDS, ('setup', 'level_spec', 'game',
+                                 'checkpoint', 'manifest'))
 
     def test_format_error_is_value_error(self):
         self.assertTrue(issubclass(FormatError, ValueError))

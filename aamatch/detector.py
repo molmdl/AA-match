@@ -1,4 +1,5 @@
-"""aamatch.detector -- pure-layer detection pipeline (plans 02-06/02-07).
+"""aamatch.detector -- pure-layer detection pipeline (plans 02-06/02-07/
+02-07b). Complete 7-type surface via detect() (DETECT-01/DETECT-02).
 
 Layer: PURE. Consumes plain atom records + the ligand bond block, returns
 plain canonical result records. The detector NEVER reads PyMOL state:
@@ -31,11 +32,13 @@ gate document on 2026-09-06; the docstring is the policy carrier):
    generator capability and detector typing consistent, so fail-closed
    cannot create unsolvable levels.
 4. STATE 1 ONLY / caller-owned frames: see the header above.
-5. METAL GATING PREVIEW (02-07b finishes the type): metal coordination
-    will run only when a ligand-side element is in the approved list
-   (capability.METAL_ELEMENTS / capability.ligand_has_metal, gate §5
-   item 5) so the generator can never require metal on a metal-free
-   ligand. Ligand metal atoms are precomputed here as features.
+5. METAL GATING (gate §5 item 5, 02-07b): metal coordination runs ONLY
+   when a ligand-side atom's element is in the approved list
+   (capability.METAL_ELEMENTS / capability.ligand_has_metal) so the
+   generator can never require metal on a metal-free ligand. Ligand
+   metal atoms are precomputed as features; detect() consults the
+   capability gate BEFORE enumerating any metal pair, mirroring the
+   generator's required-type selection.
 6. COVALENT EXCLUSIONS. Enumeration is strictly CROSS-SIDE (aa x lig), so
    an intra-side covalent pair is unrepresentable by construction; the
    AA side carries no bond block, and identical atom ids are excluded.
@@ -75,6 +78,21 @@ home, gate §4.2; no parallel matrix lives here):
   anchor, so no terminal pair is definable from the bond block; the
   symmetric centroid of the bonded Ns is used. Revisiting this is a
   DETECTOR_VERSION event (gate §4.7), never a silent edit.
+- HALOGEN ACCEPTOR-SIDE Y ANCHOR (row 6, 02-07b): the acceptor angle
+  ∠(Y-A···X) reads the acceptor's heavy-atom bond partner "Y". AA
+  fragments carry no bond block, so Y is paired GEOMETRICALLY: the
+  nearest same-object non-H atom within HALOGEN_Y_ATTACH_MAX = 2.0 A
+  (typing-internal epsilon like AA_H_ATTACH_MAX; C-O/N/S single bonds
+  are <= ~1.8 A, so 2.0 carries margin; a heavy neighbor beyond the
+  bond partner cannot sit that close in sane fragments). No Y partner
+  within the epsilon -> no angle -> NO candidate (fail-closed, never
+  guessed). This ride-along is computed per-candidate from positions
+  only.
+- METAL CHELATORS (row 7, 02-07b): chelating atoms = the capability
+  acceptors (side-chain N/O/S, D1). distance-only (BINANA's adopted
+  rationale); one record per (chelator atom, ligand metal) contact.
+  Enumeration is gated on capability.ligand_has_metal -- a metal-free
+  ligand produces zero candidates and the branch is never run.
 - ONE RECORD PER CONTACT: h_bond emits one record per (donor heavy,
    acceptor) pair, represented by the attached H with the largest
    D-H...A angle (ties -> lowest H id) -- two Hs on one donor (LYS NZ)
@@ -125,8 +143,8 @@ PIPELINE (detection research §5.2; the DETECT-05 two-level pruning):
 detect_part1 runs five of the seven types (h_bond, salt_bridge,
 pi_stacking, cation_pi, hydrophobic) through the shared pipeline; the
 02-07 split (2026-09-06) put the two ring-geometry types here, and
-plan 02-07b adds halogen + metal on the same features/candidates and
-wraps the full 7-type detect().
+plan 02-07b added halogen + metal on the same features/candidates and
+wrapped the full 7-type surface as detect().
 
 Dependency direction: math + pure vec3/spatial/capability/thresholds +
 setup_state.INTERACTION_TYPES (the ONE enum home, canonical type order).
@@ -141,6 +159,7 @@ from .vec3 import (add, angle_at, cross, dist, norm_squared,
 from .spatial import cross_pairs
 from .capability import (
     AA_RESIDUES,
+    ligand_has_metal,
     METAL_ELEMENTS,
     _adjacency,
     _all_single_bonds,
@@ -158,7 +177,9 @@ from .thresholds import (
     AA_PREFILTER_MARGIN,
     CATIONPI_D_MAX,
     CATIONPI_OFFSET_MAX,
+    HALOGEN_ACC_ANGLE_DEG,
     HALOGEN_D_MAX,
+    HALOGEN_DONOR_ANGLE_DEG,
     HBOND_ANGLE_MIN_DEG,
     HBOND_D_MAX,
     HYDRO_D_MAX,
@@ -177,6 +198,12 @@ _TYPE_ORDER = dict((t, i) for i, t in enumerate(INTERACTION_TYPES))
 # AA-side donor-H pairing epsilon (typing-internal, see docstring item on
 # geometric pairing; X-H covalent <= ~1.36 A S-H, so 1.5 carries margin).
 AA_H_ATTACH_MAX = 1.5
+
+# Row-6 acceptor-side bond-partner ("Y") pairing epsilon (typing-internal,
+# 02-07b): heavy-atom single bonds C-O/C-N/C-S are <= ~1.8 A, so 2.0
+# carries margin; a second heavy neighbor cannot sit that close in a sane
+# fragment. NOT a gate threshold.
+HALOGEN_Y_ATTACH_MAX = 2.0
 
 # Origin vertex for angle_at()-based vector angles (normal-vs-normal).
 _ORIGIN = (0.0, 0.0, 0.0)
@@ -948,6 +975,96 @@ def _cation_pi_records(features, near_objs):
     return records
 
 
+def _halogen_y_partner(acceptor_rec, atoms):
+    """Row-6 Y anchor: the acceptor's heavy-atom bond partner, paired
+    geometrically (no AA bond block) as the nearest same-object non-H
+    atom within HALOGEN_Y_ATTACH_MAX; None when none is in range
+    (fail-closed -- the angle is never guessed)."""
+    a_pos = _pos(acceptor_rec)
+    best = None
+    best_d = HALOGEN_Y_ATTACH_MAX
+    for rec in atoms:
+        if rec is acceptor_rec or _elem(rec) == 'H':
+            continue
+        d = dist(a_pos, _pos(rec))
+        if d <= best_d:
+            best_d = d
+            best = rec
+    return best
+
+
+def _halogen_records(features, near_objs, lig_ctx, atom_pairs):
+    """Row 6: A...X <= HALOGEN_D_MAX AND donor angle ∠(A···X-C) at X in
+    HALOGEN_DONOR_ANGLE_DEG AND acceptor angle ∠(Y-A···X) at A in
+    HALOGEN_ACC_ANGLE_DEG -- windows INCLUSIVE (thresholds row-6
+    transcription). Enumeration is STRUCTURALLY one-directional: (AA
+    acceptor O/N/S by capability name) x (ligand C-X donor, X in
+    {Cl, Br, I}; C-F excluded at TYPING -- no candidate exists), so an
+    AA-side halogen donor is unrepresentable (research §4 side rule).
+    Windows are applied to the acos-computed angle in [0, 180]; the
+    donor upper bound 195 mirrors 135 about 180 (row-6 implementer
+    note)."""
+    contexts = _aa_contexts(features, near_objs)
+    donors_by_x = {}
+    for (x_idx, x_rec), (c_idx, c_rec) in features['lig']['halogen_donors']:
+        donors_by_x[x_idx] = c_rec
+    records = []
+    for aa_rec, lig_idx, lig_rec, d in atom_pairs:
+        if d <= MIN_DIST or d > HALOGEN_D_MAX:
+            continue
+        if lig_idx not in lig_ctx['halogen_idx']:
+            continue
+        ctx = contexts.get(aa_rec['object'])
+        if ctx is None or aa_rec['name'] not in ctx['acceptor_names']:
+            continue
+        carbon = donors_by_x[lig_idx]          # the X's C partner, typed
+        y_partner = _halogen_y_partner(
+            aa_rec, features['aa'][aa_rec['object']]['atoms'])
+        if y_partner is None:
+            continue
+        a_pos = _pos(aa_rec)
+        x_pos = _pos(lig_rec)
+        donor_angle = math.degrees(angle_at(a_pos, x_pos, _pos(carbon)))
+        if not (HALOGEN_DONOR_ANGLE_DEG[0] <= donor_angle
+                <= HALOGEN_DONOR_ANGLE_DEG[1]):
+            continue
+        acc_angle = math.degrees(angle_at(_pos(y_partner), a_pos, x_pos))
+        if not (HALOGEN_ACC_ANGLE_DEG[0] <= acc_angle
+                <= HALOGEN_ACC_ANGLE_DEG[1]):
+            continue
+        records.append(_record(
+            'halogen', aa_rec['object'], aa_rec['resn'], aa_rec['resi'],
+            'acceptor', [aa_rec['id']], lig_rec['object'], 'donor',
+            [carbon['id'], lig_rec['id']],
+            {'d_ax': d, 'donor_angle_deg': donor_angle,
+             'acc_angle_deg': acc_angle}))
+    return records
+
+
+def _metal_records(features, near_objs, lig_ctx, atom_pairs):
+    """Row 7: metal...chelator atom <= METAL_D_MAX (<=) -- DISTANCE-ONLY
+    (BINANA's adopted rationale: many geometries, wide L-M-L deviation,
+    possibly vacant sites; gate row 7). Chelation atoms = the capability
+    acceptors (AA side-chain N/O/S, D1); the metal side is the ligand's
+    approved-list element (gate OQ-7 list). Called ONLY under the
+    capability.ligand_has_metal gate (detect())."""
+    contexts = _aa_contexts(features, near_objs)
+    records = []
+    for aa_rec, lig_idx, lig_rec, d in atom_pairs:
+        if d <= MIN_DIST or d > METAL_D_MAX:
+            continue
+        if lig_idx not in lig_ctx['metal_idx']:
+            continue
+        ctx = contexts.get(aa_rec['object'])
+        if ctx is None or aa_rec['name'] not in ctx['acceptor_names']:
+            continue
+        records.append(_record(
+            'metal', aa_rec['object'], aa_rec['resn'], aa_rec['resi'],
+            'chelator', [aa_rec['id']], lig_rec['object'], 'metal',
+            [lig_rec['id']], {'d_metal': d}))
+    return records
+
+
 def _canonical_sort(records):
     """Deterministic canonical order: (INTERACTION_TYPES position,
     aa object, aa atom_ids, lig atom_ids)."""
@@ -958,7 +1075,87 @@ def _canonical_sort(records):
         tuple(r['lig']['atom_ids'])))
 
 
+def _pipeline(atom_records, ligand_bonds):
+    """Shared detection preamble (research §5.2): features once -> AA
+    bounding-sphere prefilter -> spatial.cross_pairs atom candidates
+    plus direct feature-pair enumeration inputs. Returns
+    (features, near_objs, lig_ctx, atom_pairs), or None when the scene
+    is empty / no AA survives the prefilter."""
+    features = extract_features(atom_records, ligand_bonds)
+    if not features['lig']['atoms'] or not features['aa']:
+        return None
+    near_objs = _prefilter_pass(features)
+    if not near_objs:
+        return None
+    lig_ctx = _ligand_context(features)
+    atom_pairs = _atom_candidate_pairs(features, near_objs)
+    return features, near_objs, lig_ctx, atom_pairs
+
+
+def _part1_records(features, near_objs, lig_ctx, atom_pairs):
+    """The five 02-06/02-07 type emitters (h_bond, salt_bridge,
+    pi_stacking, cation_pi, hydrophobic) in INTERACTION_TYPES order."""
+    records = []
+    records.extend(_h_bond_records(features, near_objs, lig_ctx,
+                                   atom_pairs))
+    records.extend(_salt_bridge_records(features, near_objs))
+    records.extend(_pi_stacking_records(features, near_objs))
+    records.extend(_cation_pi_records(features, near_objs))
+    records.extend(_hydrophobic_records(features, near_objs, lig_ctx,
+                                        atom_pairs))
+    return records
+
+
 def detect_part1(atom_records, ligand_bonds):
+    """Detect five of the seven types (h_bond, salt_bridge, pi_stacking,
+    cation_pi, hydrophobic) through the shared pipeline: features once
+    -> AA bounding-sphere prefilter -> spatial.cross_pairs atom-level
+    candidates (contact types) and direct feature-pair enumeration
+    (charge-group and ring pairs) -> per-candidate row tests ->
+    canonical records.
+
+    Input/output contract: see extract_features and the module docstring
+    (records carry explicit partner sides; identical input yields an
+    identical list). The 02-07 split (2026-09-06) put the two ring-
+    geometry types here; plan 02-07b added halogen + metal on the same
+    features/candidates and wrapped the COMPLETE 7-type surface as
+    detect() (DETECT-01/DETECT-02 done).
+    """
+    state = _pipeline(atom_records, ligand_bonds)
+    if state is None:
+        return []
+    features, near_objs, lig_ctx, atom_pairs = state
+    return _canonical_sort(_part1_records(features, near_objs, lig_ctx,
+                                          atom_pairs))
+
+
+def detect(atom_records, ligand_bonds):
+    """THE canonical 7-type detection entry (plan 02-07b): every
+    INTERACTION_TYPES member emits records through the shared pipeline
+    -- the five part-1 types, plus halogen (row 6: AA acceptor x ligand
+    C-X donor, both angle windows) and metal (row 7: AA chelator x
+    ligand approved-list metal, distance-only).
+
+    Metal enumeration is gated on capability.ligand_has_metal (gate §5
+    item 5 / research §7.6): with a metal-free ligand the row-7 branch
+    is never even run, so the record set is a CLOSED 7-type surface --
+    no record of an unknown or unreachably-typed interaction can exist.
+    Output: canonically sorted records (INTERACTION_TYPES position,
+    aa object, aa atom_ids, lig atom_ids); identical input yields an
+    identical list.
+    """
+    state = _pipeline(atom_records, ligand_bonds)
+    if state is None:
+        return []
+    features, near_objs, lig_ctx, atom_pairs = state
+    records = _part1_records(features, near_objs, lig_ctx, atom_pairs)
+    records.extend(_halogen_records(features, near_objs, lig_ctx,
+                                    atom_pairs))
+    if ligand_has_metal(features['lig']['atoms']):
+        records.extend(_metal_records(features, near_objs, lig_ctx,
+                                      atom_pairs))
+    return _canonical_sort(records)
+
     """Detect five of the seven types (h_bond, salt_bridge, pi_stacking,
     cation_pi, hydrophobic) through the shared pipeline: features once
     -> AA bounding-sphere prefilter -> spatial.cross_pairs atom-level

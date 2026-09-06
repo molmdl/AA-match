@@ -147,8 +147,10 @@ class TestAATableTruthfulness(unittest.TestCase):
         self.assertIsNone(entry['charge'][0])
         self.assertEqual(entry['donors'], ['NE2'])
         self.assertEqual(entry['acceptors'], ['ND1'])
+        # Ring list is a valid CYCLIC WALK (row-9 geometry consumes it):
+        # imidazole connectivity CG-ND1-CE1-NE2-CD2-CG.
         self.assertEqual(entry['rings'],
-                         [['CG', 'ND1', 'CD2', 'CE1', 'NE2']])
+                         [['CG', 'ND1', 'CE1', 'NE2', 'CD2']])
 
     def test_trp_two_rings_binana_assignment(self):
         # source: gate §2.2 row 8 — Trp = two rings (BINANA assignment).
@@ -297,6 +299,19 @@ class TestAACapablePolarity(unittest.TestCase):
                                               profile(has_hydrophobe=True)))
         self.assertFalse(capability.aa_capable('ALA', 'hydrophobic',
                                                profile()))
+
+    def test_hbond_donor_only_aa_vs_donor_only_ligand_fails_closed(self):
+        # h_bond is direction-refined like D3 (recorded Rule-2
+        # addition): an AA DONOR needs a ligand ACCEPTOR. LYS/ARG
+        # (donor-only side chains) against a donor-only ligand can
+        # never form an H-bond — the detector would find none — so the
+        # capability must say no (GEN-04 must not allocate a doomed
+        # slot).
+        donor_only = profile(has_donor=True)
+        self.assertFalse(capability.aa_capable('LYS', 'h_bond',
+                                               donor_only))
+        self.assertFalse(capability.aa_capable('ARG', 'h_bond',
+                                               donor_only))
 
     def test_unknown_residue_and_type_fail_closed(self):
         self.assertFalse(capability.aa_capable('XYZ', 'h_bond', RICH))

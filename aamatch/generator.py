@@ -93,7 +93,12 @@ import math
 import random
 
 from .capability import AA_RESIDUES, AA_TOKENS, aa_capable, ligand_support
-from .setup_state import INTERACTION_TYPES
+from .level_spec import DETECTOR_VERSION, LEVEL_SPEC_VERSION
+from .setup_state import (
+    DIFFICULTY_CAP,
+    INTERACTION_TYPES,
+    MOLECULES_CAP,
+)
 
 # ---------------------------------------------------------------------------
 # Engineering constants (generation research §5/§6 -- tune freely, the
@@ -265,7 +270,13 @@ def _validate_ligand_data(ligand_data):
         raise GenerationError(
             "ligand_data 'radius' must be > 0 (a degenerate bounding "
             "sphere cannot size a grid); found %r" % (radius,))
-    return {'centroid': tuple(finite), 'radius': radius_f}
+    # Preserve the REST of the geometry dict (notably 'profile' -- the
+    # chemistry half of the ligand_data contract) with the validated
+    # centroid/radius normalized in place.
+    validated = dict(ligand_data)
+    validated['centroid'] = tuple(finite)
+    validated['radius'] = radius_f
+    return validated
 
 
 # ---------------------------------------------------------------------------
@@ -514,3 +525,355 @@ def allocate_slots(required_items, n, ligand_profile, rng):
             'can_form': list(assignment['can_form']),
         })
     return slots
+
+
+# ---------------------------------------------------------------------------
+# Payload assembly (GEN-01, generation research §7.2/§9).
+# ---------------------------------------------------------------------------
+
+def _is_int(value):
+    """True for real ints only -- bool is an int subclass, never a
+    seed/count (mirrors level_spec._is_int)."""
+    return isinstance(value, int) and not isinstance(value, bool)
+
+
+def _validated_candidates(candidates):
+    """Validate candidate rows and return them re-sorted defensively by
+    (set_id, entry_id).
+
+    Candidates come pre-sorted per manifest enumerate_entries order;
+    generate() re-sorts anyway and documents it (the generator must not
+    depend on caller-side ordering discipline). Rows are manifest-shaped
+    (schema frozen at 02-03): the entry's fields plus 'set_id'. Only the
+    fields the payload consumes are checked here -- the manifest parse
+    gate owns the full schema.
+    """
+    if not isinstance(candidates, (list, tuple)):
+        raise GenerationError(
+            "candidates must be a list of manifest entry rows (found %s)"
+            % type(candidates).__name__)
+    rows = []
+    for row in candidates:
+        if not isinstance(row, dict):
+            raise GenerationError(
+                "candidate rows must be dicts (found %s)"
+                % type(row).__name__)
+        set_id = row.get('set_id')
+        entry_id = row.get('entry_id')
+        if not isinstance(set_id, str) or not set_id \
+                or not isinstance(entry_id, str) or not entry_id:
+            raise GenerationError(
+                "candidate rows must carry non-empty 'set_id' and "
+                "'entry_id' strings (found %r)" % (row,))
+        for key in ('file', 'sha256'):
+            value = row.get(key)
+            if not isinstance(value, str) or not value:
+                raise GenerationError(
+                    "candidate %r: %r must be a non-empty string"
+                    % (entry_id, key))
+        rows.append(row)
+    return sorted(rows, key=lambda row: (row['set_id'], row['entry_id']))
+
+
+def _candidate_class(row):
+    """The molecule size bucket of one candidate: the manifest's recorded
+    'size_class' when present, else derived from 'heavy_atom_count'
+    (small < SIZE_S1 <= medium < SIZE_S2 <= large). Unknown shapes fail
+    closed naming the candidate."""
+    size_class = row.get('size_class')
+    if size_class in SIZE_CLASSES:
+        return size_class
+    heavy = row.get('heavy_atom_count')
+    if _is_int(heavy) and heavy > 0:
+        if heavy < SIZE_S1:
+            return 'small'
+        if heavy < SIZE_S2:
+            return 'medium'
+        return 'large'
+    raise GenerationError(
+        "candidate %r needs a valid 'size_class' (%s) or a positive int "
+        "'heavy_atom_count' (found size_class=%r, heavy_atom_count=%r)"
+        % (row.get('entry_id'), '/'.join(SIZE_CLASSES), size_class, heavy))
+
+
+def _select_pool(candidates, target_class):
+    """Candidates in the target size-class bucket (sorted order
+    preserved).
+
+    SUPPLY-SIDE FALLBACK (recorded deviation, plan 02-08): when no
+    candidate carries the target bucket, the NEAREST non-empty bucket by
+    rank distance wins (ties -> the easier/smaller rank). The emitted
+    difficulty dict keeps RECORDING the target size class -- the
+    fallback degrades the supply, never the recorded difficulty axis.
+    Rationale: v1's development manifest is small-only; a hard refusal
+    would block every D >= 2 game (and with it the phase's own E2E)
+    before curated Phase-8 data exists. Without ANY candidates,
+    GenerationError.
+    """
+    pools = {}
+    for row in candidates:                # sorted order preserved
+        pools.setdefault(_candidate_class(row), []).append(row)
+    pool = pools.get(target_class)
+    if pool:
+        return pool
+    target_rank = SIZE_CLASSES.index(target_class)
+    ranked = sorted(pools, key=lambda name: SIZE_CLASSES.index(name))
+    nearest = min(ranked,
+                  key=lambda name: (abs(SIZE_CLASSES.index(name)
+                                        - target_rank),
+                                    SIZE_CLASSES.index(name)))
+    return pools[nearest]
+
+
+def _geometry_for(identity, ligand_data):
+    """Look up one molecule's geometry summary in ligand_data.
+
+    Contract (generation research §3.2, made explicit): EITHER a dict
+    keyed by ``(set_id, entry_id)`` tuples mapping to per-molecule
+    ``{'centroid': (x, y, z), 'radius': R[, 'profile': {...}]}`` -- the
+    02-14 new_game shape -- OR ONE shared ``{'centroid', 'radius'...}``
+    dict applied to every molecule (single-ligand smokes/tests, 02-13
+    pattern). Missing identity -> GenerationError naming it.
+    """
+    if not isinstance(ligand_data, dict):
+        raise GenerationError(
+            "ligand_data must be a dict keyed by (set_id, entry_id) "
+            "with {'centroid', 'radius'} geometry, or ONE shared "
+            "{'centroid', 'radius'} dict (found %s)"
+            % type(ligand_data).__name__)
+    if 'centroid' in ligand_data and 'radius' in ligand_data:
+        return ligand_data
+    geometry = ligand_data.get(identity)
+    if geometry is None:
+        raise GenerationError(
+            "ligand_data has no entry for molecule %r -- key it by "
+            "(set_id, entry_id) or pass one shared {'centroid', "
+            "'radius'} dict" % (identity,))
+    return geometry
+
+
+def _profile_of(geometry, identity):
+    """The molecule's chemistry profile (capability.ligand_profile
+    shape), consumed by derive_required/allocate_slots.
+
+    DEVIATION NOTE (contract gap closed here, binding on 02-13/02-14):
+    the ligand_data entries must carry 'profile' -- the cmd tier computes
+    it from the loaded ligand (extract_game_atoms side=='lig' records +
+    ligand_bonds -> capability.ligand_profile). A MISSING profile
+    degrades FAIL-CLOSED to an empty profile: every support predicate is
+    False, so unset/block_exclusive modes refuse with the standard
+    "supports none / cannot support" messages rather than silently
+    promising unsolvable interactions.
+    """
+    profile_data = geometry.get('profile')
+    if profile_data is None:
+        return {}
+    if not isinstance(profile_data, dict):
+        raise GenerationError(
+            "ligand_data profile for %r must be a "
+            "capability.ligand_profile-shaped dict (found %s)"
+            % (identity, type(profile_data).__name__))
+    return profile_data
+
+
+def _protonation_of(candidate, rng, identity):
+    """Select and record the ligand protonation state (GEN-02 data side,
+    generation research §7.3): a manifest-recorded string is used
+    verbatim; multiple recorded states are picked via
+    ``rng.choice(sorted(states))`` on the molecule's own RNG stream. The
+    picked value lands in the spec, so replay never re-picks."""
+    raw = candidate.get('protonation')
+    if isinstance(raw, (list, tuple)):
+        if not raw:
+            raise GenerationError(
+                "candidate %r offers an empty protonation list"
+                % (identity,))
+        return rng.choice(sorted(str(state) for state in raw))
+    if isinstance(raw, str) and raw:
+        return raw
+    raise GenerationError(
+        "candidate %r has no recorded 'protonation' (expected a string "
+        "or a non-empty list of states; found %r)" % (identity, raw))
+
+
+def generate(seed, setup, candidates, ligand_data, difficulty_levels):
+    """Pure seeded level generation: returns the level-spec payload dict
+    (the container's 'data').
+
+    Inputs (all data-in, no I/O -- the cmd tier resolves files first):
+    ``seed``: real int master seed (bool refused explicitly -- a clearer
+    message than the parse gate). ``setup``: validated setup_state dict
+    (mode, allowed_interactions, molecules_per_level, source_mode).
+    ``candidates``: manifest entry rows (+ 'set_id'), PRE-SORTED per
+    manifest enumerate_entries order -- re-sorted defensively by
+    (set_id, entry_id) regardless. ``ligand_data``: per-molecule
+    geometry + chemistry profile, keyed by (set_id, entry_id) tuples, or
+    ONE shared geometry dict (see _geometry_for). ``difficulty_levels``:
+    the clamped D (setup's difficulty_levels).
+
+    Payload shape (reserved schema + ONE additive extension, generation
+    research §7.2/§9):
+
+        {'detector_version': DETECTOR_VERSION,    # exact-match gate
+         'format_version': LEVEL_SPEC_VERSION,    # refuse-newer gate
+         'seed': <int>,
+         'levels': [{'level_index': L, 'tier' == L via 'difficulty',
+                     'difficulty': {tier, grid_n, n_required_types,
+                                    molecule_size_class},
+                     'molecules': [{'molecule_id': 'mol-NNN',  # per level
+                                    'ligand': {source, set_id, entry_id,
+                                               file, sha256, protonation,
+                                               provenance},
+                                    'required': {mode, items},
+                                    'placement': {'offset': [x, y, z]},
+                                                              # additive
+                                    'grid': {'n', 'slots': [...]}}]}]}
+
+    ``placement.offset`` is the recorded additive extension of the
+    reserved shape (passthrough parse accepts it, 01-06): molecule
+    group m's shift along +X (materializer applies it to ligand + grid
+    TOGETHER). ``molecule_id`` numbers molecules WITHIN each level
+    (mol-001..); level_index + molecule_id identify globally, matching
+    the per-molecule scoping of slot_id. 'file' stays package-relative
+    (PITFALL 2; to_windows_path at load time only). ``provenance`` is
+    the candidate's recorded provenance or '' until Phase 8 curates it.
+
+    RNG layout (generation research §7.1): one master
+    random.Random(seed) draws D * MOLECULES_CAP unit sub-seeds in fixed
+    order -- one per (level, molecule SLOT) up to the setup cap, so the
+    master stream consumption is setup-independent and adding a molecule
+    consumes previously-drawn-but-unused seeds WITHOUT shifting an
+    existing molecule's stream (PITFALL 11.2; byte-isolation tested).
+    Each unit's Random(sub_seed) is consumed in a FIXED call order:
+    molecule pick (rng.sample over the bucket's sorted candidate list,
+    minus this level's already-picked molecules) -> protonation choice
+    -> derive_required sampling -> allocate_slots. Molecules within a
+    level are DISTINCT picks (dedup by (set_id, entry_id)).
+
+    Selection: candidates are filtered to the level's size-class bucket
+    (fallback: nearest non-empty bucket, recorded deviation -- the
+    difficulty dict keeps the TARGET class); inside the pool the unit
+    RNG samples from the deterministically sorted candidate list.
+
+    The payload fully determines the level (nothing re-derives from the
+    seed at replay): same seed + same inputs -> byte-identical payload
+    (json sort_keys); all RNG touches go through sorted/fixed-order
+    lists. Raises GenerationError naming the cause for every infeasible
+    configuration (OQ-1 semantics) and every degenerate input.
+    """
+    if isinstance(seed, bool) or not isinstance(seed, int):
+        raise GenerationError(
+            "seed must be a real int -- bool is not a seed (a clearer "
+            "message than the parse gate); found %r" % (seed,))
+    if not _is_int(difficulty_levels) \
+            or not 1 <= difficulty_levels <= DIFFICULTY_CAP:
+        raise GenerationError(
+            "difficulty_levels must be an int in 1..%d (the frozen setup "
+            "clamp); found %r" % (DIFFICULTY_CAP, difficulty_levels))
+    if not isinstance(setup, dict):
+        raise GenerationError(
+            "setup must be a validated setup_state dict (found %s)"
+            % type(setup).__name__)
+    molecules_per_level = setup.get('molecules_per_level')
+    if not _is_int(molecules_per_level) or molecules_per_level < 1:
+        raise GenerationError(
+            "setup 'molecules_per_level' must be an int >= 1 (found %r)"
+            % (molecules_per_level,))
+
+    rows = _validated_candidates(candidates)
+    if not rows:
+        raise GenerationError(
+            "no candidates supplied -- generate needs at least one "
+            "manifest entry row")
+
+    D = difficulty_levels
+    master = random.Random(seed)
+    unit_seeds = _sub_seeds(master, D * MOLECULES_CAP)
+
+    levels = []
+    for level_index in range(D):
+        params = difficulty_params(D, level_index)
+        n = params['grid_n']
+        pool = _select_pool(rows, params['molecule_size_class'])
+        taken = set()
+        molecules = []
+        for molecule_index in range(molecules_per_level):
+            unit_rng = random.Random(
+                unit_seeds[level_index * MOLECULES_CAP + molecule_index])
+            available = [row for row in pool
+                         if (row['set_id'], row['entry_id']) not in taken]
+            if not available:
+                distinct = len(set((row['set_id'], row['entry_id'])
+                                   for row in pool))
+                raise GenerationError(
+                    "size class %r (fallback target %r) has %d distinct "
+                    "candidate(s); level %d needs %d distinct molecules "
+                    "-- add candidates or lower molecules_per_level"
+                    % (params['molecule_size_class'],
+                       params['molecule_size_class'], distinct,
+                       level_index, molecules_per_level))
+            picked = unit_rng.sample(available, 1)[0]
+            identity = (picked['set_id'], picked['entry_id'])
+            taken.add(identity)
+
+            geometry = _validate_ligand_data(
+                _geometry_for(identity, ligand_data))
+            profile_data = _profile_of(geometry, identity)
+            protonation = _protonation_of(picked, unit_rng, identity)
+            required = derive_required(setup, profile_data, unit_rng,
+                                       params['n_required_types'])
+            slots = allocate_slots(required['items'], n, profile_data,
+                                   unit_rng)
+
+            offset = placement_offset(molecule_index, n)
+            slot_payloads = []
+            for slot in slots:
+                position = slot_position(slot['row'], slot['col'], n,
+                                         geometry['centroid'],
+                                         geometry['radius'])
+                for value in position:
+                    if not math.isfinite(value):
+                        raise GenerationError(
+                            "grid position for slot %s of %r is "
+                            "non-finite (degenerate ligand geometry?)"
+                            % (slot['slot_id'], identity))
+                slot_payloads.append({
+                    'slot_id': slot['slot_id'],
+                    'row': slot['row'],
+                    'col': slot['col'],
+                    'aa': slot['aa'],
+                    'role': slot['role'],
+                    'can_form': list(slot['can_form']),
+                    'grid_pose': {'position': [float(position[0]),
+                                               float(position[1]),
+                                               float(position[2])]},
+                })
+            molecules.append({
+                'molecule_id': 'mol-%03d' % (molecule_index + 1),
+                'ligand': {
+                    'source': setup.get('source_mode', 'demo'),
+                    'set_id': picked['set_id'],
+                    'entry_id': picked['entry_id'],
+                    'file': picked['file'],
+                    'sha256': picked['sha256'],
+                    'protonation': protonation,
+                    'provenance': picked.get('provenance', ''),
+                },
+                'required': required,
+                'placement': {'offset': [float(offset[0]),
+                                         float(offset[1]),
+                                         float(offset[2])]},
+                'grid': {'n': n, 'slots': slot_payloads},
+            })
+        levels.append({
+            'level_index': level_index,
+            'difficulty': params,
+            'molecules': molecules,
+        })
+
+    return {
+        'detector_version': DETECTOR_VERSION,
+        'format_version': LEVEL_SPEC_VERSION,
+        'seed': seed,
+        'levels': levels,
+    }

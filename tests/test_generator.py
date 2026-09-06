@@ -707,11 +707,14 @@ class TestGeneratePayload(unittest.TestCase):
     """GEN-01: complete, stamped, byte-deterministic payloads."""
 
     def _payload(self, seed=42, setup=None, candidates=None,
-                 ligand_data=None, difficulty=3):
+                 ligand_data=None, difficulty=None):
+        if setup is None:
+            setup = setup_of('unset', ALL_TYPES, molecules=1, difficulty=3)
+        if difficulty is None:
+            difficulty = setup['difficulty_levels']  # caller discipline
         return generate(
             seed,
-            setup if setup is not None
-            else setup_of('unset', ALL_TYPES, molecules=1, difficulty=3),
+            setup,
             CANDIDATES if candidates is None else candidates,
             LIGAND_DATA if ligand_data is None else ligand_data,
             difficulty)
@@ -740,7 +743,7 @@ class TestGeneratePayload(unittest.TestCase):
         self.assertEqual(molecule['molecule_id'], 'mol-001')
         ligand = molecule['ligand']
         self.assertEqual(sorted(ligand),
-                         ['entry_id', 'file', 'provenance', 'protonation',
+                         ['entry_id', 'file', 'protonation', 'provenance',
                           'set_id', 'sha256', 'source'])
         self.assertEqual(ligand['source'], 'demo')   # setup source_mode
         self.assertEqual(ligand['set_id'], SET_ID)
@@ -824,10 +827,12 @@ class TestGeneratePayload(unittest.TestCase):
 
     def test_missing_ligand_data_identity_refused(self):
         setup = setup_of('unset', ALL_TYPES, molecules=1, difficulty=1)
-        partial = dict(LIGAND_DATA)
-        del partial[(SET_ID, 'benzamide')]
+        rows = [candidate('benzamide')]
+        partial = {(SET_ID, 'acetate'):
+                   {'centroid': (0.0, 0.0, 0.0), 'radius': 4.0,
+                    'profile': RICH}}          # wrong identity on purpose
         with self.assertRaises(GenerationError) as ctx:
-            generate(1, setup, CANDIDATES, partial, 1)
+            generate(1, setup, rows, partial, 1)
         self.assertIn('ligand_data', str(ctx.exception))
 
     def test_shared_geometry_convenience(self):

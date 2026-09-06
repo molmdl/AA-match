@@ -74,9 +74,13 @@ if REPO_ROOT not in sys.path:
 #                   hydrophobic; imports .vec3, .spatial, .capability,
 #                   .thresholds and .setup_state INTERACTION_TYPES —
 #                   canonical type order; NO itertools, NO numpy).
+# Phase 2 (02-08): generator (seeded level construction; imports math,
+#                   random, .capability typing tables, .level_spec
+#                   version constants and .setup_state enums — the ONE
+#                   homes; NO itertools, NO numpy).
 PURE_MODULES = ['setup_state', 'level_spec', 'persistence', 'backup',
                 'paths', 'vec3', 'spatial', 'manifest', 'capability',
-                'thresholds', 'detector']
+                'thresholds', 'detector', 'generator']
 
 # Roots that must NEVER appear in any import of a pure module, in ANY
 # scope (module level or function body -- B7). dataclasses is 3.7+.

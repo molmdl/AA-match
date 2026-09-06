@@ -10,17 +10,17 @@ See: .planning/PROJECT.md (updated 2026-09-05)
 ## Current Position
 
 Phase: 2 of 9 (Headless Game Engine) — In progress
-Plan: 4 of 15 complete (wave 3: 02-04 fixtures + MANIFEST.json + generalized runner + SMOKE-02 done; next: 02-05 detector constants transcription)
-Status: In progress — data supply PROVEN (SMOKE-02 count-exact on both fixtures; manifest schema frozen and exercised)
-Last activity: 2026-09-06 — Completed 02-04-PLAN.md (benzamide/acetate SDFs, sha256-pinned MANIFEST.json accepted by the 02-03 gate, run_smoke.sh NN-deriving, SMOKE-02 PASS first boot; 211/211 tests)
+Plan: 5 of 15 complete (waves 1-2 done; wave 3 done: 02-04 fixtures + MANIFEST + SMOKE-02, 02-05 capability single typing home — parallel worktrees merged by orchestrator)
+Status: DETECT-03 [GATE] CLOSED (approved 2026-09-06); data supply PROVEN (SMOKE-02 count-exact); typing side frozen — 02-06/02-07 detector code transcribes thresholds into thresholds.py and consumes aamatch/capability.py tables ONLY (DETECT-04 by construction)
+Last activity: 2026-09-06 — Wave 3 complete: 02-04 (benzamide/acetate SDFs, sha256-pinned MANIFEST.json, generalized run_smoke.sh, SMOKE-02 PASS first boot) + 02-05 (capability.py, PURE_MODULES=9, 295/295 tests)
 
-Progress: [███░░░░░░░] 27% of Phase 2 (4/15) · [█████░░░░░] 54% of project (phase 2 of 9; plans 13/24)
+Progress: [███░░░░░░░] 33% of Phase 2 (5/15) · [█████▍░░░░] 58% of project (phase 2 of 9; plans 14/24)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 13 (Phase 1: 01-01…01-09; Phase 2: 02-01, 02-02, 02-03, 02-04)
-- Average duration: ~11 min (02-03); 6 min (02-04)
+- Total plans completed: 14 (Phase 1: 01-01…01-09; Phase 2: 02-01…02-05)
+- Average duration: ~11 min (02-03); 6 min (02-04); ~29 min (02-05, TDD)
 - Total execution time: —
 
 **By Phase:**
@@ -28,7 +28,7 @@ Progress: [███░░░░░░░] 27% of Phase 2 (4/15) · [███�
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 1 | 9/9 ✓ | — | — |
-| 2 | 4/15 | ~8 min (02-02) + ~25 min (02-01 cont.) + 11 min (02-03) + 6 min (02-04) | — |
+| 2 | 5/15 | ~8 min (02-02) + ~25 min (02-01 cont.) + 11 min (02-03) + 6 min (02-04) + 29 min (02-05) | — |
 
 **Recent Trend:**
 - Last 5 plans: —
@@ -70,6 +70,10 @@ Decisions are logged in PROJECT.md Key Decisions table. Seeded from PROJECT.md a
 - (02-03) set_id/entry_id must be non-empty strings (enumerate_entries sort keys — non-strings would TypeError in sorted(), so they are validated with clear refusals); enumerate_entries returns new dicts + set_id sorted by (set_id, entry_id); largest_entry = max heavy_atom_count, ties-first (DETECT-05 selector, no special-cased field). KINDS += 'manifest' (additive; refusal messages unchanged). PURE_MODULES = 8. Empty sets list allowed (supply emptiness is the generator's concern).
 - (02-04) Fixtures are SCRIPT-BUILT (tmp/build_fixtures.py, git-ignored): SDF counts consistent by construction; manifest counts derived from the same lists; sha256 taken over written bytes in the same run — NEVER hand-edit an SDF after manifest creation, regenerate instead. Benzamide carries the script-derived counts (16 atoms/16 bonds {"1":12,"2":4}), not the plan sketch (11 bonds omitted the 5 ring C-H); acetate matches its sketch exactly. Both ligands flag-free (metal/halogen false) per DETECT-03 policy; license=''/provenance={} are Phase-8 placeholders; set_id 'demo-dev-1' tier 'easy' = development set (not curated demo data).
 - (02-04) run_smoke.sh generalization CLOSED the 02-02 pending todo: SMOKE-NN derived from basename via sed (empty -> 01 legacy fallback); optional TIMEOUT arg (default 120); SMOKE-01 recipe unchanged in behavior. SMOKE-02 shape frozen for reuse: pure container parsed INSIDE PyMOL, per-entry private _aam_tmp* object with delete-in-finally, get_bonds order-MULTISET comparison (0-based index caveat irrelevant — orders only), iterate with explicit space dict and no round() in the expression, element-scan cross-check of metal/halogen flags, final get_names('objects') leak check.
+- (02-05) capability.py = THE single typing home (gate §4.2), transcribed row-for-row from the gate doc with `source:` comments; per-type capable sets + counts (h_bond 12, salt 4, pi 4, cation_pi 6, hydrophobic 8, halogen 9, metal 9) test-pinned; '>= 2 capable AAs per type' is a permanent invariant test. API: aa_capable(resn, itype, ligand_profile) is polarity-aware (D3 salt-bridge sign; D4 cation-pi either direction; h_bond DIRECTION-REFINED — AA donor needs ligand acceptor and vice versa, Rule-2 addition closing a solvability hole). AA_TOKENS = the one generator-token → fragment/resn/charge_class vocabulary (20 tokens; protonation variants additive-later). PURE_MODULES = 9.
+- (02-05) Ligand typing contract: §5.1 atom records + bond block [(i,j,order)] 0-based; optional `formal_charge` governs charge groups when present, kekulé structure-only when absent (recorded decision; acid-OH guard added Rule 2 — COOH never anion); aromatic = bond orders (6-ring 3 non-adjacent doubles = alternation; 5-ring 2; all-4 markers; unmarked = single per MDL) with 15° dihedral fallback ONLY when cycle orders absent; donors fail-closed (O/N/S needs bonded H); acceptors = any O/N/S; halogen donors Cl/Br/I (C-F excluded); `RING_PLANARITY_FALLBACK_DEG = 15.0` lives in capability.py — 02-06 should reference it, not duplicate.
+- (02-05, recorded tension) Gate §3.3 Met-row halogen cell says Y(S) but §3.5's resolved halogen set (9) excludes Met; the plan's transcription rule + §3.5 were followed (Met excluded) — reconcile the doc row at the next versioned review (§4.7 bump event, never silent).
+- (02-05, for 02-13) side_chain naming = heavy atoms beyond CB + polar Hs (plan examples pin it; ALA/GLY empty; carbon Hs omitted); chempy fragments digit-prefix HIS ring H ('2HE' per probe) vs standard-PDB names transcribed — SMOKE-03 field-verifies and reconciles atom names in capability.py (never thresholds).
 
 ### Pending Todos
 
@@ -84,12 +88,14 @@ Decisions are logged in PROJECT.md Key Decisions table. Seeded from PROJECT.md a
 
 ## Session Continuity
 
-Last session: 2026-09-06 (02-04 executed in worktree tmp/exec-02-04 on branch exec/02-04 — wave-3 parallel protocol; task commits 6a65dc8, fe7fb92, 4962551)
-Stopped at: Completed 02-04-PLAN.md — 02-04-SUMMARY.md written, SMOKE-01+SMOKE-02 both PASS via generalized runner, full suite 211/211 green
+Last session: 2026-09-06 (wave-3 executors: 02-04 on exec/02-04, 02-05 on exec/02-05 after one silent-failure re-spawn; both merged to main by orchestrator)
+Stopped at: Wave 3 complete — 02-04 (SMOKE-01+02 PASS via generalized runner, 211/211) + 02-05 (capability.py, 295/295, PURE_MODULES=9)
 Resume file: None
 
 ## Next Actions
 
-- Orchestrator: merge exec/02-04 back in wave-3 dependency order, then proceed per plan frontmatter — 02-05..02-07 (detector/capability constants transcribed row-by-row from docs/DETECTION_THRESHOLDS.md), 02-08 (generator consumes enumerate_entries over aamatch/data/MANIFEST.json; DETECT-05 target via largest_entry -> benzamide)
+- Orchestrator: proceed to wave 4 — 02-06 (thresholds.py + detector core): transcribe the 10 gate-doc rows as named constants with source comments; reference `capability.RING_PLANARITY_FALLBACK_DEG` for row 8; candidate pairs via spatial.cross_pairs + AA bounding-sphere prefilter
+- 02-07 (detector pt 2): consume capability.py typed sets + ligand typing ONLY (no parallel tables); h_bond enumerates donor-side vs acceptor-side per the direction-refined capability; OQ-4 anti-artifact rule binds ligand-side cations
+- 02-08 (generator): solvability consumes residue_capabilities + ligand_support + ligand_has_metal; enumerate_entries candidates; DETECT-05 target via largest_entry (-> benzamide)
 - SMOKE-03/04/05 need NO runner changes (marker-deriving run_smoke.sh handles any smoke_NN_name.py)
 - Fixture geometry (benzamide xy-plane pose, acetate tetrahedral methyl) is stable for 02-13 placement scripting and 02-14 E2E poses

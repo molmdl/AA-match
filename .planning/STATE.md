@@ -5,21 +5,21 @@
 See: .planning/PROJECT.md (updated 2026-09-05)
 
 **Core value:** The player can place amino acids onto a small molecule in the PyMOL 3D viewer and the game correctly detects and scores the interactions they form — turning unguided 3D manipulation practice into a scored game.
-**Current focus:** Phase 1 — Bootstrap & Pure Foundation
+**Current focus:** Phase 2 — Headless Game Engine
 
 ## Current Position
 
-Phase: 1 of 9 (Bootstrap & Pure Foundation) — **COMPLETE ✓ (verified 2026-09-06)**
-Plan: 9 of 9 complete (3 waves, parallel worktrees, merged clean)
-Status: Phase 1 verified — 01-VERIFICATION.md passed (4/4 success criteria, 9/9 plan must-have groups); ready to plan Phase 2
-Last activity: 2026-09-06 — Wave 3 + human install checkpoint resolved (plugin-path install, defaults frozen with difficulty cap 10); verifier PASSED
+Phase: 2 of 9 (Headless Game Engine)
+Plan: 2 of 15 (02-02 complete — executed in PARALLEL with 02-01 on branch exec/02-02; merge order handled by orchestrator)
+Status: In progress
+Last activity: 2026-09-06 — Completed 02-02-PLAN.md (vec3 + spatial pure geometry primitives, TDD, 163/163 tests)
 
-Progress: [██████████] 100% of Phase 1 · [█░░░░░░░░░] 11% of project (1/9 phases)
+Progress: [████░░░░░░] 42% of project plans (10/24: Phase 1 9/9 + Phase 2 1/15)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 9 (Phase 1: 01-01…01-09)
+- Total plans completed: 10 (Phase 1: 01-01…01-09; Phase 2: 02-02)
 - Average duration: —
 - Total execution time: —
 
@@ -28,6 +28,7 @@ Progress: [██████████] 100% of Phase 1 · [█░░░░�
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 1 | 9/9 ✓ | — | — |
+| 2 | 1/15 | ~8 min (02-02) | 8 min |
 
 **Recent Trend:**
 - Last 5 plans: —
@@ -59,6 +60,9 @@ Decisions are logged in PROJECT.md Key Decisions table. Seeded from PROJECT.md a
 - (01-07) Headless smoke repo-root anchor = `sys.argv` first, cwd fallback — `__file__` unusable in `-cq` scripts; loader-contract assertion headless = `info.load()` verdict, NOT the `loaded` property; Windows env recorded: Python 3.9.13 / PyQt5 5.12.3 / Qt 5.12.9 / PyMOL 2.5.0 / numpy 1.25.2; fwdslash + space-path cmd.load probes both OK.
 - (01-08) Purity is ENFORCED by tests/test_purity.py (AST scan all scopes + clean-subprocess + negative control pinning exactly 2 findings); checker is pure fn `find_bad_imports(src)`; **new pure modules must be added to `PURE_MODULES` in tests/test_purity.py to be gated**.
 - (01-09, HUMAN verdict 2026-09-06) INSTALL-01 PASS via **PLUGIN-PATH method** (repo root added to PyMOL plugin path — repo edits live, no reinstall; dialog copy-install branch not exercised). Module identity: exactly ONE module object; **never ALSO copy-install** (two module objects → duplicate singletons). Setup defaults FROZEN for Phases 2+ (changes = version-bump event): molecules_per_level 2/1/10 · difficulty_levels 3/1/**10** (human-amended from 9, commit aef7c5e) · interaction_mode 'unset'.
+- (02-02) `vec3.py` floats-in/floats-out contract via float() coercion (int tuples never leak); `unit()`/`angle_at()` raise ValueError on zero-length arms (fail-closed); angle_at clamps cos to [-1,1] vs float rounding near 0/pi; `plane_project` requires a UNIT normal (documented, no re-normalization).
+- (02-02) `spatial.py`: cell size == cutoff makes the 3×3×3 neighbourhood scan provably exhaustive (100-seed equivalence vs brute-force oracle proven); cell keys = int(x // cell) FLOOR division (negatives correct); `brute_force_pairs` is test-oracle-only — docstring carries the 02-15 audit-grep phrase, pinned by a unit test.
+- (02-02) PURE_MODULES now 7 (`+ vec3, spatial`); ALLOWED_STDLIB untouched (math already whitelisted; spatial imports only `from .vec3 import dist`; itertools stays out per 02-01). Phase-2 pure-module pattern established: RED test commit → GREEN feat commit → PURE_MODULES registration as test commit.
 
 ### Pending Todos
 
@@ -76,10 +80,11 @@ Upcoming human gates/spikes from research (not blockers for Phase 1):
 
 ## Session Continuity
 
-Last session: 2026-09-06
-Stopped at: Phase 1 COMPLETE + verified (01-VERIFICATION.md passed, 114/114 tests, SMOKE-01 PASS, INSTALL-01 human-approved)
+Last session: 2026-09-06 (02-02 executor, worktree tmp/exec-02-02, branch exec/02-02)
+Stopped at: Completed 02-02-PLAN.md (5 commits: d26d219, f31e474, 221f99e, 9f9ec65, 4b85861; SUMMARY at .planning/phases/02-headless-game-engine/02-02-SUMMARY.md)
 Resume file: None
 
 ## Next Actions
 
-- Run `/gsd-discuss-phase 2` (recommended — threshold-table gate DETECT-03 needs user transcription+approval sequencing) or `/gsd-plan-phase 2`
+- Orchestrator: merge exec/02-02 (and exec/02-01) back in dependency order, then continue Phase-2 wave 2 (02-03+)
+- Detector plans 02-06/07 consume `spatial.cross_pairs` + `vec3` per-candidate math

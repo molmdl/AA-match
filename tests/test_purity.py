@@ -78,9 +78,11 @@ if REPO_ROOT not in sys.path:
 #                   random, .capability typing tables, .level_spec
 #                   version constants and .setup_state enums — the ONE
 #                   homes; NO itertools, NO numpy).
+# Phase 2 (02-10): game_state (SCORE-01 scoring + runtime container;
+#                   imports time + .setup_state INTERACTION_TYPES only).
 PURE_MODULES = ['setup_state', 'level_spec', 'persistence', 'backup',
                 'paths', 'vec3', 'spatial', 'manifest', 'capability',
-                'thresholds', 'detector', 'generator']
+                'thresholds', 'detector', 'generator', 'game_state']
 
 # Roots that must NEVER appear in any import of a pure module, in ANY
 # scope (module level or function body -- B7). dataclasses is 3.7+.
@@ -279,6 +281,17 @@ class TestGeneratorRegistration(unittest.TestCase):
         self.assertIn(
             'generator', PURE_MODULES,
             'aamatch/generator.py must be registered in PURE_MODULES '
+            '(unregistered pure modules are silently ungated)')
+
+
+class TestGameStateRegistration(unittest.TestCase):
+    """Plan 02-10 Task 2: the scoring/runtime-state module joins the
+    gated pure modules (same registration-pin pattern as the generator)."""
+
+    def test_game_state_registered_in_pure_modules(self):
+        self.assertIn(
+            'game_state', PURE_MODULES,
+            'aamatch/game_state.py must be registered in PURE_MODULES '
             '(unregistered pure modules are silently ungated)')
 
 

@@ -74,10 +74,10 @@ completed: 2026-09-06
 Each task was committed atomically (TDD discipline):
 
 1. **Task 1: thresholds.py — approved table as constants** — `fdf2ab8` (test RED), `735941d` (feat GREEN)
-2. **Task 2: detector core — features, prefilter, candidates, 3 types** — `3ff2b9b` (test RED), `b5fa47d` (feat GREEN incl. post-green helper-order tidy)
+2. **Task 2: detector core — features, prefilter, candidates, 3 types** — `3ff2b9b` (test RED), `b5fa47d` (feat GREEN incl. post-green helper-order tidy), `64b3869` (test: benzamide fixture exact-trig fix — the change the GREEN run depended on, found uncommitted after the metadata commit and committed immediately)
 3. **Task 3: register thresholds + detector in PURE_MODULES** — `c968629` (test)
 
-**Plan metadata:** (this commit) `docs(02-06): complete ...`
+**Plan metadata:** `5ae476b` (docs: complete plan)
 
 ## Files Created/Modified
 - `aamatch/thresholds.py` — approved table as constants (single import point for the detector)

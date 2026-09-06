@@ -162,11 +162,14 @@ def _n_methyl_ligand(c_pos):
 def _benzamide_ligand():
     """Benzamide: kekule 6-ring in the xy-plane (center origin, radius
     1.39, normal +z) + C7(=O8)N9(H10,H11). Ring C1 carries the C7
-    substituent; C2..C6 carry H12..H16."""
+    substituent; C2..C6 carry H12..H16. Ring coordinates use exact
+    trig so the row-9 radius is exactly 1.39."""
+    ring_y = 1.39 * math.sin(math.pi / 3.0)   # 1.203775... (exact hexagon)
     coords = [
-        ('C1', 'C', (1.39, 0.0, 0.0)), ('C2', 'C', (0.695, 1.204, 0.0)),
-        ('C3', 'C', (-0.695, 1.204, 0.0)), ('C4', 'C', (-1.39, 0.0, 0.0)),
-        ('C5', 'C', (-0.695, -1.204, 0.0)), ('C6', 'C', (0.695, -1.204, 0.0)),
+        ('C1', 'C', (1.39, 0.0, 0.0)), ('C2', 'C', (0.695, ring_y, 0.0)),
+        ('C3', 'C', (-0.695, ring_y, 0.0)), ('C4', 'C', (-1.39, 0.0, 0.0)),
+        ('C5', 'C', (-0.695, -ring_y, 0.0)), ('C6', 'C', (0.695, -ring_y,
+                                                          0.0)),
         ('C7', 'C', (2.89, 0.0, 0.0)), ('O8', 'O', (2.89, 1.22, 0.0)),
         ('N9', 'N', (2.89, -1.35, 0.0)), ('H10', 'H', (3.79, -1.85, 0.0)),
         ('H11', 'H', (3.5, -0.6, 0.0)), ('H12', 'H', (1.09, 2.09, 0.0)),

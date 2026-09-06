@@ -54,7 +54,7 @@ convention), no numpy, no pymol.
 
 import math
 
-from .vec3 import sub, dot, cross, norm
+from .vec3 import sub, dot, cross, norm, scale
 from .setup_state import INTERACTION_TYPES
 
 
@@ -286,21 +286,20 @@ def aa_capable(resn, itype, ligand_profile):
         return aa_donates or aa_accepts
 
     if itype == 'pi_stacking':
-        return bool(entry['rings']) and rings >= 1
+        return bool(entry['rings']) and ligand_support('pi_stacking', prof)
 
     if itype == 'hydrophobic':
-        return entry['hydrophobic'] and bool(prof.get('has_hydrophobe'))
+        return entry['hydrophobic'] and ligand_support('hydrophobic', prof)
 
     if itype == 'halogen':
         # AA side is the acceptor role only; donors are ligand-side
         # (row 6) and gated on the ligand's C-X (Cl/Br/I) profile.
-        return bool(entry['acceptors']) \
-            and bool(prof.get('has_halogen_donor'))
+        return bool(entry['acceptors']) and ligand_support('halogen', prof)
 
     if itype == 'metal':
         # Chelator atoms are the O/N/S acceptor atoms; runs only when
         # the ligand carries an approved-list metal (gate §5 item 5).
-        return bool(entry['acceptors']) and bool(prof.get('has_metal'))
+        return bool(entry['acceptors']) and ligand_support('metal', prof)
 
     return False
 
@@ -350,3 +349,364 @@ AA_TOKENS = {
     'tyr': {'fragment': 'tyr', 'resn': 'TYR', 'charge_class': 'neutral'},
     'val': {'fragment': 'val', 'resn': 'VAL', 'charge_class': 'neutral'},
 }
+
+
+# ---------------------------------------------------------------------------
+# Ligand-side typing (plan 02-05 Task 2). Input: plain atom records
+# (detection research §5.1: side/object/id/name/elem/resn/resi/alt/x/y/z,
+# optional 'formal_charge' — SDF M CHG round-trips into it, materialization
+# research §1.1) + the bond block [(i, j, order)] with 0-based atom
+# indices. Geometry stays OUT except the row-8 planarity fallback — no
+# thresholds live here (typing only, detection research §5.1).
+# ---------------------------------------------------------------------------
+
+# source: gate §3.5 metal list (row 7, OQ-7 approved 2026-09-06).
+METAL_ELEMENTS = frozenset(('MG', 'ZN', 'FE', 'CA', 'MN', 'CU', 'NI',
+                            'CO', 'CD'))
+# source: gate row 6 — halogen-bond donors are ligand-side C-X with
+# X in {Cl, Br, I}; C-F EXCLUDED (recorded ProLIF-precedent resolution).
+_HALOGEN_DONOR_ELEMS = frozenset(('CL', 'BR', 'I'))
+# source: gate §5 item 3 / row 6 — donor/acceptor elements are O/N/S.
+_POLAR_ELEMS = frozenset(('O', 'N', 'S'))
+# source: gate row 5 — qualifying carbon: element C whose bonded
+# neighbors are all C or H (ligand side only; the AA side is
+# residue-name-based per §3.4).
+_HYDROPHOBE_NEIGHBOR_ELEMS = frozenset(('C', 'H'))
+# source: gate row 8 fallback — 5/6-member ring with adjacent-dihedral
+# deviation <= 15 deg (BINANA [V]); consumed in RADIANS via conversion
+# below (02-02: vec3 angle math is radians — converted explicitly).
+RING_PLANARITY_FALLBACK_DEG = 15.0
+# MDL/SDF aromatic bond-order marker ("all aromatic-order markers").
+_AROMATIC_MARKER = 4
+
+
+def _elem(atom):
+    """Normalized element symbol (uppercase, stripped)."""
+    return str(atom.get('elem', '')).strip().upper()
+
+
+def _formal_charge(atom):
+    """Optional formal_charge as int, or None when absent/invalid."""
+    value = atom.get('formal_charge')
+    if value is None:
+        return None
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _bond_order_int(order):
+    """Coerce a bond order to 1/2/3/4; None when absent/unrecognizable.
+
+    Aromatic markers (SDF order 4; MOL2 'ar'/'aromatic' spellings)
+    coerce to 4. Unknown values fail closed (never guessed).
+    """
+    if order is None:
+        return None
+    try:
+        value = int(order)
+    except (TypeError, ValueError):
+        text = str(order).strip().lower()
+        if text in ('ar', 'aromatic', 'resonance'):
+            return _AROMATIC_MARKER
+        return None
+    return value if value in (1, 2, 3, 4) else None
+
+
+def _adjacency(atoms, bonds):
+    """idx -> sorted neighbor-index lists from the bond block."""
+    adjacency = {}
+    for bond in bonds:
+        i, j = int(bond[0]), int(bond[1])
+        if i == j:
+            continue                       # defensive: self-loop
+        adjacency.setdefault(i, [])
+        adjacency.setdefault(j, [])
+        if j not in adjacency[i]:
+            adjacency[i].append(j)
+        if i not in adjacency[j]:
+            adjacency[j].append(i)
+    for key in adjacency:
+        adjacency[key].sort()
+    return adjacency
+
+
+def _order_lookup(bonds):
+    """{(min(i,j), max(i,j)): raw order} from the bond block."""
+    lookup = {}
+    for bond in bonds:
+        i, j = int(bond[0]), int(bond[1])
+        lookup[(min(i, j), max(i, j))] = bond[2] if len(bond) > 2 else None
+    return lookup
+
+
+def _canonical_ring(path):
+    """Cyclic walk canonicalized (min atom first, lexicographically
+    smaller of the two directions) so each cycle dedupes to one tuple."""
+    start = min(path)
+    idx = path.index(start)
+    rotated = tuple(path[idx:] + path[:idx])
+    backwards = (rotated[0],) + tuple(reversed(rotated[1:]))
+    return rotated if rotated <= backwards else backwards
+
+
+def _find_rings(adjacency):
+    """All simple 5/6-member cycles as canonical atom-index tuples.
+
+    Explicit-stack DFS over the bond-block adjacency — NO itertools
+    (recorded 02-01 convention: explicit stack + nested loops only).
+    Each cycle is walked from its MINIMUM atom (neighbors with index
+    > start), so the two traversal directions are the only duplicates
+    and the canonical form dedupes them. Paths are capped at 6 atoms;
+    a cycle closes when the walk re-reaches `start` at length 5 or 6.
+    """
+    found = {}
+    for start in sorted(adjacency):
+        stack = [(start, (start,))]
+        while stack:
+            node, path = stack.pop()
+            for nxt in adjacency.get(node, ()):
+                if nxt == start:
+                    if len(path) in (5, 6):
+                        ring = _canonical_ring(path)
+                        found[ring] = ring
+                elif nxt > start and nxt not in path and len(path) < 6:
+                    stack.append((nxt, path + (nxt,)))
+    return sorted(found)
+
+
+def _no_adjacent(positions, n):
+    """True iff no two ring-bond positions are consecutive mod n."""
+    ordered = sorted(positions)
+    for k in range(len(ordered)):
+        if (ordered[k] + 1) % n == ordered[(k + 1) % len(ordered)]:
+            return False
+    return True
+
+
+def _ring_aromatic(ring, order_lookup, atoms):
+    """Row-8 aromaticity for one 5/6-member cycle.
+
+    Primary: bond-order-derived — all orders aromatic markers, OR the
+    Kekule alternation pattern (6-ring: 3 non-adjacent doubles =
+    perfect alternation; 5-ring: 2 non-adjacent doubles = the
+    pyrrole/imidazole/furan pattern; unmarked bonds count as single
+    per MDL semantics; any triple/unknown order fails the ring).
+    Fallback: ONLY when every bond order in the cycle is absent —
+    adjacent-dihedral deviation <= RING_PLANARITY_FALLBACK_DEG.
+    """
+    n = len(ring)
+    orders = []
+    for k in range(n):
+        i, j = ring[k], ring[(k + 1) % n]
+        orders.append(order_lookup.get((min(i, j), max(i, j))))
+    coerced = [_bond_order_int(o) for o in orders]
+
+    if all(o is None for o in coerced):
+        return _ring_planar(ring, atoms)          # fallback ONLY here
+
+    known = [1 if o is None else o for o in coerced]
+    if all(o == _AROMATIC_MARKER for o in known):
+        return True
+    if any(o not in (1, 2) for o in known):
+        return False                              # e.g. a triple bond
+    doubles = [k for k, o in enumerate(known) if o == 2]
+    return len(doubles) == n // 2 and _no_adjacent(doubles, n)
+
+
+def _dihedral_deviation_deg(p0, p1, p2, p3):
+    """Deviation of the p0-p1-p2-p3 dihedral from planarity (the nearest
+    of 0/180 deg), in [0, 90]; None when the central bond is degenerate.
+
+    Built on vec3 primitives (floats in/out); atan2 yields RADIANS and
+    is converted here — the 02-02 vec3 contract is radians-only.
+    """
+    b0 = sub(p0, p1)
+    b1 = sub(p2, p1)
+    b2 = sub(p3, p2)
+    length = norm(b1)
+    if length == 0.0:
+        return None
+    axis = scale(b1, 1.0 / length)
+    v = sub(b0, scale(axis, dot(b0, axis)))
+    w = sub(b2, scale(axis, dot(b2, axis)))
+    x = dot(v, w)
+    y = dot(cross(axis, v), w)
+    angle = abs(math.degrees(math.atan2(y, x)))   # radians -> degrees
+    if angle > 180.0:                             # atan2 range guard
+        angle = 360.0 - angle
+    return min(angle, 180.0 - angle)
+
+
+def _ring_planar(ring, atoms):
+    """Row-8 fallback: every adjacent-dihedral deviation <= 15 deg.
+    A degenerate window fails closed (not planar)."""
+    n = len(ring)
+    coords = [(float(atoms[i]['x']), float(atoms[i]['y']),
+               float(atoms[i]['z'])) for i in ring]
+    for k in range(n):
+        deviation = _dihedral_deviation_deg(
+            coords[k], coords[(k + 1) % n], coords[(k + 2) % n],
+            coords[(k + 3) % n])
+        if deviation is None or deviation > RING_PLANARITY_FALLBACK_DEG:
+            return False
+    return True
+
+
+def _has_h_neighbor(idx, elements, adjacency):
+    """True iff atom `idx` has a bonded H (fail-closed donor test)."""
+    return any(elements[j] == 'H' for j in adjacency.get(idx, ()))
+
+
+def _all_single_bonds(idx, neighbors, order_lookup):
+    """True iff every bond from `idx` to `neighbors` has order 1."""
+    for j in neighbors:
+        order = _bond_order_int(
+            order_lookup.get((min(idx, j), max(idx, j))))
+        if order != 1:
+            return False
+    return True
+
+
+def _charge_signs(elements, adjacency, order_lookup, atoms):
+    """Ligand charge-group typing (gate §2.3 ligand side + the recorded
+    formal_charge decision). Returns a set of '+'/'-'.
+
+    '-' carboxylate: C bonded to exactly 2 O with NO O bearing an H.
+      When formal_charge is present on the Os it governs (any O < 0);
+      when absent, the kekule C=O/O-C structure alone types '-' (the
+      recorded plan decision — esters written without charge flags are
+      the accepted false-positive of that decision, recorded here).
+      Recorded Rule-2 guard: a carboxyl OH (neutral acid) is never an
+      anion — fail-closed, consistent with donor typing.
+    '+' ammonium: N with formal_charge > 0, OR N with 4 single bonds
+      including >= 1 H.
+    '+' guanidino: C bonded to 3 N.
+    """
+    signs = set()
+    for idx, elem in enumerate(elements):
+        neighbors = adjacency.get(idx, ())
+        if elem == 'C':
+            o_neighbors = [j for j in neighbors if elements[j] == 'O']
+            if len(o_neighbors) == 2 \
+                    and not any(_has_h_neighbor(j, elements, adjacency)
+                                for j in o_neighbors):
+                charges = [_formal_charge(atoms[j]) for j in o_neighbors]
+                known = [c for c in charges if c is not None]
+                if known:
+                    if any(c < 0 for c in known):
+                        signs.add('-')     # formal charge governs
+                else:
+                    signs.add('-')         # structure alone (recorded)
+            n_neighbors = [j for j in neighbors if elements[j] == 'N']
+            if len(n_neighbors) == 3:
+                signs.add('+')             # guanidino
+        elif elem == 'N':
+            fc = _formal_charge(atoms[idx])
+            if fc is not None and fc > 0:
+                signs.add('+')             # formal charge governs
+            if len(neighbors) == 4 \
+                    and _all_single_bonds(idx, neighbors, order_lookup) \
+                    and _has_h_neighbor(idx, elements, adjacency):
+                signs.add('+')             # ammonium structure
+    return signs
+
+
+def ligand_profile(atoms, bonds):
+    """Ligand chemistry profile from atom records + bond block.
+
+    Returns a plain dict (generation research §2.4 support predicates
+    consume it; the generator may carry it via the manifest):
+    {'has_donor', 'has_acceptor', 'charge_signs' (set of '+'/'-'),
+     'ring_count', 'aromatic_rings' (list of atom-index lists),
+     'has_hydrophobe', 'has_halogen_donor', 'has_metal',
+     'metal_elements' (sorted)}.
+
+    Typing rules (each unit-tested): aromatic rings from bond orders
+    (5/6-member cycles, alternating 1/2 or all aromatic markers; the
+    15-deg dihedral fallback fires ONLY when bond orders are absent
+    for the cycle); donors FAIL-CLOSED (O/N/S needs a bonded H);
+    acceptors = any O/N/S (an -OH oxygen is both donor and
+    acceptor-eligible — the geometric test decides later); charge
+    groups per ``_charge_signs``; hydrophobe = row-5 qualifying
+    carbon; halogen donor = C-X with X in {Cl, Br, I} (C-F excluded);
+    metal = row-7 approved element list. ring_count counts AROMATIC
+    rings (pi_stacking/cation_pi support is about aromatic rings,
+    row 8). Unknown elements/values fail closed.
+    """
+    adjacency = _adjacency(atoms, bonds)
+    order_lookup = _order_lookup(bonds)
+    elements = [_elem(a) for a in atoms]
+
+    has_donor = False
+    has_acceptor = False
+    has_hydrophobe = False
+    has_halogen_donor = False
+    metals = set()
+    for idx, elem in enumerate(elements):
+        neighbor_elems = set(elements[j] for j in adjacency.get(idx, ()))
+        if elem in _POLAR_ELEMS:
+            has_acceptor = True
+            if 'H' in neighbor_elems:
+                has_donor = True           # fail-closed: needs attached H
+        if elem == 'C' and neighbor_elems <= _HYDROPHOBE_NEIGHBOR_ELEMS:
+            has_hydrophobe = True          # vacuous OK for a lone C
+        if elem in _HALOGEN_DONOR_ELEMS and 'C' in neighbor_elems:
+            has_halogen_donor = True       # C-F excluded by the elem set
+        if elem in METAL_ELEMENTS:
+            metals.add(elem)
+
+    aromatic = []
+    for ring in _find_rings(adjacency):
+        if _ring_aromatic(ring, order_lookup, atoms):
+            aromatic.append(list(ring))
+
+    return {
+        'has_donor': has_donor,
+        'has_acceptor': has_acceptor,
+        'charge_signs': _charge_signs(elements, adjacency, order_lookup,
+                                      atoms),
+        'ring_count': len(aromatic),
+        'aromatic_rings': aromatic,
+        'has_hydrophobe': has_hydrophobe,
+        'has_halogen_donor': has_halogen_donor,
+        'has_metal': bool(metals),
+        'metal_elements': sorted(metals),
+    }
+
+
+def ligand_support(itype, ligand_profile):
+    """Ligand-side support predicate per generation research §2.4 —
+    the generator's required-set feasibility half (the AA half is
+    ``aa_capable``; the SAME tables feed both, DETECT-04 by
+    construction). Unknown types and missing keys fail closed."""
+    prof = ligand_profile or {}
+    signs = prof.get('charge_signs') or ()
+    rings = prof.get('ring_count') or 0
+    if itype == 'h_bond':
+        return bool(prof.get('has_donor')) or bool(prof.get('has_acceptor'))
+    if itype == 'salt_bridge':
+        return bool(signs)
+    if itype == 'pi_stacking':
+        return rings >= 1
+    if itype == 'cation_pi':
+        return rings >= 1 or '+' in signs
+    if itype == 'hydrophobic':
+        return bool(prof.get('has_hydrophobe'))
+    if itype == 'halogen':
+        return bool(prof.get('has_halogen_donor'))
+    if itype == 'metal':
+        return bool(prof.get('has_metal'))
+    return False
+
+
+def ligand_has_metal(atoms):
+    """True iff any ligand-side atom's element is in the approved metal
+    list — the shared gating helper so the generator's required-type
+    selection mirrors the detector's metal gate (gate §5 item 5;
+    detection research §7.6)."""
+    for atom in atoms:
+        if _elem(atom) in METAL_ELEMENTS:
+            return True
+    return False

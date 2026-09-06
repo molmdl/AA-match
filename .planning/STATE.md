@@ -9,12 +9,12 @@ See: .planning/PROJECT.md (updated 2026-09-05)
 
 ## Current Position
 
-Phase: 1 of 9 (Bootstrap & Pure Foundation) — **COMPLETE ✓ (verified 2026-09-06)**
-Plan: 9 of 9 complete (3 waves, parallel worktrees, merged clean)
-Status: Phase 1 verified — 01-VERIFICATION.md passed (4/4 success criteria, 9/9 plan must-have groups); ready to plan Phase 2
-Last activity: 2026-09-06 — Wave 3 + human install checkpoint resolved (plugin-path install, defaults frozen with difficulty cap 10); verifier PASSED
+Phase: 2 of 9 (Headless Game Engine) — In progress
+Plan: 1 of 15 complete (02-01 DETECT-03 gate — DONE)
+Status: DETECT-03 [GATE] CLOSED — docs/DETECTION_THRESHOLDS.md human-approved 2026-09-06; detector/generator plans (02-05..02-08) may freeze against it
+Last activity: 2026-09-06 — Completed 02-01-PLAN.md (units + atom-typing verified at approval; provisional pending Phase-8 dataset revisit)
 
-Progress: [██████████] 100% of Phase 1 · [█░░░░░░░░░] 11% of project (1/9 phases)
+Progress: [█░░░░░░░░░] 7% of Phase 2 (1/15) · [██░░░░░░░░] 22% of project (phase 2 of 9; plans 10/24)
 
 ## Performance Metrics
 
@@ -28,6 +28,7 @@ Progress: [██████████] 100% of Phase 1 · [█░░░░�
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 1 | 9/9 ✓ | — | — |
+| 2 | 1/15 | ~25 min (02-01 cont.) | — |
 
 **Recent Trend:**
 - Last 5 plans: —
@@ -59,6 +60,9 @@ Decisions are logged in PROJECT.md Key Decisions table. Seeded from PROJECT.md a
 - (01-07) Headless smoke repo-root anchor = `sys.argv` first, cwd fallback — `__file__` unusable in `-cq` scripts; loader-contract assertion headless = `info.load()` verdict, NOT the `loaded` property; Windows env recorded: Python 3.9.13 / PyQt5 5.12.3 / Qt 5.12.9 / PyMOL 2.5.0 / numpy 1.25.2; fwdslash + space-path cmd.load probes both OK.
 - (01-08) Purity is ENFORCED by tests/test_purity.py (AST scan all scopes + clean-subprocess + negative control pinning exactly 2 findings); checker is pure fn `find_bad_imports(src)`; **new pure modules must be added to `PURE_MODULES` in tests/test_purity.py to be gated**.
 - (01-09, HUMAN verdict 2026-09-06) INSTALL-01 PASS via **PLUGIN-PATH method** (repo root added to PyMOL plugin path — repo edits live, no reinstall; dialog copy-install branch not exercised). Module identity: exactly ONE module object; **never ALSO copy-install** (two module objects → duplicate singletons). Setup defaults FROZEN for Phases 2+ (changes = version-bump event): molecules_per_level 2/1/10 · difficulty_levels 3/1/**10** (human-amended from 9, commit aef7c5e) · interaction_mode 'unset'.
+- (02-01, HUMAN gate 2026-09-06) **DETECT-03 [GATE] APPROVED** — docs/DETECTION_THRESHOLDS.md is the frozen transcription source for 02-05..02-08. Key adoptions: H-bond 4.0 Å/≥140° (BINANA), salt bridge 5.5 Å group-center, π-stacking 5.5 Å/30°/2.0 Å one-category, cation-π 6.0 Å + 2.0 Å offset w/ PLIP ligand-side anti-artifact rule (OQ-4), metal 3.0 Å distance-only list {MG, ZN, FE, CA, MN, CU, NI, CO, CD} [OQ-7], ring-ID 15° fallback, MIN_DIST 0.5 Å.
+- (02-01) Resolved typing deviations from research: **Met thioether-S H-bond acceptor EXCLUDED in v1**; **Asp/Glu carboxylate acceptors + Asp/Gln/Glu/His/Cys(S) metal chelators INCLUDED** (BINANA rules); **C-F halogen donors EXCLUDED** (ProLIF precedent). His = neutral in v1 (OQ-3/D2); hydrophobic pedagogical set ALA VAL LEU ILE PRO PHE MET TRP; D1 side-chain-only; OQ-1 mode semantics (exclusive = "any" scoped by allowed_interactions); itertools NOT whitelisted; single typing home = aamatch/capability.py.
+- (02-01, HUMAN caveat) Approval is **PROVISIONAL**: values may need adjustment depending on the final curated dataset (Phase 8) — any revisit is a **DETECTOR_VERSION bump event, never a silent edit** (bump policy §4.7 of the gate doc).
 
 ### Pending Todos
 
@@ -66,20 +70,18 @@ Decisions are logged in PROJECT.md Key Decisions table. Seeded from PROJECT.md a
 - Generalize `smoke/run_smoke.sh` marker grep beyond SMOKE-01 when Phase 2 smokes arrive.
 - (Optional) Annotate 01-RESEARCH-plugin-install.md §1.3/§3.1: `load()` return ≠ `loaded` property; `__file__` unusable in `-cq` scripts.
 
-### Blockers/Concerns
+### Blockers/Concerns Carried Forward
 
-Upcoming human gates/spikes from research (not blockers for Phase 1):
-
-- **Phase 2 gate (NOW THE NEXT CONCERN): threshold table needs human transcription + approval before detector freeze (DETECT-03)** — sequence as Phase 2's first plan
+- **Phase 2 gate DETECT-03: RESOLVED (approved 2026-09-06, provisional pending Phase-8 dataset revisit)** — plans 02-05..02-08 transcribe constants from docs/DETECTION_THRESHOLDS.md row-by-row; the units/atom-typing check passed at approval.
 - Phase 3 spike: movement model (`cmd.drag(wizard=0)` interplay, default `editor_scheme`) is UNVERIFIED — run headless spike before freezing
 - Phase 7 gate: `.pse` matrix round-trip smoke before committing checkpoint design
 
 ## Session Continuity
 
 Last session: 2026-09-06
-Stopped at: Phase 1 COMPLETE + verified (01-VERIFICATION.md passed, 114/114 tests, SMOKE-01 PASS, INSTALL-01 human-approved)
+Stopped at: Completed 02-01-PLAN.md (DETECT-03 gate approved + recorded; commits e25e428, 7214d66 on exec/02-01)
 Resume file: None
 
 ## Next Actions
 
-- Run `/gsd-discuss-phase 2` (recommended — threshold-table gate DETECT-03 needs user transcription+approval sequencing) or `/gsd-plan-phase 2`
+- Merge exec/02-01 into base (orchestrator), then execute remaining Phase-2 plans in wave order (wave 2 next per 02-01-SUMMARY dependency graph)

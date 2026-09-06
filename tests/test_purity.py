@@ -74,9 +74,13 @@ if REPO_ROOT not in sys.path:
 #                   hydrophobic; imports .vec3, .spatial, .capability,
 #                   .thresholds and .setup_state INTERACTION_TYPES —
 #                   canonical type order; NO itertools, NO numpy).
+# Phase 2 (02-08): generator (seeded level construction; imports math,
+#                   random, .capability typing tables, .level_spec
+#                   version constants and .setup_state enums — the ONE
+#                   homes; NO itertools, NO numpy).
 PURE_MODULES = ['setup_state', 'level_spec', 'persistence', 'backup',
                 'paths', 'vec3', 'spatial', 'manifest', 'capability',
-                'thresholds', 'detector']
+                'thresholds', 'detector', 'generator']
 
 # Roots that must NEVER appear in any import of a pure module, in ANY
 # scope (module level or function body -- B7). dataclasses is 3.7+.
@@ -263,6 +267,19 @@ class TestGateDPyCompileSyntax(unittest.TestCase):
                     'Gate D failed: %s does not compile under python3.6 '
                     '(3.7+ syntax? dataclasses?)\n%s'
                     % (name, _stderr_tail(proc.stderr)))
+
+
+class TestGeneratorRegistration(unittest.TestCase):
+    """Plan 02-08 Task 3: the seeded generator joins the gated pure
+    modules. Gates silently SKIP unregistered modules (01-08), so the
+    registration itself is pinned -- removing 'generator' from the list
+    without re-reviewing its imports must fail here."""
+
+    def test_generator_registered_in_pure_modules(self):
+        self.assertIn(
+            'generator', PURE_MODULES,
+            'aamatch/generator.py must be registered in PURE_MODULES '
+            '(unregistered pure modules are silently ungated)')
 
 
 class TestNegativeControl(unittest.TestCase):

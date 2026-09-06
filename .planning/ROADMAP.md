@@ -72,7 +72,7 @@ Plans:
 - [x] 02-04-PLAN.md — fixture ligands + MANIFEST.json + generalized smoke runner + SMOKE-02 every-manifest-id proof
 - [x] 02-05-PLAN.md — pure capability.py: single typing home (AA table + ligand typing + support predicates) (TDD)
 - [x] 02-06-PLAN.md — thresholds.py constants + detector core (features, prefilter, candidates, h_bond/salt_bridge/hydrophobic) (TDD)
-- [ ] 02-07-PLAN.md — detector part 2a: pi_stacking + cation_pi (TDD; split from original 02-07 after repeated silent spawn failures)
+^- [x] 02-07-PLAN.md — detector part 2a: pi_stacking + cation_pi (TDD; split from original 02-07 after repeated silent spawn failures)
 - [ ] 02-07b-PLAN.md — detector part 2b: halogen + metal + canonical 7-type surface (TDD; depends 02-07)
 - [x] 02-08-PLAN.md — pure seeded generator: difficulty, grid geometry, mode semantics, solvable allocation, payload assembly (TDD)
 - [x] 02-09-PLAN.md — cmd-tier geometry.py extraction bridge (records + bond block + bounds)
@@ -216,7 +216,7 @@ Lifted from PITFALLS.md "Pitfall-to-Phase Mapping" (topic names → this roadmap
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Bootstrap & Pure Foundation | 9/9 | Complete | 2026-09-06 |
-| 2. Headless Game Engine | 8/16 | In progress (waves 1-6 done except 02-07 split part 1; DETECT-03 gate approved 2026-09-06) | - |
+| 2. Headless Game Engine | 9/16 | In progress (waves 1-6 complete; wave 7 = 02-07b/02-10/02-12/02-13) | - |
 | 3. Wizard Gameplay Loop | 0/TBD | Not started | - |
 | 4. Qt Setup Window | 0/TBD | Not started | - |
 | 5. Game Status Tab & Start Sequence | 0/TBD | Not started | - |

@@ -216,7 +216,7 @@ Lifted from PITFALLS.md "Pitfall-to-Phase Mapping" (topic names → this roadmap
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Bootstrap & Pure Foundation | 9/9 | Complete | 2026-09-06 |
-| 2. Headless Game Engine | 9/16 | In progress (waves 1-6 complete; wave 7 = 02-07b/02-10/02-12/02-13) | - |
+| 2. Headless Game Engine | 13/16 | In progress (wave 7 complete; wave 8 = 02-11/02-14) | - |
 | 3. Wizard Gameplay Loop | 0/TBD | Not started | - |
 | 4. Qt Setup Window | 0/TBD | Not started | - |
 | 5. Game Status Tab & Start Sequence | 0/TBD | Not started | - |

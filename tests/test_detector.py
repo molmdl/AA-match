@@ -1,11 +1,13 @@
-"""Unit tests for aamatch.detector — pipeline core + 3 of 7 types (02-06).
+"""Unit tests for aamatch.detector — pipeline core + 5 of 7 types.
 
 Plan 02-06 scope: extract_features (typed features, computed ONCE), the
 AA bounding-sphere prefilter, spatial.cross_pairs candidate enumeration,
 and the h_bond / salt_bridge / hydrophobic tests with explicit partner
-sides. Plan 02-07 extends this file with pi_stacking, cation_pi, halogen
-and metal on the SAME pipeline — every geometry here is hand-placed and
-runs under bare python3.6 with ZERO PyMOL (pure-layer contract).
+sides. Plans 02-07 (pi_stacking, cation_pi — the ring-geometry types)
+and 02-07b (halogen, metal, canonical detect; 02-07 split 2026-09-06)
+extend this file on the SAME pipeline — every geometry here is
+hand-placed and runs under bare python3.6 with ZERO PyMOL (pure-layer
+contract).
 
 All criteria asserted at scripted boundaries come from the APPROVED
 DETECT-03 gate document (docs/DETECTION_THRESHOLDS.md, 2026-09-06) via
@@ -311,6 +313,125 @@ def _far_alanine():
     atoms.append(_aa_atom('aa_far', next_id, 'CB', 'C', 'ALA', 9,
                           101.5, 100.6, 100.0))
     return atoms
+
+
+# --- ring-geometry helpers (plan 02-07) -----------------------------------
+
+_HEX_R = 1.39                                       # benzene-like radius
+_HEX_Y = _HEX_R * math.sin(math.pi / 3.0)           # exact hexagon
+
+
+def _benzene_ligand():
+    """Plain benzene ring (6 C + 6 H, kekule bonds), center at origin,
+    normal +z, radius 1.39. Ring carbons qualify as hydrophobes
+    (neighbors C/C/H), so the ring-type tests below scope all asserts
+    with _of_type — a stray hydrophobic record never fakes a miss."""
+    atoms = [_lig_atom(0, 'C1', 'C', 1.39, 0.0, 0.0),
+             _lig_atom(1, 'C2', 'C', 0.695, _HEX_Y, 0.0),
+             _lig_atom(2, 'C3', 'C', -0.695, _HEX_Y, 0.0),
+             _lig_atom(3, 'C4', 'C', -1.39, 0.0, 0.0),
+             _lig_atom(4, 'C5', 'C', -0.695, -_HEX_Y, 0.0),
+             _lig_atom(5, 'C6', 'C', 0.695, -_HEX_Y, 0.0)]
+    h_scale = (_HEX_R + 1.09) / _HEX_R              # C-H ~1.09 A, radial
+    for k in range(6):
+        carbon = atoms[k]
+        atoms.append(_lig_atom(len(atoms), 'H%d' % (k + 7), 'H',
+                               carbon['x'] * h_scale,
+                               carbon['y'] * h_scale, 0.0))
+    bonds = [(0, 1, 2), (1, 2, 1), (2, 3, 2), (3, 4, 1), (4, 5, 2),
+             (5, 0, 1)]
+    bonds.extend((k, k + 6, 1) for k in range(6))
+    return atoms, bonds
+
+
+def _hex_ring(obj, next_id, resn, resi, center, normal_u, inplane_u,
+              names):
+    """Six ring atoms (regular hexagon, radius 1.39) in the plane through
+    ``center`` with unit normal ``normal_u``; ``inplane_u`` is a unit
+    in-plane axis. The walk order ``names`` (atoms at 0, 60, ..., 300
+    deg) puts atoms 0/2/4 at 120 deg so the row-9 plane is
+    non-degenerate; (u, v, n) is right-handed so the computed normal
+    equals ``normal_u``."""
+    n = normal_u
+    u = inplane_u
+    v = (n[1] * u[2] - n[2] * u[1],
+         n[2] * u[0] - n[0] * u[2],
+         n[0] * u[1] - n[1] * u[0])
+    atoms = []
+    for k, name in enumerate(names):
+        theta = 2.0 * math.pi * k / 6.0
+        c = math.cos(theta)
+        s = math.sin(theta)
+        atoms.append(_aa_atom(
+            obj, next_id + k, name, 'C', resn, resi,
+            center[0] + _HEX_R * (c * u[0] + s * v[0]),
+            center[1] + _HEX_R * (c * u[1] + s * v[1]),
+            center[2] + _HEX_R * (c * u[2] + s * v[2])))
+    return atoms
+
+
+# The capability AA_RESIDUES['PHE']['rings'][0] walk — asserted here so
+# the scripted atoms always match the production ring table.
+_PHE_WALK = ('CG', 'CD1', 'CE1', 'CZ', 'CE2', 'CD2')
+
+
+def _phenylalanine(obj, center, normal_u, inplane_u, resi=5):
+    """PHE fragment: backbone + CB + the capability ring walk as a
+    regular hexagon with the scripted center/normal/in-plane axis."""
+    assert tuple(capability.AA_RESIDUES['PHE']['rings'][0]) == _PHE_WALK
+    atoms, next_id = _aa_backbone(obj, 600, 'PHE', resi,
+                                  (center[0] - 2.0, center[1] - 4.0,
+                                   center[2]))
+    atoms.append(_aa_atom(obj, next_id, 'CB', 'C', 'PHE', resi,
+                          center[0] - 1.5, center[1] - 1.0, center[2]))
+    next_id += 1
+    atoms.extend(_hex_ring(obj, next_id, 'PHE', resi, center, normal_u,
+                           inplane_u, _PHE_WALK))
+    return atoms
+
+
+def _lysine(obj, nz_pos, ce_pos, cd_pos, cg_pos, resi=6):
+    """LYS fragment with the charged ammonium NZ at ``nz_pos`` (charge
+    center = NZ per gate 2.3, charge_atoms=('NZ',)) and the chain atoms
+    at scripted positions; polar HZ1..3 ride on NZ at ~1.0 A."""
+    atoms, next_id = _aa_backbone(obj, 700, 'LYS', resi,
+                                  (cg_pos[0] - 2.0, cg_pos[1] - 2.0,
+                                   cg_pos[2]))
+    atoms.append(_aa_atom(obj, next_id, 'CB', 'C', 'LYS', resi,
+                          cg_pos[0] - 1.5, cg_pos[1] + 1.0, cg_pos[2]))
+    next_id += 1
+    for name, pos in (('CG', cg_pos), ('CD', cd_pos), ('CE', ce_pos),
+                      ('NZ', nz_pos)):
+        elem = 'N' if name == 'NZ' else 'C'
+        atoms.append(_aa_atom(obj, next_id, name, elem, 'LYS', resi,
+                              pos[0], pos[1], pos[2]))
+        next_id += 1
+    for name, off in (('HZ1', (0.59, 0.59, 0.59)),
+                      ('HZ2', (-0.82, 0.0, 0.58)),
+                      ('HZ3', (0.0, -0.82, 0.58))):
+        atoms.append(_aa_atom(obj, next_id, name, 'H', 'LYS', resi,
+                              nz_pos[0] + off[0], nz_pos[1] + off[1],
+                              nz_pos[2] + off[2]))
+        next_id += 1
+    return atoms
+
+
+def _tert_ammonium_ligand(n_pos, sub_positions):
+    """Protonated tertiary amine: N with exactly THREE non-H substituents
+    at ``sub_positions`` (all single bonds) + one H — a ligand '+'
+    charge group of kind ammonium whose substituent plane is DEFINED
+    (the OQ-4 veto subject). The H position is irrelevant to the veto
+    (only the three non-H substituent points define the plane)."""
+    atoms = [_lig_atom(0, 'N1', 'N', n_pos[0], n_pos[1], n_pos[2])]
+    bonds = []
+    for k, pos in enumerate(sub_positions):
+        atoms.append(_lig_atom(len(atoms), 'C%d' % (k + 2), 'C',
+                               pos[0], pos[1], pos[2]))
+        bonds.append((0, len(atoms) - 1, 1))
+    atoms.append(_lig_atom(len(atoms), 'H9', 'H',
+                           n_pos[0], n_pos[1], n_pos[2] - 1.01))
+    bonds.append((0, len(atoms) - 1, 1))
+    return atoms, bonds
 
 
 def _scene(lig_atoms, lig_bonds, aa_atom_lists):
@@ -871,6 +992,258 @@ class TestRecordContract(unittest.TestCase):
         self.assertFalse(capability.aa_capable('ALA', 'h_bond', profile))
         self.assertTrue(capability.aa_capable('ASP', 'salt_bridge', profile))
         self.assertTrue(capability.aa_capable('SER', 'h_bond', profile))
+
+
+# ---------------------------------------------------------------------------
+# 02-07 RED spec 1 — pi_stacking (row 3: one uniform test for parallel
+# AND T-shaped; sub-type recorded as a metric only)
+# ---------------------------------------------------------------------------
+
+class TestPiStacking(unittest.TestCase):
+    """Row 3 (gate §2.2): ring-center dist < 5.5 A AND normals within
+    30 deg of parallel OR of perpendicular AND projected-center offset
+    < 2.0 A — the sub-type P/T is a METRIC; the type is always
+    'pi_stacking'. Ligand benzene ring at origin, normal +z; the AA
+    ring is PHE scripted from the capability walk."""
+
+    def _pi(self, center, normal, u):
+        lig_atoms, lig_bonds = _benzene_ligand()
+        phe = _phenylalanine('aa_phe', center, normal, u)
+        atoms, bonds = _scene(lig_atoms, lig_bonds, [phe])
+        return _of_type(detector.detect_part1(atoms, bonds),
+                        'pi_stacking')
+
+    def test_parallel_formed_subtype_p(self):
+        # Ring center (1.0, 0, 4.5): d = sqrt(21.25) < 5.5, normals
+        # parallel, both cross-projections give offset 1.0 < 2.0.
+        records = self._pi((1.0, 0.0, 4.5), (0.0, 0.0, 1.0),
+                           (1.0, 0.0, 0.0))
+        self.assertEqual(len(records), 1)
+        record = records[0]
+        self.assertEqual(record['aa']['resn'], 'PHE')
+        self.assertEqual(record['aa']['role'], 'ring')
+        self.assertEqual(record['lig']['role'], 'ring')
+        self.assertAlmostEqual(record['metrics']['d_center'],
+                               math.sqrt(21.25), places=6)
+        self.assertAlmostEqual(record['metrics']['angle_deg'], 0.0,
+                               places=6)
+        self.assertAlmostEqual(record['metrics']['offset'], 1.0,
+                               places=6)
+        self.assertEqual(record['metrics']['subtype'], 'P')
+        self.assertEqual(set(record['metrics']),
+                         {'d_center', 'angle_deg', 'offset', 'subtype'})
+        self.assertEqual(record['aa']['atom_ids'],
+                         [607, 608, 609, 610, 611, 612])
+        self.assertEqual(record['lig']['atom_ids'], [0, 1, 2, 3, 4, 5])
+        self.assertTrue(record['formed'])
+
+    def test_parallel_5p6_not_formed(self):
+        # Center distance 5.6 A exceeds the strict 5.5 A row-3 cutoff.
+        self.assertEqual(self._pi((0.0, 0.0, 5.6), (0.0, 0.0, 1.0),
+                                  (1.0, 0.0, 0.0)), [])
+
+    def test_t_shaped_formed_subtype_t(self):
+        # Ring plane perpendicular (normal +x), center 5.0 A away with
+        # projected offset 1.0: the min cross-projection (AA center into
+        # the ligand plane) keeps the hit; subtype 'T'.
+        records = self._pi((1.0, 0.0, 4.898979485566356),
+                           (1.0, 0.0, 0.0), (0.0, 0.0, 1.0))
+        self.assertEqual(len(records), 1)
+        record = records[0]
+        self.assertAlmostEqual(record['metrics']['d_center'], 5.0,
+                               places=6)
+        self.assertAlmostEqual(record['metrics']['angle_deg'], 90.0,
+                               places=6)
+        self.assertAlmostEqual(record['metrics']['offset'], 1.0,
+                               places=6)
+        self.assertEqual(record['metrics']['subtype'], 'T')
+
+    def test_offset_2p5_not_formed(self):
+        # Parallel stack at offset 2.5 (distance sqrt(26.5) < 5.5 and
+        # angle fine) — the offset test alone must kill the hit.
+        self.assertEqual(self._pi((2.5, 0.0, 4.5), (0.0, 0.0, 1.0),
+                                  (1.0, 0.0, 0.0)), [])
+
+    def test_normals_45deg_neither_nor_formed(self):
+        # Normals 45 deg off parallel: within NEITHER 30 deg of parallel
+        # NOR 30 deg of perpendicular — the angle test alone kills it
+        # (distance 4.5 and offset 0.0 both pass).
+        s = math.sqrt(0.5)
+        self.assertEqual(self._pi((0.0, 0.0, 4.5), (s, 0.0, s),
+                                  (s, 0.0, -s)), [])
+
+    def test_backbone_atoms_never_join_ring_test_d1(self):
+        # D1: backbone + CB only — a PHE object WITHOUT its side-chain
+        # ring atoms carries no ring feature; nothing can stack.
+        lig_atoms, lig_bonds = _benzene_ligand()
+        atoms_phe, _ = _aa_backbone('aa_phe', 800, 'PHE', 5,
+                                    (0.0, 0.0, 3.0))
+        atoms_phe.append(_aa_atom('aa_phe', 806, 'CB', 'C', 'PHE', 5,
+                                  0.5, 1.0, 3.5))
+        atoms, bonds = _scene(lig_atoms, lig_bonds, [atoms_phe])
+        self.assertEqual(_of_type(detector.detect_part1(atoms, bonds),
+                                  'pi_stacking'), [])
+        self.assertEqual(_of_type(detector.detect_part1(atoms, bonds),
+                                  'cation_pi'), [])
+
+    def test_records_agree_with_capability_tables(self):
+        # DETECT-04: PHE is pi_stacking-capable against a ring ligand.
+        lig_atoms, lig_bonds = _benzene_ligand()
+        profile = capability.ligand_profile(lig_atoms, lig_bonds)
+        self.assertTrue(capability.aa_capable('PHE', 'pi_stacking',
+                                              profile))
+        self.assertFalse(capability.aa_capable('ALA', 'pi_stacking',
+                                               profile))
+
+
+# ---------------------------------------------------------------------------
+# 02-07 RED spec 2 — cation_pi (row 4: <= 6.0 A + 2.0 A offset, BOTH
+# directions per D4; OQ-4 ligand-side anti-artifact veto, AA-side none)
+# ---------------------------------------------------------------------------
+
+# sqrt(5.5^2 - 1.0^2) — z for a 5.5 A charge-center distance with a 1.0 A
+# projected offset (case a/b geometry).
+_CATION_Z = 5.408326913195984
+
+
+class TestCationPi(unittest.TestCase):
+    """Row 4 (gate §2.2 + D4 + §4.4): charge center <-> ring center
+    <= 6.0 A AND projected charge offset < 2.0 A, direction recorded.
+    The tertiary-amine anti-artifact veto applies ONLY when the ligand
+    carries the cation (documented asymmetry)."""
+
+    def _run(self, lig_atoms, lig_bonds, aa_lists, type_='cation_pi'):
+        atoms, bonds = _scene(lig_atoms, lig_bonds, aa_lists)
+        return _of_type(detector.detect_part1(atoms, bonds), type_)
+
+    def test_ligand_ring_over_aa_cation_formed(self):
+        # (a) LYS NZ 5.5 A from the benzene center, projected offset 1.0.
+        lig_atoms, lig_bonds = _benzene_ligand()
+        nz = (1.0, 0.0, _CATION_Z)
+        lys = _lysine('aa_lys', nz, (2.2, 0.5, _CATION_Z + 1.4),
+                      (3.4, 1.0, _CATION_Z + 2.8),
+                      (4.2, 0.5, _CATION_Z + 4.2))
+        records = self._run(lig_atoms, lig_bonds, [lys])
+        self.assertEqual(len(records), 1)
+        record = records[0]
+        self.assertEqual(record['aa']['resn'], 'LYS')
+        self.assertEqual(record['aa']['role'], 'cation')
+        self.assertEqual(record['lig']['role'], 'ring')
+        self.assertEqual(record['aa']['atom_ids'], [710])
+        self.assertEqual(record['lig']['atom_ids'], [0, 1, 2, 3, 4, 5])
+        self.assertEqual(record['metrics']['direction'],
+                         'aa_cation_over_lig_ring')
+        self.assertAlmostEqual(record['metrics']['d_center'], 5.5,
+                               places=6)
+        self.assertAlmostEqual(record['metrics']['offset'], 1.0,
+                               places=6)
+        self.assertEqual(set(record['metrics']),
+                         {'d_center', 'offset', 'direction'})
+        self.assertTrue(record['formed'])
+
+    def test_ligand_cation_over_aa_ring_formed(self):
+        # (b) primary ammonium ligand (one C neighbor — NOT a veto
+        # subject) N at origin; AA PHE ring 5.5 A away, offset 1.0.
+        lig_atoms, lig_bonds = _ammonium_ligand(
+            (0.0, 0.0, 0.0), ((0.59, 0.59, 0.59), (-0.82, 0.0, 0.58),
+                              (0.0, -0.82, 0.58)))
+        phe = _phenylalanine('aa_phe', (1.0, 0.0, _CATION_Z),
+                             (0.0, 0.0, 1.0), (1.0, 0.0, 0.0))
+        records = self._run(lig_atoms, lig_bonds, [phe])
+        self.assertEqual(len(records), 1)
+        record = records[0]
+        self.assertEqual(record['aa']['role'], 'ring')
+        self.assertEqual(record['lig']['role'], 'cation')
+        self.assertEqual(record['lig']['atom_ids'], [0])
+        self.assertEqual(record['metrics']['direction'],
+                         'aa_ring_under_lig_cation')
+        self.assertAlmostEqual(record['metrics']['d_center'], 5.5,
+                               places=6)
+        self.assertAlmostEqual(record['metrics']['offset'], 1.0,
+                               places=6)
+
+    def test_distance_6p5_not_formed(self):
+        # (c) charge center 6.5 A from the ring center > 6.0 A cutoff.
+        lig_atoms, lig_bonds = _ammonium_ligand(
+            (0.0, 0.0, 0.0), ((0.59, 0.59, 0.59), (-0.82, 0.0, 0.58),
+                              (0.0, -0.82, 0.58)))
+        phe = _phenylalanine('aa_phe', (0.0, 0.0, 6.5),
+                             (0.0, 0.0, 1.0), (1.0, 0.0, 0.0))
+        self.assertEqual(self._run(lig_atoms, lig_bonds, [phe]), [])
+
+    def test_offset_2p5_not_formed(self):
+        # (d) distance 5.5 A passes; projected offset 2.5 >= 2.0 kills.
+        lig_atoms, lig_bonds = _ammonium_ligand(
+            (0.0, 0.0, 0.0), ((0.59, 0.59, 0.59), (-0.82, 0.0, 0.58),
+                              (0.0, -0.82, 0.58)))
+        phe = _phenylalanine('aa_phe', (2.5, 0.0, 4.898979485566356),
+                             (0.0, 0.0, 1.0), (1.0, 0.0, 0.0))
+        self.assertEqual(self._run(lig_atoms, lig_bonds, [phe]), [])
+
+    def test_ligand_tertiary_amine_veto_fires(self):
+        # (e) OQ-4 veto: protonated tertiary amine in the SAME would-be
+        # formed geometry as case (b), but its substituent plane normal
+        # is ~perpendicular to the ring normal (amine stacked 'through'
+        # the ligand side) — the veto must reject the hit.
+        subs = [(1.47, 0.0, 0.0), (-0.735, 0.0, 1.2727481),
+                (-0.735, 0.0, -1.2727481)]          # plane normal ~ +y
+        lig_atoms, lig_bonds = _tert_ammonium_ligand((0.0, 0.0, 0.0),
+                                                     subs)
+        phe = _phenylalanine('aa_phe', (1.0, 0.0, _CATION_Z),
+                             (0.0, 0.0, 1.0), (1.0, 0.0, 0.0))
+        self.assertEqual(self._run(lig_atoms, lig_bonds, [phe]), [])
+
+    def test_tertiary_amine_plane_parallel_formed(self):
+        # Control for the veto: identical tertiary-amine geometry but
+        # with the substituent plane normal ~parallel to the ring normal
+        # (pole-on) — the veto passes and the hit forms. This proves the
+        # miss above is the VETO, not a distance/offset accident.
+        subs = [(1.47, 0.0, 0.0), (-0.735, 1.2727481, 0.0),
+                (-0.735, -1.2727481, 0.0)]          # plane normal ~ +z
+        lig_atoms, lig_bonds = _tert_ammonium_ligand((0.0, 0.0, 0.0),
+                                                     subs)
+        phe = _phenylalanine('aa_phe', (1.0, 0.0, _CATION_Z),
+                             (0.0, 0.0, 1.0), (1.0, 0.0, 0.0))
+        records = self._run(lig_atoms, lig_bonds, [phe])
+        self.assertEqual(len(records), 1)
+        self.assertEqual(records[0]['metrics']['direction'],
+                         'aa_ring_under_lig_cation')
+
+    def test_aa_cation_side_has_no_veto_asymmetry(self):
+        # Documented OQ-4 asymmetry: arrange the LYS chain in the exact
+        # through-plane shape the ligand veto rejects (CG/CD/CE in a
+        # plane whose normal is ~perpendicular to the ring normal) —
+        # the AA side has no such veto and the hit STILL forms.
+        lig_atoms, lig_bonds = _benzene_ligand()
+        nz = (1.0, 0.0, _CATION_Z)
+        lys = _lysine('aa_lys', nz,
+                      (nz[0] + 1.47, 0.0, nz[2]),
+                      (nz[0] - 0.735, 0.0, nz[2] + 1.2727481),
+                      (nz[0] - 0.735, 0.0, nz[2] - 1.2727481))
+        records = self._run(lig_atoms, lig_bonds, [lys])
+        self.assertEqual(len(records), 1)
+        self.assertEqual(records[0]['metrics']['direction'],
+                         'aa_cation_over_lig_ring')
+        self.assertAlmostEqual(records[0]['metrics']['d_center'], 5.5,
+                               places=6)
+
+    def test_records_agree_with_capability_tables(self):
+        # DETECT-04, both directions (D4): LYS cation against a ring
+        # ligand; PHE ring against a cationic ligand.
+        lig_atoms, lig_bonds = _benzene_ligand()
+        ring_profile = capability.ligand_profile(lig_atoms, lig_bonds)
+        self.assertTrue(capability.aa_capable('LYS', 'cation_pi',
+                                              ring_profile))
+        self.assertFalse(capability.aa_capable('ASP', 'cation_pi',
+                                               ring_profile))
+        cat_atoms, cat_bonds = _ammonium_ligand(
+            (0.0, 0.0, 0.0), ((0.59, 0.59, 0.59), (-0.82, 0.0, 0.58),
+                              (0.0, -0.82, 0.58)))
+        cat_profile = capability.ligand_profile(cat_atoms, cat_bonds)
+        self.assertTrue(capability.aa_capable('PHE', 'cation_pi',
+                                              cat_profile))
+        self.assertFalse(capability.aa_capable('ALA', 'cation_pi',
+                                               cat_profile))
 
 
 if __name__ == '__main__':

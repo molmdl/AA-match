@@ -31,8 +31,8 @@ gate document on 2026-09-06; the docstring is the policy carrier):
    generator capability and detector typing consistent, so fail-closed
    cannot create unsolvable levels.
 4. STATE 1 ONLY / caller-owned frames: see the header above.
-5. METAL GATING PREVIEW (02-07 finishes the type): metal coordination
-   will run only when a ligand-side element is in the approved list
+5. METAL GATING PREVIEW (02-07b finishes the type): metal coordination
+    will run only when a ligand-side element is in the approved list
    (capability.METAL_ELEMENTS / capability.ligand_has_metal, gate §5
    item 5) so the generator can never require metal on a metal-free
    ligand. Ligand metal atoms are precomputed here as features.
@@ -76,14 +76,18 @@ home, gate §4.2; no parallel matrix lives here):
   symmetric centroid of the bonded Ns is used. Revisiting this is a
   DETECTOR_VERSION event (gate §4.7), never a silent edit.
 - ONE RECORD PER CONTACT: h_bond emits one record per (donor heavy,
-  acceptor) pair, represented by the attached H with the largest
-  D-H...A angle (ties -> lowest H id) -- two Hs on one donor (LYS NZ)
-  are one physical contact, not two. Donor-uniqueness ACROSS different
-  donors is intentionally NOT deduped (recorded gate §2.4 deviation:
-  those rules change counts, not presence; fraction scoring is
-  presence-based). Hydrophobic emits one binary-presence record per
-  (AA object, ligand) whose atom_ids are the contacted carbon sets
-  (row 5 ">= 1 pair of qualifying carbons").
+   acceptor) pair, represented by the attached H with the largest
+   D-H...A angle (ties -> lowest H id) -- two Hs on one donor (LYS NZ)
+   are one physical contact, not two. Donor-uniqueness ACROSS different
+   donors is intentionally NOT deduped (recorded gate §2.4 deviation:
+   those rules change counts, not presence; fraction scoring is
+   presence-based). Hydrophobic emits one binary-presence record per
+   (AA object, ligand) whose atom_ids are the contacted carbon sets
+   (row 5 ">= 1 pair of qualifying carbons"). The ring-geometry types
+   (plan 02-07) emit one record per qualifying (AA ring, ligand ring)
+   pair (pi_stacking) or per qualifying (charge group, ring) pair in
+   each direction (cation_pi) -- both are feature-level contacts, and
+   the cation_pi direction/sub-role is recorded in metrics per D4.
 - Ligand rings precomputed here are AROMATIC rings only (rows 3-4 are
   aromatic-ring interactions; capability.ligand_profile counts the same
   set). Row-9 geometry: center = mean of ring atoms, normal = plane
@@ -118,10 +122,11 @@ PIPELINE (detection research §5.2; the DETECT-05 two-level pruning):
    identical list (determinism pinned by test, including AA record
    order permutation).
 
-detect_part1 runs the three contact types (h_bond, salt_bridge,
-hydrophobic) through the shared pipeline; plan 02-07 adds pi_stacking,
-cation_pi, halogen and metal on the same features/candidates and wraps
-the full 7-type detect().
+detect_part1 runs five of the seven types (h_bond, salt_bridge,
+pi_stacking, cation_pi, hydrophobic) through the shared pipeline; the
+02-07 split (2026-09-06) put the two ring-geometry types here, and
+plan 02-07b adds halogen + metal on the same features/candidates and
+wraps the full 7-type detect().
 
 Dependency direction: math + pure vec3/spatial/capability/thresholds +
 setup_state.INTERACTION_TYPES (the ONE enum home, canonical type order).
@@ -131,7 +136,8 @@ comprehensions only), no pymol.
 
 import math
 
-from .vec3 import add, angle_at, cross, dist, norm_squared, scale, sub, unit
+from .vec3 import (add, angle_at, cross, dist, norm_squared,
+                   plane_project, scale, sub, unit)
 from .spatial import cross_pairs
 from .capability import (
     AA_RESIDUES,
@@ -150,12 +156,17 @@ from .capability import (
 )
 from .thresholds import (
     AA_PREFILTER_MARGIN,
+    CATIONPI_D_MAX,
+    CATIONPI_OFFSET_MAX,
     HALOGEN_D_MAX,
     HBOND_ANGLE_MIN_DEG,
     HBOND_D_MAX,
     HYDRO_D_MAX,
     METAL_D_MAX,
     MIN_DIST,
+    PISTACK_ANGLE_TOL_DEG,
+    PISTACK_CENTER_D_MAX,
+    PISTACK_OFFSET_MAX,
     SALT_CENTER_D_MAX,
 )
 from .setup_state import INTERACTION_TYPES
@@ -166,6 +177,9 @@ _TYPE_ORDER = dict((t, i) for i, t in enumerate(INTERACTION_TYPES))
 # AA-side donor-H pairing epsilon (typing-internal, see docstring item on
 # geometric pairing; X-H covalent <= ~1.36 A S-H, so 1.5 carries margin).
 AA_H_ATTACH_MAX = 1.5
+
+# Origin vertex for angle_at()-based vector angles (normal-vs-normal).
+_ORIGIN = (0.0, 0.0, 0.0)
 
 # Known NON-side-chain heavy atom names: the standard backbone plus OXT
 # plus CB (the universal side-chain anchor). Anything else heavy is
@@ -340,7 +354,13 @@ def _ligand_charge_groups(lig_recs, elements, adjacency, order_lookup):
     the SAME predicates as capability._charge_signs (parity pinned by
     test): ammonium N+ (center = N), carboxylate - (midpoint of the two
     Os), guanidino + (centroid of the bonded Ns -- see module docstring).
-    Phosphate/sulfonate are NOT typed in v1 (capability parity)."""
+    Phosphate/sulfonate are NOT typed in v1 (capability parity).
+
+    Ammonium groups also carry 'substituents' -- the N's non-H neighbor
+    positions, consumed ONLY by the OQ-4 cation-pi anti-artifact veto
+    (a substituent-plane normal exists iff there are exactly three:
+    PLIP's tertamine; quaternary ammonium and primary/secondary amines
+    are never veto subjects)."""
     groups = []
     for idx, elem in enumerate(elements):
         neighbors = adjacency.get(idx, ())
@@ -352,7 +372,10 @@ def _ligand_charge_groups(lig_recs, elements, adjacency, order_lookup):
             if (fc is not None and fc > 0) or ammonium:
                 groups.append({'sign': '+', 'kind': 'ammonium',
                                'center': _pos(lig_recs[idx]),
-                               'atom_ids': [int(lig_recs[idx]['id'])]})
+                               'atom_ids': [int(lig_recs[idx]['id'])],
+                               'substituents': tuple(
+                                   _pos(lig_recs[j]) for j in neighbors
+                                   if elements[j] != 'H')})
         elif elem == 'C':
             o_neighbors = [j for j in neighbors if elements[j] == 'O']
             n_neighbors = [j for j in neighbors if elements[j] == 'N']
@@ -787,6 +810,144 @@ def _hydrophobic_records(features, near_objs, lig_ctx, atom_pairs):
     return records
 
 
+def _normals_angle_deg(n1, n2):
+    """Unsigned LINE angle between two unit normals in degrees, folded to
+    [0, 90] via min(theta, 180 - theta) -- ring planes have no direction
+    (PLIP detection.py pistacking/pication)."""
+    theta = math.degrees(angle_at(n1, _ORIGIN, n2))
+    if theta > 90.0:
+        return 180.0 - theta
+    return theta
+
+
+def _pi_stacking_records(features, near_objs):
+    """Row 3: ring-center dist < PISTACK_CENTER_D_MAX (strict) AND
+    normals within PISTACK_ANGLE_TOL_DEG of parallel OR of perpendicular
+    AND projected-center offset < PISTACK_OFFSET_MAX -- one uniform test
+    covering both sub-geometries (gate §2.2 row 3); the sub-type P/T is
+    recorded as a METRIC only (the reported type is always pi_stacking).
+    Offset = min over the two cross-projections (each ring center into
+    the opposite ring's plane), the PLIP pistacking form. Ring pairs are
+    enumerated directly (tiny counts, no cell list)."""
+    records = []
+    lig_rings = features['lig']['rings']
+    lig_obj = _lig_object_name(features)
+    for obj in near_objs:
+        feat = features['aa'][obj]
+        for aa_ring in feat['rings']:
+            for lig_ring in lig_rings:
+                d = dist(aa_ring['center'], lig_ring['center'])
+                if d <= MIN_DIST or d >= PISTACK_CENTER_D_MAX:
+                    continue
+                angle = _normals_angle_deg(aa_ring['normal'],
+                                           lig_ring['normal'])
+                if angle <= PISTACK_ANGLE_TOL_DEG:
+                    subtype = 'P'
+                elif angle >= 90.0 - PISTACK_ANGLE_TOL_DEG:
+                    subtype = 'T'
+                else:
+                    continue
+                offset = min(
+                    dist(plane_project(aa_ring['center'],
+                                       lig_ring['center'],
+                                       lig_ring['normal']),
+                         lig_ring['center']),
+                    dist(plane_project(lig_ring['center'],
+                                       aa_ring['center'],
+                                       aa_ring['normal']),
+                         aa_ring['center']))
+                if offset >= PISTACK_OFFSET_MAX:
+                    continue
+                records.append(_record(
+                    'pi_stacking', obj, feat['resn'], feat['resi'],
+                    'ring', aa_ring['atom_ids'], lig_obj, 'ring',
+                    lig_ring['atom_ids'],
+                    {'d_center': d, 'angle_deg': angle, 'offset': offset,
+                     'subtype': subtype}))
+    return records
+
+
+def _cation_pi_test(charge_center, ring):
+    """Row 4 shared geometry: (d, offset) when the charge center lies
+    within CATIONPI_D_MAX of the ring center (inclusive <=, per the
+    thresholds row transcription) AND projects within CATIONPI_OFFSET_MAX
+    of the ring center in the ring plane (strict <); None otherwise."""
+    d = dist(charge_center, ring['center'])
+    if d <= MIN_DIST or d > CATIONPI_D_MAX:
+        return None
+    projected = plane_project(charge_center, ring['center'],
+                              ring['normal'])
+    offset = dist(projected, ring['center'])
+    if offset >= CATIONPI_OFFSET_MAX:
+        return None
+    return d, offset
+
+
+def _substituent_plane_veto(group, ring):
+    """OQ-4 (gate §4.4, PLIP ligand-side-only anti-artifact rule): when
+    the LIGAND cation is a tertiary ammonium (exactly three non-H
+    substituents on the single N), its substituent-plane normal must lie
+    within PISTACK_ANGLE_TOL_DEG of the ring normal -- a larger angle is
+    a 'pi-cation interaction through the ligand' and the hit is rejected
+    (return True). The AA side has NO such veto (documented asymmetry);
+    primary/secondary ammonium, quaternary ammonium, and guanidino
+    ligand cations are not tertamines and never veto. A degenerate
+    (collinear) substituent plane carries no normal and cannot veto."""
+    if group['kind'] != 'ammonium':
+        return False
+    subs = group.get('substituents', ())
+    if len(subs) != 3:
+        return False
+    normal = cross(sub(subs[1], subs[0]), sub(subs[2], subs[0]))
+    if norm_squared(normal) == 0.0:
+        return False
+    return _normals_angle_deg(unit(normal), ring['normal']) \
+        > PISTACK_ANGLE_TOL_DEG
+
+
+def _cation_pi_records(features, near_objs):
+    """Row 4: cation-pi in BOTH directions per D4 -- AA '+' charge-group
+    center over a ligand ring, or ligand '+' group over an AA ring --
+    with the direction recorded and the OQ-4 veto applied ONLY when the
+    ligand carries the cation (documented asymmetry, gate §4.4)."""
+    records = []
+    lig_groups = features['lig']['charge_groups']
+    lig_rings = features['lig']['rings']
+    lig_obj = _lig_object_name(features)
+    for obj in near_objs:
+        feat = features['aa'][obj]
+        aa_charge = feat['charge']
+        if aa_charge['sign'] == '+' and aa_charge['center'] is not None:
+            for lig_ring in lig_rings:
+                test = _cation_pi_test(aa_charge['center'], lig_ring)
+                if test is None:
+                    continue
+                d, offset = test
+                records.append(_record(
+                    'cation_pi', obj, feat['resn'], feat['resi'],
+                    'cation', aa_charge['atom_ids'], lig_obj, 'ring',
+                    lig_ring['atom_ids'],
+                    {'d_center': d, 'offset': offset,
+                     'direction': 'aa_cation_over_lig_ring'}))
+        for group in lig_groups:
+            if group['sign'] != '+':
+                continue
+            for aa_ring in feat['rings']:
+                test = _cation_pi_test(group['center'], aa_ring)
+                if test is None:
+                    continue
+                if _substituent_plane_veto(group, aa_ring):
+                    continue
+                d, offset = test
+                records.append(_record(
+                    'cation_pi', obj, feat['resn'], feat['resi'],
+                    'ring', aa_ring['atom_ids'], lig_obj, 'cation',
+                    group['atom_ids'],
+                    {'d_center': d, 'offset': offset,
+                     'direction': 'aa_ring_under_lig_cation'}))
+    return records
+
+
 def _canonical_sort(records):
     """Deterministic canonical order: (INTERACTION_TYPES position,
     aa object, aa atom_ids, lig atom_ids)."""
@@ -798,15 +959,18 @@ def _canonical_sort(records):
 
 
 def detect_part1(atom_records, ligand_bonds):
-    """Detect the three 02-06 contact types (h_bond, salt_bridge,
-    hydrophobic) through the shared pipeline: features once -> AA
-    bounding-sphere prefilter -> spatial.cross_pairs candidates ->
-    per-candidate row tests -> canonical records.
+    """Detect five of the seven types (h_bond, salt_bridge, pi_stacking,
+    cation_pi, hydrophobic) through the shared pipeline: features once
+    -> AA bounding-sphere prefilter -> spatial.cross_pairs atom-level
+    candidates (contact types) and direct feature-pair enumeration
+    (charge-group and ring pairs) -> per-candidate row tests ->
+    canonical records.
 
     Input/output contract: see extract_features and the module docstring
     (records carry explicit partner sides; identical input yields an
-    identical list). Plan 02-07 extends this pipeline with pi_stacking,
-    cation_pi, halogen and metal and wraps the full 7-type detect().
+    identical list). The 02-07 split (2026-09-06) put the two ring-
+    geometry types here; plan 02-07b adds halogen + metal on the same
+    features/candidates and wraps the full 7-type detect().
     """
     features = extract_features(atom_records, ligand_bonds)
     if not features['lig']['atoms'] or not features['aa']:
@@ -820,6 +984,8 @@ def detect_part1(atom_records, ligand_bonds):
     records.extend(_h_bond_records(features, near_objs, lig_ctx,
                                    atom_pairs))
     records.extend(_salt_bridge_records(features, near_objs))
+    records.extend(_pi_stacking_records(features, near_objs))
+    records.extend(_cation_pi_records(features, near_objs))
     records.extend(_hydrophobic_records(features, near_objs, lig_ctx,
                                         atom_pairs))
     return _canonical_sort(records)

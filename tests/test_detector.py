@@ -1604,5 +1604,109 @@ class TestHalogenMetalCapabilityParity(unittest.TestCase):
             'HIS', 'metal', capability.ligand_profile(cf_atoms, [])))
 
 
+# ---------------------------------------------------------------------------
+# 02-07b RED spec 3 — canonical 7-type detect(): one multi-type scene
+# (h_bond + pi_stacking + hydrophobic) must return the complete record
+# list ordered by (INTERACTION_TYPES position, aa object, aa atom_ids,
+# lig atom_ids); the type set is CLOSED (unknown/extra types impossible).
+# ---------------------------------------------------------------------------
+
+def _seven_type_scene(aa_order='ser_first'):
+    """Benzamide ligand + SER (donor h_bond to O8), PHE (parallel
+    pi-stack over the ring, 5.0 A — far enough that neither its CB nor
+    ring carbons dip below 4.0 A of any ligand hydrophobe), and ALA
+    (CB 3.5 A from ring carbon C2 -> hydrophobic). Yields exactly:
+    h_bond, pi_stacking, hydrophobic — nothing else."""
+    lig_atoms, lig_bonds = _benzamide_ligand()
+    og = (2.89, 4.22, 0.0)                     # 3.0 A from O8 along +y
+    hg = _h_pos(og, (2.89, 1.22, 0.0), 1.0, 160.0)
+    ser = _serine('aa_ser', og, hg)
+    phe = _phenylalanine('aa_phe', (0.0, 0.0, 5.0), (0.0, 0.0, 1.0),
+                         (1.0, 0.0, 0.0))
+    ala = _alanine('aa_ala', (0.695, _HEX_Y + 3.5, 0.0))
+    aa_lists = [ser, phe, ala]
+    if aa_order == 'reversed':
+        aa_lists = [ala, phe, ser]
+    return _scene(lig_atoms, lig_bonds, aa_lists)
+
+
+class TestCanonicalDetect(unittest.TestCase):
+    """detect() is THE 7-type surface (DETECT-01/DETECT-02 complete)."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.atoms, cls.bonds = _seven_type_scene()
+        cls.records = detector.detect(cls.atoms, cls.bonds)
+
+    def test_total_record_count_and_types_in_order(self):
+        # Exactly 3 records, in canonical INTERACTION_TYPES order:
+        # h_bond (pos 0) < pi_stacking (pos 2) < hydrophobic (pos 4).
+        self.assertEqual(len(self.records), 3)
+        self.assertEqual([r['type'] for r in self.records],
+                         ['h_bond', 'pi_stacking', 'hydrophobic'])
+
+    def test_canonical_order_matches_enum_positions(self):
+        positions = [INTERACTION_TYPES.index(r['type'])
+                     for r in self.records]
+        self.assertEqual(positions, sorted(positions))
+        keys = [(INTERACTION_TYPES.index(r['type']), r['aa']['object'],
+                 tuple(r['aa']['atom_ids']), tuple(r['lig']['atom_ids']))
+                for r in self.records]
+        self.assertEqual(keys, sorted(keys))
+
+    def test_type_set_is_closed(self):
+        # Unknown/extra types are IMPOSSIBLE: every record's type is one
+        # of the INTERACTION_TYPES enum members (and only those); the
+        # 7-slot enum is the closed surface.
+        self.assertEqual(len(INTERACTION_TYPES), 7)
+        for record in self.records:
+            self.assertIn(record['type'], INTERACTION_TYPES)
+        enum_order = [t for t in INTERACTION_TYPES
+                      if t in (r['type'] for r in self.records)]
+        self.assertEqual([r['type'] for r in self.records], enum_order)
+
+    def test_record_objects_and_partner_roles(self):
+        by_type = dict((r['type'], r) for r in self.records)
+        self.assertEqual(by_type['h_bond']['aa']['object'], 'aa_ser')
+        self.assertEqual(by_type['h_bond']['aa']['role'], 'donor')
+        self.assertEqual(by_type['pi_stacking']['aa']['object'], 'aa_phe')
+        self.assertEqual(by_type['pi_stacking']['aa']['role'], 'ring')
+        self.assertEqual(by_type['hydrophobic']['aa']['object'], 'aa_ala')
+        self.assertEqual(by_type['hydrophobic']['lig']['role'], 'carbon')
+
+    def test_halogen_and_metal_ride_the_same_sort(self):
+        # The two 02-07b types sit at canonical positions 5 and 6: a
+        # halogen + metal scene reports both, ordered after the five
+        # part-1 type pages.
+        c_pos, y_pos = _halogen_positions(3.5, 165.0, 120.0)
+        lig_atoms, lig_bonds = _c_x_ligand(c_pos, (3.5, 0.0, 0.0))
+        lig_atoms.append(_lig_atom(len(lig_atoms), 'ZN', 'ZN',
+                                   c_pos[0], c_pos[1] + 6.0, c_pos[2]))
+        ser1 = _serine_og_cb('aa_ser', (0.0, 0.0, 0.0), y_pos)
+        his = [dict(r, object='aa_his') for r
+               in _histidine('aa_his', (c_pos[0], c_pos[1] + 8.5, 0.0))]
+        atoms, bonds = _scene(lig_atoms, lig_bonds, [ser1, his])
+        records = detector.detect(atoms, bonds)
+        types = [r['type'] for r in records]
+        self.assertEqual(types, sorted(
+            types, key=lambda t: INTERACTION_TYPES.index(t)))
+        self.assertIn('halogen', types)
+        self.assertIn('metal', types)
+        self.assertLess(types.index('halogen'), types.index('metal'))
+
+    def test_detect_part1_subset_stays_5_of_7(self):
+        # The legacy entry keeps its 5-of-7 contract on the same scene
+        # (no halogen/metal features present) — byte-identical to
+        # detect() here, proving the shared pipeline path.
+        self.assertEqual(
+            detector.detect_part1(self.atoms, self.bonds), self.records)
+
+    def test_determinism_and_aa_order_permutation_invariant(self):
+        self.assertEqual(detector.detect(self.atoms, self.bonds),
+                         self.records)
+        atoms, bonds = _seven_type_scene(aa_order='reversed')
+        self.assertEqual(detector.detect(atoms, bonds), self.records)
+
+
 if __name__ == '__main__':
     unittest.main()

@@ -67,8 +67,16 @@ if REPO_ROOT not in sys.path:
 # Phase 2 (02-05): capability (single typing home; imports math via vec3,
 #                   .vec3 for the row-8 planarity fallback, and
 #                   .setup_state INTERACTION_TYPES — the ONE enum home).
+# Phase 2 (02-06): thresholds (the approved DETECT-03 table as constants;
+#                   re-exports capability's METAL_ELEMENTS + row-8 15-deg
+#                   fallback — single homes, never duplicates) and
+#                   detector (pipeline core + h_bond/salt_bridge/
+#                   hydrophobic; imports .vec3, .spatial, .capability,
+#                   .thresholds and .setup_state INTERACTION_TYPES —
+#                   canonical type order; NO itertools, NO numpy).
 PURE_MODULES = ['setup_state', 'level_spec', 'persistence', 'backup',
-                'paths', 'vec3', 'spatial', 'manifest', 'capability']
+                'paths', 'vec3', 'spatial', 'manifest', 'capability',
+                'thresholds', 'detector']
 
 # Roots that must NEVER appear in any import of a pure module, in ANY
 # scope (module level or function body -- B7). dataclasses is 3.7+.

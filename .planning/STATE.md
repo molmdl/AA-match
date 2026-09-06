@@ -10,17 +10,17 @@ See: .planning/PROJECT.md (updated 2026-09-05)
 ## Current Position
 
 Phase: 2 of 9 (Headless Game Engine) — In progress
-Plan: 12 of 16 complete on main (waves 1-6 + 02-07b + 02-10 + 02-12 merged); wave 7 remainder: 02-13 on its branch awaiting merge
-Status: **Detector COMPLETE — all 7 types via detect()** (DETECT-01/02 done) + pure seeded generator + score/GameState + >=100-seed invariant suite complete (ROADMAP Phase-2 criterion 3 SATISFIED; PURE_MODULES = 13)
-Last activity: 2026-09-06 — 02-12 (1800-payload invariant suite, 456/456 on branch) merged from its wave-7 branch
+Plan: 13 of 16 complete on main — **wave 7 COMPLETE** (02-07b + 02-10 + 02-12 + 02-13 all merged; waves 1-6 before that)
+Status: **Detector COMPLETE — all 7 types via detect()** (DETECT-01/02 done) + pure seeded generator + score/GameState + >=100-seed invariant suite (criterion 3 SATISFIED) + cmd-tier placement with SMOKE-03 PASS 28/28 (ligand_data profile contract PROVEN end-to-end); PURE_MODULES = 13
+Last activity: 2026-09-06 — 02-13 (placement.py + SMOKE-03) merged; wave 8 = 02-11 / 02-14 next
 
-Progress: [███████░░░] 69% of Phase 2 (12/16) · [███████████░] 92% of project (phase 2 of 9; plans 25/25)
+Progress: [████████░░] 81% of Phase 2 (13/16) · [███████████░] 92% of project (phase 2 of 9; plans 26/25)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 18 (Phase 1: 01-01…01-09; Phase 2: 02-01…02-09)
-- Average duration: ~11 min (02-03); 6 min (02-04); ~29 min (02-05); 23 min (02-06); 4 min (02-09); 11 min (02-07); 17 min (02-08)
+- Total plans completed: 19 (Phase 1: 01-01…01-09; Phase 2: 02-01…02-09, 02-13)
+- Average duration: ~11 min (02-03); 6 min (02-04); ~29 min (02-05); 23 min (02-06); 4 min (02-09); 11 min (02-07); 17 min (02-08); ~20 min (02-13)
 - Total execution time: —
 
 **By Phase:**
@@ -95,7 +95,6 @@ Decisions are logged in PROJECT.md Key Decisions table. Seeded from PROJECT.md a
 - (02-07) cation_pi record contract final: roles cation/ring per direction, metrics {d_center, offset, direction} with direction ∈ {'aa_cation_over_lig_ring', 'aa_ring_under_lig_cation'} (D4 both directions; distance <= 6.0 inclusive, offset < 2.0 strict — transcribed from the thresholds row comments).
 - (02-07) detect_part1 emits 5 of 7 types; ligand ammonium groups carry a 'substituents' feature annotation (non-H neighbor points) consumed only by the veto — feature extension, not a typing change; plan case-(e) prose inversion recorded as a Rule-1 deviation in 02-07-SUMMARY.md (gate doc is authoritative).
 - (02-07) Ring-type tests always scope asserts with _of_type: scripted aromatic ligand ring carbons qualify as hydrophobes, so an unscoped 'no records' assert can be faked by a hydrophobic hit; veto proofs use the perpendicular/parallel CONTROL PAIR pattern.
-<<<<<<< HEAD
 - (02-07b) detect() = THE complete 7-type surface (DETECT-01/02 done): shared `_pipeline` preamble + `_part1_records`; detect_part1 kept byte-identical 5-of-7 for 02-06..02-08 consumers. Halogen row 6: structurally (AA capability-named acceptor) × (ligand typed C-X); C-F has NO candidate (typing), AA-side halogen unrepresentable; windows INCLUSIVE tuples from thresholds; donor upper bound 195 inert on acos∈[0,180].
 - (02-07b) Row-6 Y anchor (acceptor bond partner) paired GEOMETRICALLY: nearest non-H same-object atom within `HALOGEN_Y_ATTACH_MAX=2.0` (typing-internal epsilon, Rule-2 like AA_H_ATTACH_MAX; no partner → no candidate, fail-closed) — AA fragments have no bond block, so Y cannot come from connectivity. Recorded as new typing policy in detector docstring.
 - (02-07b) Metal row 7: distance-only ≤3.0, chelator = capability acceptors only; GATED on `capability.ligand_has_metal` before enumeration (spy-pinned: metal-free ligand → `_metal_records` call_count==0). MET exclusion per §3.5 falls out of `acceptors=()` — no special-case code anywhere.
@@ -104,6 +103,9 @@ Decisions are logged in PROJECT.md Key Decisions table. Seeded from PROJECT.md a
 - (02-10) GameState = plain data only (purity-kept: PURE_MODULES = 13, imports time + setup_state): record_molecule_result stores score + canonical-order formed types in ONE call (score/debrief can never drift); molecule key 'L{level}M{molecule}'; skip-path guidance = record partial score via the same call + increment skip_count; start_timer(now=None) stores a float anchor, rendering is a later QTimer phase's job; to_dict/from_dict lossless NOW (Phase 7 wraps it, never reshapes).
 - (02-12) The invariant suite tests IMPLEMENTED semantics, not plan sketches: exclusive mode is vacuously covered (no items -> no dedicated slots; 'any' scoring is 02-10); corpus type-coverage aggregates ALL modes because hydrophobic-required is block_exclusive-only per OQ-5 (the suite also pins hydrophobic == 0 across the unset corpus); cross-seed distinctness is measured with the 'seed' echo stripped (raw bytes would trivially pass); exhaustive pairwise-spacing proofs use an O(k log k) sorted-x sliding window -- 1800-payload O(k^2) would dominate runtime for no added rigor.
 - (02-12) Corpus health observed (recorded for the 02-15 audit): 100/100 distinct payloads per config (floor 95); all 20 AAs appear as distractors; 7/7 types required; r0c0 required in 9.8% of 600 unset units (< 50%); suite adds ~51 s under python3.6 (456/456 total, ~67 s full suite).
+- (02-13) placement.py = the cmd-tier materializer (NEVER in PURE_MODULES): materialize(payload, level_index=0) builds ONE level (fresh `_aam_lig`/`_aam_aa` names — never load-into-existing), sentinel-tags every atom (segi='AAM', b=-999.0), bakes AAs to effective poses (grid_pose + placement.offset, camera=0, world frame); registry = slot_id -> (object, sorted ids) + pre_game_names snapshot. reset_to_grid = spec REPLAY re-bake (never matrix_reset — probe-proven reverter); cleanup_game_objects = prefix-only deletion. Banned-call docstring list binds 02-15's audit.
+- (02-13) SMOKE-03 field-verified capability atom naming: materialized chempy fragments classify with unclassified_aa_atoms == 0 against the live detector — NO reconciliation edits to detector.py/_KNOWN_NON_SIDE_CHAIN or capability.py were needed (the pre-authorized escape hatch stayed unused, a STRONGER outcome than planned).
+- (02-13) SMOKE-03 candidates are restricted to the benzamide row by construction: block_exclusive (correctly) refuses checked-but-unsupported types on aromatic-less molecules, so passing both manifest entries would make the smoke seed-fragile; diversity proofs stay with SMOKE-02.
 
 ### Pending Todos
 
@@ -118,17 +120,17 @@ Decisions are logged in PROJECT.md Key Decisions table. Seeded from PROJECT.md a
 
 ## Session Continuity
 
-Last session: 2026-09-06 (wave-7 executors on kimi-k3: 02-07b + 02-10 + 02-12 merged; 02-13 on its branch)
-Stopped at: Detector 7 types + score/GameState + 100-seed suite merged — orchestrator merging final wave-7 branch (02-13)
+Last session: 2026-09-06 (wave-7 executors on kimi-k3: 02-07b / 02-10 / 02-12 / 02-13 — all four COMPLETE, all merged by orchestrator)
+Stopped at: Wave 7 COMPLETE (13/16) — wave 8 next = 02-11 / 02-14, then wave 9 = 02-15
 Resume file: None
 
 ## Next Actions
 
-- Orchestrator: merge wave-7 branches in dependency order — **exec/02-07b first (touches only tests/test_detector.py + aamatch/detector.py + planning docs; 02-10/02-13 consume its detect() surface)** — then wave 8 = 02-11 / 02-14, wave 9 = 02-15
-- **02-13/02-14 MUST pass chemistry profiles in ligand_data (02-08 deviation 3):** per loaded ligand, `profile = capability.ligand_profile(lig_atoms, lig_bonds)` merged into the geometry dict next to bounding_sphere's {'centroid', 'radius'} — geometry-only ligand_data degrades fail-closed and unset/block_exclusive modes refuse
-- **02-10 scoring binds to `detector.detect()`** (NOT detect_part1): presence-based fraction scoring consumes record types; the record contract is final for all 7 types (halogen {d_ax, donor_angle_deg, acc_angle_deg}; metal {d_metal}; roles pinned in 02-07b-SUMMARY)
-- **02-13 SMOKE-03 note (new, from 02-07b):** a materialized AA fragment whose acceptor atom sits > 2.0 A from every non-H same-object atom is malformed — `HALOGEN_Y_ATTACH_MAX` doubles as a fragment sanity bound alongside the unclassified-atoms assertion
-- 02-10 (engine): wire detect() = extract_game_atoms() + ligand_bonds() with the probe-pinned remap — bond position i → index_to_id[i+1] → atom id → position in the (object, id)-sorted ligand records; bounding_sphere() output + ligand_profile feed generate(..., ligand_data, ...) keyed by (set_id, entry_id)
-- SMOKE-03 (02-13): assert features['unclassified_aa_atoms'] == 0 per materialized AA; reconcile cap-atom naming by extending the detector's known non-side-chain set if needed (never thresholds)
+- Orchestrator: wave 8 = 02-11 (detector invariance/sensitivity suite) + 02-14 (engine + SMOKE-04) in parallel worktrees, then wave 9 = 02-15 (perf smoke + AST audit + detector-version stamp)
+- **02-14 (SMOKE-04) reuses SMOKE-03's ligand_data pattern verbatim:** temp _aam_tmp load -> extract_game_atoms -> bounding_sphere + ligand_profile over remapped get_bonds -> {'centroid','radius','profile'} (02-08 deviation 3 contract, PROVEN end-to-end by SMOKE-03); scripted placement consumes translate_to/transform_baked; rotation-invariance Part B bakes whole-scene rotates with camera=0
+- **02-14 (engine) wires detect() = extract_game_atoms() + ligand_bonds()** with the probe-pinned remap — bond position i → index_to_id[i+1] → atom id → position in the (object, id)-sorted ligand records; bounding_sphere() + ligand_profile feed generate(..., ligand_data, ...) keyed by (set_id, entry_id); productionize the smoke-local ligand_data build + bond remap helpers; scoring binds to detector.detect() (NOT detect_part1 — the 7-type surface)
+- **02-13 SMOKE-03 note for 02-11/02-14:** a materialized AA fragment whose acceptor atom sits > 2.0 A from every non-H same-object atom is malformed — `HALOGEN_Y_ATTACH_MAX` doubles as a fragment sanity bound alongside the unclassified-atoms assertion
+- **Banned-call audit for 02-15:** `grep matrix_reset|get_object_ttt aamatch/` must hit only placement.py's docstring prohibition list
+- SMOKE-03 reconciler result: materialized chempy fragments classify 100% against capability atom naming (unclassified_aa_atoms == 0) — _KNOWN_NON_SIDE_CHAIN untouched; the pre-authorized detector.py escape hatch stayed UNUSED
 - SMOKE-03/04/05 need NO runner changes (marker-deriving run_smoke.sh handles any smoke_NN_name.py); geometry helpers are import-ready for all three
-- Fixture geometry (benzamide xy-plane pose, acetate tetrahedral methyl) is stable for 02-13 placement scripting and 02-14 E2E poses; pose asserts use 1e-6 tolerance (float32)
+- Fixture geometry (benzamide xy-plane pose, acetate tetrahedral methyl) is stable for 02-14 E2E poses; pose asserts use 1e-6 tolerance (float32)

@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-09-05)
 ## Current Position
 
 Phase: 2 of 9 (Headless Game Engine) — In progress
-Plan: 9 of 16 complete (waves 1-6: 02-01..02-09 + 02-07 split part 1 + 02-08 generator — both merged from their worktree branches by the orchestrator)
-Status: Detector 5 of 7 types (pi_stacking + cation_pi merged; halogen/metal/canonical = 02-07b next) + pure seeded generator complete (423/423 tests, PURE_MODULES = 12); wave 7 = 02-07b / 02-10 / 02-12 / 02-13
-Last activity: 2026-09-06 — 02-07 (detector part 2a, 361/361 → merged) + 02-08 (generator, 423/423 → merged); 02-08 deviation 3 ligand_data contract binds 02-13/02-14
+Plan: 9 of 16 complete (waves 1-6: 02-01..02-09 + 02-07 split part 1 + 02-08 generator — both merged from their worktree branches by the orchestrator); 02-12 done on exec/02-12 pending wave-7 merge
+Status: Detector 5 of 7 types (pi_stacking + cation_pi merged; halogen/metal/canonical = 02-07b next) + pure seeded generator complete (423/423 tests, PURE_MODULES = 12); 02-12 100-seed invariant suite complete on its branch (456/456: 438 + 18 new) — ROADMAP Phase-2 criterion 3 SATISFIED; wave 7 = 02-07b / 02-10 / 02-12 / 02-13
+Last activity: 2026-09-06 — wave-7 executor 02-12 on exec/02-12: >= 100-seed generator invariant suite (1800 payloads, 18 tests, GEN-01/03/04/05 + corpus stats, 456/456 green); awaits orchestrator merge with wave-7 siblings
 
-Progress: [█████▌░░░░] 56% of Phase 2 (9/16) · [███████████░] 92% of project (phase 2 of 9; plans 24/25)
+Progress: [██████░░░░] 63% of Phase 2 (10/16 incl. 02-12 pending merge) · [███████████░] 92% of project (phase 2 of 9; plans 25/25 incl. 02-12)
 
 ## Performance Metrics
 
@@ -28,7 +28,7 @@ Progress: [█████▌░░░░] 56% of Phase 2 (9/16) · [███�
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 1 | 9/9 ✓ | — | — |
-| 2 | 9/16 | ~8 min (02-02) + ~25 min (02-01 cont.) + 11 min (02-03) + 6 min (02-04) + 29 min (02-05) + 23 min (02-06) + 4 min (02-09) + 11 min (02-07) + 17 min (02-08) | — |
+| 2 | 10/16 (02-12 pending merge) | ~8 min (02-02) + ~25 min (02-01 cont.) + 11 min (02-03) + 6 min (02-04) + 29 min (02-05) + 23 min (02-06) + 4 min (02-09) + 11 min (02-07) + 17 min (02-08) + 45 min (02-12) | — |
 
 **Recent Trend:**
 - Last 5 plans: —
@@ -95,6 +95,8 @@ Decisions are logged in PROJECT.md Key Decisions table. Seeded from PROJECT.md a
 - (02-07) cation_pi record contract final: roles cation/ring per direction, metrics {d_center, offset, direction} with direction ∈ {'aa_cation_over_lig_ring', 'aa_ring_under_lig_cation'} (D4 both directions; distance <= 6.0 inclusive, offset < 2.0 strict — transcribed from the thresholds row comments).
 - (02-07) detect_part1 emits 5 of 7 types; ligand ammonium groups carry a 'substituents' feature annotation (non-H neighbor points) consumed only by the veto — feature extension, not a typing change; plan case-(e) prose inversion recorded as a Rule-1 deviation in 02-07-SUMMARY.md (gate doc is authoritative).
 - (02-07) Ring-type tests always scope asserts with _of_type: scripted aromatic ligand ring carbons qualify as hydrophobes, so an unscoped 'no records' assert can be faked by a hydrophobic hit; veto proofs use the perpendicular/parallel CONTROL PAIR pattern.
+- (02-12) The invariant suite tests IMPLEMENTED semantics, not plan sketches: exclusive mode is vacuously covered (no items -> no dedicated slots; 'any' scoring is 02-10); corpus type-coverage aggregates ALL modes because hydrophobic-required is block_exclusive-only per OQ-5 (the suite also pins hydrophobic == 0 across the unset corpus); cross-seed distinctness is measured with the 'seed' echo stripped (raw bytes would trivially pass); exhaustive pairwise-spacing proofs use an O(k log k) sorted-x sliding window -- 1800-payload O(k^2) would dominate runtime for no added rigor.
+- (02-12) Corpus health observed (recorded for the 02-15 audit): 100/100 distinct payloads per config (floor 95); all 20 AAs appear as distractors; 7/7 types required; r0c0 required in 9.8% of 600 unset units (< 50%); suite adds ~51 s under python3.6 (456/456 total, ~67 s full suite).
 
 ### Pending Todos
 
@@ -109,8 +111,8 @@ Decisions are logged in PROJECT.md Key Decisions table. Seeded from PROJECT.md a
 
 ## Session Continuity
 
-Last session: 2026-09-06 (wave-6 executors: 02-07 on exec/02-07 [kimi-k3, first silent-failure-free run], 02-08 on exec/02-08; both merged to main by orchestrator)
-Stopped at: Waves 1-6 complete — detector 5/7 types + pure seeded generator; wave 7 next (02-07b / 02-10 / 02-12 / 02-13)
+Last session: 2026-09-06 (wave-6 executors: 02-07 on exec/02-07 [kimi-k3, first silent-failure-free run], 02-08 on exec/02-08; both merged to main by orchestrator; wave-7 executor: 02-12 on exec/02-12)
+Stopped at: 02-12 complete on its branch (awaiting wave-7 merge); siblings 02-07b / 02-10 / 02-13 still running
 Resume file: None
 
 ## Next Actions

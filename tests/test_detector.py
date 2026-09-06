@@ -1500,8 +1500,9 @@ class TestMetal(unittest.TestCase):
         self.assertEqual(record['aa']['role'], 'chelator')
         self.assertEqual(record['lig']['role'], 'metal')
         self.assertEqual(record['aa']['resn'], 'HIS')
-        # scripted ids: ND1 = 514 (500 start + 14), ligand metal = 0
-        self.assertEqual(record['aa']['atom_ids'], [514])
+        # scripted ids: ND1 = 508 (500..505 backbone, 506 CB, 507 CG,
+        # 508 ND1), ligand metal = 0
+        self.assertEqual(record['aa']['atom_ids'], [508])
         self.assertEqual(record['lig']['atom_ids'], [0])
         self.assertEqual(set(record['metrics']), {'d_metal'})
         self.assertAlmostEqual(record['metrics']['d_metal'], 2.5,

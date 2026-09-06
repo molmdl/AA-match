@@ -1,0 +1,57 @@
+{
+  "data": {
+    "manifest_version": 1,
+    "sets": [
+      {
+        "entries": [
+          {
+            "atom_count": 16,
+            "bond_count": 16,
+            "bond_order_counts": {
+              "1": 12,
+              "2": 4
+            },
+            "entry_id": "benzamide",
+            "file": "ligands/benzamide.sdf",
+            "formal_charge_sum": 0,
+            "format": "sdf",
+            "halogen_present": false,
+            "heavy_atom_count": 9,
+            "metal_present": false,
+            "protonation": "as-recorded",
+            "sha256": "319b964abadc4e7d2b9d6fb028f682f6cfd4d4f5214c461d1d3a6d83cae15a8d",
+            "size_class": "small",
+            "states_expected": 1
+          },
+          {
+            "atom_count": 7,
+            "bond_count": 6,
+            "bond_order_counts": {
+              "1": 5,
+              "2": 1
+            },
+            "entry_id": "acetate",
+            "file": "ligands/acetate.sdf",
+            "formal_charge_sum": -1,
+            "format": "sdf",
+            "halogen_present": false,
+            "heavy_atom_count": 4,
+            "metal_present": false,
+            "protonation": "as-recorded",
+            "sha256": "9ea6ba6390c0c47fd3b00840a220ecf847f1c464aa6c930c45c059dd9427e3c6",
+            "size_class": "small",
+            "states_expected": 1
+          }
+        ],
+        "license": "",
+        "provenance": {},
+        "set_id": "demo-dev-1",
+        "tier": "easy",
+        "title": "Phase-2 development set"
+      }
+    ]
+  },
+  "kind": "manifest",
+  "magic": "AAMATCH",
+  "version": 1
+}

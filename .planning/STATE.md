@@ -10,17 +10,17 @@ See: .planning/PROJECT.md (updated 2026-09-05)
 ## Current Position
 
 Phase: 2 of 9 (Headless Game Engine) — In progress
-Plan: 2 of 15 complete (wave 1: 02-01 + 02-02 both done; parallel worktrees merged by orchestrator)
-Status: DETECT-03 [GATE] CLOSED — docs/DETECTION_THRESHOLDS.md human-approved 2026-09-06 (units + atom-typing verified); detector/generator plans (02-05..02-08) may freeze against it
-Last activity: 2026-09-06 — Wave 1 complete: 02-01 (gate doc) + 02-02 (vec3 + spatial primitives, 163/163 tests)
+Plan: 3 of 15 complete (wave 2: 02-03 pure manifest module done; next: 02-04 fixtures + MANIFEST.json + SMOKE-02)
+Status: DETECT-03 [GATE] CLOSED (approved 2026-09-06); manifest schema now frozen — 02-04's MANIFEST.json must satisfy aamatch/manifest.py validation exactly
+Last activity: 2026-09-06 — Completed 02-03-PLAN.md (manifest parse/validate/enumerate, 'manifest' kind, PURE_MODULES=8; 211/211 tests)
 
-Progress: [██░░░░░░░░] 13% of Phase 2 (2/15) · [██░░░░░░░░] 22% of project (phase 2 of 9; plans 11/24)
+Progress: [██░░░░░░░░] 20% of Phase 2 (3/15) · [█████░░░░░] 50% of project (phase 2 of 9; plans 12/24)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 11 (Phase 1: 01-01…01-09; Phase 2: 02-01, 02-02)
-- Average duration: —
+- Total plans completed: 12 (Phase 1: 01-01…01-09; Phase 2: 02-01, 02-02, 02-03)
+- Average duration: ~11 min (02-03)
 - Total execution time: —
 
 **By Phase:**
@@ -28,7 +28,7 @@ Progress: [██░░░░░░░░] 13% of Phase 2 (2/15) · [██░�
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 1 | 9/9 ✓ | — | — |
-| 2 | 2/15 | ~8 min (02-02) + ~25 min (02-01 cont.) | — |
+| 2 | 3/15 | ~8 min (02-02) + ~25 min (02-01 cont.) + 11 min (02-03) | — |
 
 **Recent Trend:**
 - Last 5 plans: —
@@ -66,6 +66,8 @@ Decisions are logged in PROJECT.md Key Decisions table. Seeded from PROJECT.md a
 - (02-02) `vec3.py` floats-in/floats-out contract via float() coercion (int tuples never leak); `unit()`/`angle_at()` raise ValueError on zero-length arms (fail-closed); angle_at clamps cos to [-1,1] vs float rounding near 0/pi; `plane_project` requires a UNIT normal (documented, no re-normalization).
 - (02-02) `spatial.py`: cell size == cutoff makes the 3×3×3 neighbourhood scan provably exhaustive (100-seed equivalence vs brute-force oracle proven); cell keys = int(x // cell) FLOOR division (negatives correct); `brute_force_pairs` is test-oracle-only — docstring carries the 02-15 audit-grep phrase, pinned by a unit test.
 - (02-02) PURE_MODULES now 7 (`+ vec3, spatial`); ALLOWED_STDLIB untouched (math already whitelisted; spatial imports only `from .vec3 import dist`; itertools stays out per 02-01). Phase-2 pure-module pattern established: RED test commit → GREEN feat commit → PURE_MODULES registration as test commit.
+- (02-03) Manifest schema FROZEN for 02-04/02-08: 14 required entry keys per 02-RESEARCH-materialization.md §3.2; `file` must be forward-slash package-relative (backslash/absolute/`X:` drive refused — PITFALL 2); counts are real ints (bools refused), bond_order_counts = digit-string → positive int, flags real bools; negative formal_charge_sum legal. manifest_version gate strict `_is_int` + refuse-newer/accept-older like FORMAT_VERSION.
+- (02-03) set_id/entry_id must be non-empty strings (enumerate_entries sort keys — non-strings would TypeError in sorted(), so they are validated with clear refusals); enumerate_entries returns new dicts + set_id sorted by (set_id, entry_id); largest_entry = max heavy_atom_count, ties-first (DETECT-05 selector, no special-cased field). KINDS += 'manifest' (additive; refusal messages unchanged). PURE_MODULES = 8. Empty sets list allowed (supply emptiness is the generator's concern).
 
 ### Pending Todos
 
@@ -81,11 +83,12 @@ Decisions are logged in PROJECT.md Key Decisions table. Seeded from PROJECT.md a
 
 ## Session Continuity
 
-Last session: 2026-09-06 (wave-1 executors: 02-01 on exec/02-01, 02-02 on exec/02-02; both merged to main by orchestrator)
-Stopped at: Wave 1 complete — 02-01 (gate doc, commits e25e428/7214d66/fcfa042) + 02-02 (vec3/spatial, commits d26d219…daec074)
+Last session: 2026-09-06 (02-03 executed directly on main — single-plan wave; TDD RED/GREEN commits 0e6c059, 0636d08, 8ab01f7, 771b71b, c9629cb)
+Stopped at: Completed 02-03-PLAN.md — 02-03-SUMMARY.md written, full suite 211/211 green
 Resume file: None
 
 ## Next Actions
 
-- Orchestrator: continue Phase-2 wave 2 (02-03 manifest container), then waves 3-8 per plan frontmatter
+- Orchestrator: proceed to 02-04 (fixture ligands + aamatch/data/MANIFEST.json + generalized smoke runner + SMOKE-02) — MANIFEST.json MUST satisfy the frozen aamatch/manifest.py schema (14 keys, digit-string bond_order_counts keys, forward-slash relative 'file')
+- Then waves per plan frontmatter; 02-08 consumes enumerate_entries as candidate list; DETECT-05 target via largest_entry
 - Detector plans 02-06/07 consume `spatial.cross_pairs` + `vec3` per-candidate math; capability/threshold plans transcribe from docs/DETECTION_THRESHOLDS.md

@@ -10,17 +10,17 @@ See: .planning/PROJECT.md (updated 2026-09-05)
 ## Current Position
 
 Phase: 2 of 9 (Headless Game Engine) — In progress
-Plan: 7 of 15 complete (waves 1-4 done; wave 5: 02-09 geometry bridge done + merged — 02-07 detector pt 2 + 02-08 generator MOVED to wave 6 after repeated silent subagent failures; waves re-assigned 2026-09-06: 02-07/02-08 -> 6, 02-10..02-13 -> 7, 02-14 -> 8, 02-15 -> 9)
-Status: Geometry boundary complete — extraction (detector-contract records), bond block + index→id map, ligand bounding sphere, pose helpers; probe-proven on real objects (=== PROBE-GEOM DONE ===, benzamide 16 atoms / 16 bonds)
-Last activity: 2026-09-06 — Completed 02-09-PLAN.md (aamatch/geometry.py cmd-tier bridge, 346/346 tests, purity untouched)
+Plan: 8 of 15 complete (waves 1-4 done; wave 5: 02-09 geometry bridge done + merged — 02-07 detector pt 2 + 02-08 generator MOVED to wave 6 after repeated silent subagent failures; waves re-assigned 2026-09-06: 02-07/02-08 -> 6, 02-10..02-13 -> 7, 02-14 -> 8, 02-15 -> 9; wave 6: 02-08 generator DONE on exec/02-08, 02-07 running in its own worktree)
+Status: Pure seeded generator complete — GEN-01/03/04/05 (difficulty half-up interpolation, deterministic gap-respecting grids, OQ-1/OQ-5 required-set semantics, solvability-by-construction slots, byte-deterministic stamped payloads, generator<->detector cross-check); 423/423 tests, PURE_MODULES = 12
+Last activity: 2026-09-06 — Completed 02-08-PLAN.md (aamatch/generator.py, 6 TDD commits on exec/02-08, 423/423 tests)
 
-Progress: [█████░░░░░] 47% of Phase 2 (7/15) · [███████████░] 92% of project (phase 2 of 9; plans 22/24)
+Progress: [████████░░] 53% of Phase 2 (8/15) · Phase 2 of 9 · 17/24 plans completed (phases 1-2)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 16 (Phase 1: 01-01…01-09; Phase 2: 02-01…02-06, 02-09)
-- Average duration: ~11 min (02-03); 6 min (02-04); ~29 min (02-05); 23 min (02-06); 4 min (02-09)
+- Total plans completed: 17 (Phase 1: 01-01…01-09; Phase 2: 02-01…02-06, 02-08, 02-09)
+- Average duration: ~11 min (02-03); 6 min (02-04); ~29 min (02-05); 23 min (02-06); 4 min (02-09); 17 min (02-08)
 - Total execution time: —
 
 **By Phase:**
@@ -28,7 +28,7 @@ Progress: [█████░░░░░] 47% of Phase 2 (7/15) · [███�
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 1 | 9/9 ✓ | — | — |
-| 2 | 7/15 | ~8 min (02-02) + ~25 min (02-01 cont.) + 11 min (02-03) + 6 min (02-04) + 29 min (02-05) + 23 min (02-06) + 4 min (02-09) | — |
+| 2 | 8/15 | ~8 min (02-02) + ~25 min (02-01 cont.) + 11 min (02-03) + 6 min (02-04) + 29 min (02-05) + 23 min (02-06) + 4 min (02-09) + 17 min (02-08) | — |
 
 **Recent Trend:**
 - Last 5 plans: —
@@ -83,6 +83,12 @@ Decisions are logged in PROJECT.md Key Decisions table. Seeded from PROJECT.md a
 - (02-09) get_bonds mapping pinned empirically: bond endpoints are 0-based walk positions; whole-object selection ⇒ position i → index_to_id[i+1] (probe showed walk order == index property 1..N). 02-10 remaps bond positions into sorted ligand record order via that map; detector validates fail-closed. Fragment AA atom ids may start at 0 — identity stays (object, id), never assume 1-based ids.
 - (02-09) bounding_sphere filters side=='lig' internally and raises ValueError on ligand-less records (fail-closed: empty bounds would silently size grids / hand NaN to the generator's save guard); world frame == ligand-file frame under Phase-2 baked coords.
 - (02-09, probe rule) pose read-back asserts use tolerance 1e-6 — PyMOL stores coords as float32, translate/untranslate roundtrips accumulate ~1e-7 (research §6.2's stated tolerance).
+- (02-08) generator.py = the pure seeded producer (PURE_MODULES = 12): difficulty via INTEGER HALF-UP `(L*6 + (D-1)//2)//(D-1)` with grid_n = 3+frac, types = 1+frac (plan's inline "3 + frac*6" was impossible — violated its own 3..9/1..7 invariants; formula wins, D=3 rows 3/1/small 6/4/medium 9/7/large verified; derived D=10 L4 = 6/4 vs the hand sketch's 5/4 — research pre-authorizes monotonicity, not hand literals). `round(` banned from the module by a source-scan test.
+- (02-08) RNG contract: master Random(seed) draws D*MOLECULES_CAP unit sub-seeds ONCE (fixed stride, setup-independent) — adding a molecule never shifts existing molecules' streams (byte-isolation tested); each unit consumed in fixed order pick -> protonation -> derive -> allocate; ALL randomness via randint/choice/sample/shuffle over sorted/fixed-order lists, never sets/dicts.
+- (02-08) **ligand_data CONTRACT (binds 02-13/02-14):** entries = {'centroid', 'radius', 'profile'} keyed by (set_id, entry_id) tuples, or ONE shared dict; 'profile' is the capability.ligand_profile shape and the cmd tier must compute it (ligand atoms + bonds) alongside bounding_sphere. Missing profile degrades FAIL-CLOSED to empty (modes refuse rather than promise unsolvable levels) — geometry-only ligand_data cannot ground polarity-aware derivation (D3/D4).
+- (02-08) Mode semantics wired: exclusive = 'any' scoped by allowed (empty -> refuse naming the setup field); block_exclusive = exact checked set (unsupported type -> refuse NAMING it; hydrophobic reachable ONLY here per OQ-5); unset = support-filtered sampling minus hydrophobic (OQ-5; only-hydrophobic -> refusal naming the policy; empty allowed -> support-filtered all-types draw per OQ-1 harmonized with the "unset never draws unsupported" edge ruling).
+- (02-08) Solvability by construction: one dedicated role='required' slot per required item, can_form truthful via aa_capable (per-slot proven), distractors from the sorted 20-AA list; grid-too-small / no-capable-AA / count!=1 / AA_TOKENS vocabulary drift all refuse naming the cause. DETECT-04 cross-check: synthetic SER/VAL scene proves aa_capable <-> detect_part1 agree BOTH directions.
+- (02-08) Molecule selection: size-class bucket filter with NEAREST-BUCKET supply fallback (ties -> easier; difficulty dict keeps the TARGET class) — the 2-small dev manifest must drive D>=2 games until Phase-8 curation; distinct per-level picks via per-unit rng.sample(available, 1) + dedup; candidates re-sorted defensively by (set_id, entry_id); molecule_id numbered WITHIN each level (mol-001.., level_index + molecule_id identify globally; keeps isolation byte-exact).
 
 ### Pending Todos
 
@@ -97,14 +103,15 @@ Decisions are logged in PROJECT.md Key Decisions table. Seeded from PROJECT.md a
 
 ## Session Continuity
 
-Last session: 2026-09-06 (02-09 executor on worktree branch exec/02-09 — wave-5 parallel protocol; do NOT merge/push from the agent)
-Stopped at: Completed 02-09-PLAN.md — aamatch/geometry.py cmd-tier bridge (probe-proven, 346/346 tests, purity untouched)
+Last session: 2026-09-06 (02-08 executor on worktree branch exec/02-08 — wave-6 parallel protocol; do NOT merge/push from the agent)
+Stopped at: Completed 02-08-PLAN.md — aamatch/generator.py pure seeded generator (6 TDD commits d6d76e5..d402ae6, 423/423 tests, PURE_MODULES = 12)
 Resume file: None
 
 ## Next Actions
 
-- Orchestrator: execute wave 6 = 02-07 (detector pt 2) + 02-08 (generator) — compact plan-file prompts (long inlined prompts correlate with silent spawn failures); then wave 7 = 02-10/02-11/02-12/02-13, wave 8 = 02-14, wave 9 = 02-15
-- 02-10 (engine): wire detect() = extract_game_atoms() + ligand_bonds() with the probe-pinned remap — bond position i → index_to_id[i+1] → atom id → position in the (object, id)-sorted ligand records; bounding_sphere() output feeds generate(..., ligand_data, ...) as {'centroid', 'radius'}
+- Orchestrator: merge exec/02-08 in dependency order after the wave-6 sibling (02-07 detector pt 2) returns; then wave 7 = 02-10/02-11/02-12/02-13, wave 8 = 02-14, wave 9 = 02-15 — compact plan-file prompts (long inlined prompts correlate with silent spawn failures)
+- **02-13/02-14 MUST pass chemistry profiles in ligand_data (02-08 deviation 3):** per loaded ligand, `profile = capability.ligand_profile(lig_atoms, lig_bonds)` merged into the geometry dict next to bounding_sphere's {'centroid', 'radius'} — geometry-only ligand_data degrades fail-closed and unset/block_exclusive modes refuse
+- 02-10 (engine): wire detect() = extract_game_atoms() + ligand_bonds() with the probe-pinned remap — bond position i → index_to_id[i+1] → atom id → position in the (object, id)-sorted ligand records; bounding_sphere() output + ligand_profile feed generate(..., ligand_data, ...) keyed by (set_id, entry_id)
 - SMOKE-03 (02-13): assert features['unclassified_aa_atoms'] == 0 per materialized AA; reconcile cap-atom naming by extending the detector's known non-side-chain set if needed (never thresholds)
 - SMOKE-03/04/05 need NO runner changes (marker-deriving run_smoke.sh handles any smoke_NN_name.py); geometry helpers are import-ready for all three
 - Fixture geometry (benzamide xy-plane pose, acetate tetrahedral methyl) is stable for 02-13 placement scripting and 02-14 E2E poses; pose asserts use 1e-6 tolerance (float32)

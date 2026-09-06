@@ -4,7 +4,7 @@ Enforces the purity contract MECHANICALLY (Phase-1 success criterion 2),
 so "pure" never regresses silently. Four gates, all part of the normal
 suite (`python3.6 -m unittest discover -s tests -v`):
 
-- Gate A  -- AST import scan over the five pure modules. EVERY
+- Gate A  -- AST import scan over the declared pure modules. EVERY
   ast.Import/ast.ImportFrom node is checked (module level AND inside
   function bodies -- research B7), so a lazy ``from pymol import cmd``
   buried in a helper fails the suite too. Absolute roots must be in the
@@ -60,8 +60,11 @@ PKG_DIR = os.path.join(REPO_ROOT, 'aamatch')
 if REPO_ROOT not in sys.path:
     sys.path.insert(0, REPO_ROOT)
 
-# The five declared pure modules (import targets: aamatch.<name>).
-PURE_MODULES = ['setup_state', 'level_spec', 'persistence', 'backup', 'paths']
+# The declared pure modules (import targets: aamatch.<name>).
+# Phase 1: setup_state, level_spec, persistence, backup, paths.
+# Phase 2 (02-02): vec3 (tuple vector math), spatial (cell-list pruning).
+PURE_MODULES = ['setup_state', 'level_spec', 'persistence', 'backup',
+                'paths', 'vec3', 'spatial']
 
 # Roots that must NEVER appear in any import of a pure module, in ANY
 # scope (module level or function body -- B7). dataclasses is 3.7+.
@@ -168,7 +171,7 @@ def _stderr_tail(stderr_bytes, lines=15):
 
 
 class TestGateAASTImportScan(unittest.TestCase):
-    """Gate A: the five pure modules import ONLY stdlib/pure, any scope."""
+    """Gate A: the declared pure modules import ONLY stdlib/pure, any scope."""
 
     def test_pure_modules_only_whitelisted_imports_anywhere(self):
         all_problems = []

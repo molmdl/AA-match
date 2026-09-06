@@ -10,16 +10,16 @@ See: .planning/PROJECT.md (updated 2026-09-05)
 ## Current Position
 
 Phase: 2 of 9 (Headless Game Engine) — In progress
-Plan: 8 of 16 complete (waves 1-5 + 02-08; 02-07 SPLIT 2026-09-06 into 02-07 [pi+cation-pi, wave 6] + 02-07b [halogen+metal+canonical, wave 7] after 6 silent spawn failures across models/prompt shapes; downstream re-waved: 02-11 -> wave 8 needs 02-07b, 02-14 adds 02-07b dep)
-Status: PAUSED 2026-09-06 — split committed, awaiting opencode restart (model switch) before respawning 02-07; exec/02-08 branch holds the completed generator (unmerged: 7 commits, 423/423, 9 recorded deviations — deviation 3 binds the cmd tier: ligand_data must carry 'profile', engine (02-14) wires capability.ligand_profile over extracted records)
-Last activity: 2026-09-06 — 02-08 (generator, exec/02-08) + 02-09 (geometry, merged) complete; split + re-wave committed
+Plan: 9 of 16 complete (waves 1-5 + 02-07 on exec/02-07 UNMERGED + 02-08 on exec/02-08 UNMERGED; orchestrator merges in dependency order — STATE.md conflict expected, combine)
+Status: 02-07 COMPLETE 2026-09-06 on worktree branch exec/02-07 (2 task commits: RED cf0529d -> GREEN f0fc52f; 361/361 WSL-green; 5 of 7 detector types) — NOT merged/pushed by the agent (parallel-branch protocol)
+Last activity: 2026-09-06 — 02-07 (detector part 2a: pi_stacking + cation_pi) complete on exec/02-07
 
-Progress: [█████░░░░░] 47% of Phase 2 (7/15) · [███████████░] 92% of project (phase 2 of 9; plans 22/24)
+Progress: [█████░░░░░] 50% of Phase 2 (8/16) · [███████████░] 92% of project (phase 2 of 9; plans 23/25)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 16 (Phase 1: 01-01…01-09; Phase 2: 02-01…02-06, 02-09)
+- Total plans completed: 17 (Phase 1: 01-01…01-09; Phase 2: 02-01…02-06, 02-09, 02-07)
 - Average duration: ~11 min (02-03); 6 min (02-04); ~29 min (02-05); 23 min (02-06); 4 min (02-09)
 - Total execution time: —
 
@@ -28,7 +28,7 @@ Progress: [█████░░░░░] 47% of Phase 2 (7/15) · [███�
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 1 | 9/9 ✓ | — | — |
-| 2 | 7/15 | ~8 min (02-02) + ~25 min (02-01 cont.) + 11 min (02-03) + 6 min (02-04) + 29 min (02-05) + 23 min (02-06) + 4 min (02-09) | — |
+| 2 | 8/16 | ~8 min (02-02) + ~25 min (02-01 cont.) + 11 min (02-03) + 6 min (02-04) + 29 min (02-05) + 23 min (02-06) + 4 min (02-09) + 11 min (02-07) | — |
 
 **Recent Trend:**
 - Last 5 plans: —
@@ -84,6 +84,12 @@ Decisions are logged in PROJECT.md Key Decisions table. Seeded from PROJECT.md a
 - (02-09) bounding_sphere filters side=='lig' internally and raises ValueError on ligand-less records (fail-closed: empty bounds would silently size grids / hand NaN to the generator's save guard); world frame == ligand-file frame under Phase-2 baked coords.
 - (02-09, probe rule) pose read-back asserts use tolerance 1e-6 — PyMOL stores coords as float32, translate/untranslate roundtrips accumulate ~1e-7 (research §6.2's stated tolerance).
 
+- (02-07) pi_stacking offset = MIN over BOTH cross-projections (each ring center into the opposite ring's plane) — PLIP pistacking's verified form (detection.py re-checked 2026-09-06); a one-sided projection cannot form the T-shaped case the plan scripts. Subtype P/T is a metric only; metrics = {d_center, angle_deg, offset, subtype}.
+- (02-07) OQ-4 veto semantics = KEEP when amine-normal-vs-ring-normal <= 30 deg, REJECT when > 30 (PLIP pication `if not a > 30: keep`; gate row 4/§4.4) — applies ONLY to ligand ammonium N with EXACTLY 3 non-H substituents (PLIP tertamine), never to AA cations (asymmetry proven by test), never to quaternary/primary/secondary/guanidino; collinear planes cannot veto. The veto's 30 deg reuses thresholds.PISTACK_ANGLE_TOL_DEG (same approved value as PLIP's hardcoded 30; thresholds.py outside the plan's file set) — separating it into its own row-4 constant would be a DETECTOR_VERSION event (§4.7), never silent.
+- (02-07) cation_pi record contract final: roles cation/ring per direction, metrics {d_center, offset, direction} with direction ∈ {'aa_cation_over_lig_ring', 'aa_ring_under_lig_cation'} (D4 both directions; distance <= 6.0 inclusive, offset < 2.0 strict — transcribed from the thresholds row comments).
+- (02-07) detect_part1 emits 5 of 7 types; ligand ammonium groups carry a 'substituents' feature annotation (non-H neighbor points) consumed only by the veto — feature extension, not a typing change; plan case-(e) prose inversion recorded as a Rule-1 deviation in 02-07-SUMMARY.md (gate doc is authoritative).
+- (02-07) Ring-type tests always scope asserts with _of_type: scripted aromatic ligand ring carbons qualify as hydrophobes, so an unscoped 'no records' assert can be faked by a hydrophobic hit; veto proofs use the perpendicular/parallel CONTROL PAIR pattern.
+
 ### Pending Todos
 
 - Keep `aamatch/` pycache-free (live plugin-path loading runs from the repo; human cleans after local test runs).
@@ -97,13 +103,13 @@ Decisions are logged in PROJECT.md Key Decisions table. Seeded from PROJECT.md a
 
 ## Session Continuity
 
-Last session: 2026-09-06 (02-09 executor on worktree branch exec/02-09 — wave-5 parallel protocol; do NOT merge/push from the agent)
-Stopped at: Completed 02-09-PLAN.md — aamatch/geometry.py cmd-tier bridge (probe-proven, 346/346 tests, purity untouched)
+Last session: 2026-09-06 (02-07 executor on worktree branch exec/02-07 — parallel-branch protocol; do NOT merge/push from the agent)
+Stopped at: Completed 02-07-PLAN.md — detector part 2a (pi_stacking + cation_pi; 361/361 tests, purity untouched)
 Resume file: None
 
 ## Next Actions
 
-- Orchestrator (AFTER opencode restart / model switch): spawn 02-07 (pi+cation-pi only — small scope); merge exec/02-08 + exec/02-07 when both return (STATE.md conflict expected — combine); then wave 7 = 02-07b / 02-10 / 02-12 / 02-13, wave 8 = 02-11 / 02-14, wave 9 = 02-15
+- Orchestrator: merge exec/02-08 + exec/02-07 in dependency order (STATE.md conflict expected — combine); then wave 7 = 02-07b / 02-10 / 02-12 / 02-13, wave 8 = 02-11 / 02-14 (02-11 needs 02-07b per the re-wave), wave 9 = 02-15
 - 02-10 (engine): wire detect() = extract_game_atoms() + ligand_bonds() with the probe-pinned remap — bond position i → index_to_id[i+1] → atom id → position in the (object, id)-sorted ligand records; bounding_sphere() output feeds generate(..., ligand_data, ...) as {'centroid', 'radius'}
 - SMOKE-03 (02-13): assert features['unclassified_aa_atoms'] == 0 per materialized AA; reconcile cap-atom naming by extending the detector's known non-side-chain set if needed (never thresholds)
 - SMOKE-03/04/05 need NO runner changes (marker-deriving run_smoke.sh handles any smoke_NN_name.py); geometry helpers are import-ready for all three

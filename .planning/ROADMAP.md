@@ -73,15 +73,15 @@ Plans:
 - [x] 02-05-PLAN.md — pure capability.py: single typing home (AA table + ligand typing + support predicates) (TDD)
 - [x] 02-06-PLAN.md — thresholds.py constants + detector core (features, prefilter, candidates, h_bond/salt_bridge/hydrophobic) (TDD)
 ^- [x] 02-07-PLAN.md — detector part 2a: pi_stacking + cation_pi (TDD; split from original 02-07 after repeated silent spawn failures)
-- [ ] 02-07b-PLAN.md — detector part 2b: halogen + metal + canonical 7-type surface (TDD; depends 02-07)
+^- [x] 02-07b-PLAN.md — detector part 2b: halogen + metal + canonical 7-type surface (TDD; depends 02-07)
 - [x] 02-08-PLAN.md — pure seeded generator: difficulty, grid geometry, mode semantics, solvable allocation, payload assembly (TDD)
 - [x] 02-09-PLAN.md — cmd-tier geometry.py extraction bridge (records + bond block + bounds)
-- [ ] 02-10-PLAN.md — pure game_state.py: score fraction semantics + runtime container (TDD)
-- [ ] 02-11-PLAN.md — detector invariance/sensitivity property battery + WSL perf regression guard (wave 8; needs complete detector)
-- [ ] 02-12-PLAN.md — generator >=100-seed invariant suite (ROADMAP criterion 3)
-- [ ] 02-13-PLAN.md — cmd-tier placement.py (materialize/sentinels/reset/cleanup) + SMOKE-03
-- [ ] 02-14-PLAN.md — engine.py composition root + SMOKE-04 count-asserted E2E (place/detect/score, rotation invariance, reset)
-- [ ] 02-15-PLAN.md — SMOKE-05 perf smoke + AST code audit + detector-version stamp proof
+^- [x] 02-10-PLAN.md — pure game_state.py: score fraction semantics + runtime container (TDD)
+^- [x] 02-11-PLAN.md — detector invariance/sensitivity property battery + WSL perf regression guard (wave 8; needs complete detector)
+^- [x] 02-12-PLAN.md — generator >=100-seed invariant suite (ROADMAP criterion 3)
+^- [x] 02-13-PLAN.md — cmd-tier placement.py (materialize/sentinels/reset/cleanup) + SMOKE-03
+^- [x] 02-14-PLAN.md — engine.py composition root + SMOKE-04 count-asserted E2E (place/detect/score, rotation invariance, reset)
+^- [x] 02-15-PLAN.md — SMOKE-05 perf smoke + AST code audit + detector-version stamp proof
 
 ### Phase 3: Wizard Gameplay Loop
 **Goal**: In a fresh, stock PyMOL, a player can play the core loop by hand: click an amino acid to select it, move/rotate it onto the small molecule, confirm, and see the detection result — with no helper visuals and the user's environment restored afterwards.
@@ -216,7 +216,7 @@ Lifted from PITFALLS.md "Pitfall-to-Phase Mapping" (topic names → this roadmap
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Bootstrap & Pure Foundation | 9/9 | Complete | 2026-09-06 |
-| 2. Headless Game Engine | 15/16 | In progress (wave 8 complete; wave 9 = 02-15 last) | - |
+| 2. Headless Game Engine | 16/16 | Complete (all 16 plans executed; verification pending) | 2026-09-07 |
 | 3. Wizard Gameplay Loop | 0/TBD | Not started | - |
 | 4. Qt Setup Window | 0/TBD | Not started | - |
 | 5. Game Status Tab & Start Sequence | 0/TBD | Not started | - |

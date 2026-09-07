@@ -51,10 +51,12 @@ reconstruction consume them; materialization research §4/§5):
 - Identity = (object_name, atom_id): the materialize-time registry maps
   slot_id -> (object, sorted atom ids) -- the Phase 7 sidecar reconciles
   against it.
-- Pose asserts compare COORDINATES within POSE_TOLERANCE (1e-6 --
-  PyMOL stores float32; translate round-trips accumulate ~1e-7), never
-  ``cmd.get_object_matrix`` (it is the non-identity coordinate-HISTORY
-  record after bakes).
+- Pose asserts compare COORDINATES within a float32-realizable
+  tolerance: POSE_TOLERANCE (1e-6) absolute floor + one float32-ulp
+  relative slack per axis (at |coord| ~ 33 A -- the tier-9 grid --
+  1e-6 is BELOW 1 ulp and would make max-grid materialization
+  intermittently unbakeable; 02-15), never ``cmd.get_object_matrix``
+  (it is the non-identity coordinate-HISTORY record after bakes).
 
 Scope note: full Cleanup-button semantics (pre-game atom counts of user
 objects, adopted-vs-materialized ligand bookkeeping) are Phase 4; this
@@ -75,8 +77,20 @@ from .paths import package_data_path, to_windows_path
 # Pose assertion tolerance: PyMOL stores coordinates as float32, so
 # translate/untranslate round-trips accumulate ~1e-7 (research §6.2;
 # 02-09 probe rule). Pose asserts compare baked coordinates against the
-# spec pose within this tolerance -- never looser, never the matrix.
+# spec pose within this tolerance (plus the float32-ulp relative slack
+# below at large coordinate magnitudes) -- never the matrix.
 POSE_TOLERANCE = 1e-6
+
+# One float32 ulp as a RELATIVE slack (2**-23 ~= 1.19e-7): at coordinate
+# magnitudes beyond ~8 A a fixed 1e-6 absolute assert strays below 1 ulp
+# of the stored values and becomes physically unattainable (02-15: the
+# tier-9 max grid bakes slots at |coord| ~ 32.9 A, whose 1-ulp rounding
+# is ~2.4e-6 -- the fixed assert raise-fired on a legitimate 1.24e-6
+# rounding). Pose asserts therefore add
+# ``FLOAT32_ULP_REL * max(|actual|, |target|)`` of slack per axis --
+# tighter than the base floor is impossible BY STORAGE, not by choice,
+# and no looser tolerance is ever granted.
+FLOAT32_ULP_REL = 1.1920929e-7
 
 # Sentinel values (research §4). Selectors: 'segi AAM' / 'b < 0'.
 SENTINEL_SEGI = 'AAM'
@@ -143,16 +157,21 @@ def _sentinel_tag(object_name):
 
 def _assert_pose(object_name, target, where):
     """Fail-closed pose assert: centroid of the baked object must equal
-    the spec target within POSE_TOLERANCE (per component -- the 3-vector
-    is the pose contract, research §6.2)."""
+    the spec target within the float32-realizable per-axis tolerance
+    (POSE_TOLERANCE absolute floor + FLOAT32_ULP_REL *
+    max(|actual|, |target|) -- the 3-vector is the pose contract,
+    research §6.2; the relative term exists ONLY because float32 cannot
+    meet a fixed 1e-6 beyond ~8 A -- see the constant's comment)."""
     actual = geometry.centroid_of(object_name)
     for axis in range(3):
-        if abs(actual[axis] - target[axis]) > POSE_TOLERANCE:
+        tol = POSE_TOLERANCE + FLOAT32_ULP_REL * max(
+            abs(actual[axis]), abs(target[axis]))
+        if abs(actual[axis] - target[axis]) > tol:
             raise PlacementError(
                 '%s: baked centroid of %r is %r, target %r differs on '
                 'axis %d by %g (tolerance %g) -- the bake did not land'
                 % (where, object_name, actual, target, axis,
-                   abs(actual[axis] - target[axis]), POSE_TOLERANCE))
+                   abs(actual[axis] - target[axis]), tol))
 
 
 def translate_to(object_name, position):

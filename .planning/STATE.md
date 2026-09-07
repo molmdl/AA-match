@@ -9,18 +9,18 @@ See: .planning/PROJECT.md (updated 2026-09-05)
 
 ## Current Position
 
-Phase: 2 of 9 (Headless Game Engine) — In progress
-Plan: 15 of 16 complete on main — **wave 8 COMPLETE** (02-11 + 02-14 merged; waves 1-7 before that); wave 9 = 02-15 (the LAST Phase-2 plan)
-Status: **ENGINE COMPLETE — SMOKE-04 PASS 26/26 (E2E + rotation invariance + spec-replay reset; ROADMAP criterion 4 GREEN)** + detector COMPLETE (7 types) + generator + score/GameState + >=100-seed invariant suite (criterion 3 SATISFIED) + detector property battery (100-seed transform/permutation invariance, 7-type sensitivity, WSL perf guard 0.4-0.9 s ≪ 2.0 s; 521 tests on branch); PURE_MODULES = 13
-Last activity: 2026-09-06 — 02-11 (invariance/sensitivity suite) + 02-14 (engine.py + SMOKE-04) merged from wave-8 branches
+Phase: 2 of 9 (Headless Game Engine) — **PHASE 2 COMPLETE** (pending orchestrator verifier)
+Plan: 16 of 16 complete on branch exec/02-15 (02-15 = wave 9, the LAST Phase-2 plan, awaiting merge)
+Status: **DETECT-05 CLOSED — SMOKE-05 PASS 23/23 (extract 16.7-21 ms / detect 0.0 ms / 1285 atoms vs <100 ms·<1000 ms budgets; stale-stamp refusal proven) + permanent AST code audit (10 tests)** + ENGINE (SMOKE-04) + detector 7-type + generator + score/GameState + invariant suites; **all 5 ROADMAP Phase-2 criteria GREEN**; 531 WSL tests; PURE_MODULES = 13
+Last activity: 2026-09-07 — 02-15 (perf smoke + AST audit + detector-version stamp + float32 pose-tolerance fix) on branch exec/02-15
 
-Progress: [█████████░] 94% of Phase 2 (15/16) · [████████████] 96% of project (phase 2 of 9; plans 28/28)
+Progress: [██████████] 100% of Phase 2 (16/16) · [████████████] 100% of project plans executed (phase 2 of 9; plans 29/29)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 21 (Phase 1: 01-01…01-09; Phase 2: 02-01…02-14)
-- Average duration: ~11 min (02-03); 6 min (02-04); ~29 min (02-05); 23 min (02-06); 4 min (02-09); 11 min (02-07); 17 min (02-08); ~20 min (02-13); ~27 min (02-11); 16 min (02-14)
+- Total plans completed: 22 (Phase 1: 01-01…01-09; Phase 2: 02-01…02-15)
+- Average duration: ~11 min (02-03); 6 min (02-04); ~29 min (02-05); 23 min (02-06); 4 min (02-09); 11 min (02-07); 17 min (02-08); ~20 min (02-13); ~27 min (02-11); 16 min (02-14); 29 min (02-15)
 - Total execution time: —
 
 **By Phase:**
@@ -28,7 +28,7 @@ Progress: [█████████░] 94% of Phase 2 (15/16) · [███�
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 1 | 9/9 ✓ | — | — |
-| 2 | 11/16 (02-11/02-12 bookkeeping per wave-7/8 merges) | ~8 min (02-02) + ~25 min (02-01 cont.) + 11 min (02-03) + 6 min (02-04) + 29 min (02-05) + 23 min (02-06) + 4 min (02-09) + 11 min (02-07) + 17 min (02-08) + 45 min (02-12) + ~20 min (02-13) + 16 min (02-14) | — |
+| 2 | 16/16 ✓ | ~8 min (02-02) + ~25 min (02-01 cont.) + 11 min (02-03) + 6 min (02-04) + 29 min (02-05) + 23 min (02-06) + 4 min (02-09) + 11 min (02-07) + 17 min (02-08) + 45 min (02-12) + ~20 min (02-13) + 16 min (02-14) + 29 min (02-15) | — |
 
 **Recent Trend:**
 - Last 5 plans: —
@@ -111,6 +111,9 @@ Decisions are logged in PROJECT.md Key Decisions table. Seeded from PROJECT.md a
 - (02-14) Rigid-transform invariance asserts: structural record identity (types/objects/ids/roles) byte-equal EXACTLY + numeric metric drift inside a documented float32 budget (SMOKE-04 pins 5e-6 A / 3e-4 deg; observed 2.6e-9 / 0.0) — a uniform 1e-6 metric assert is not float32-realizable for angles.
 - (02-14) new_game carries an optional candidates override (deterministic smoke candidate restriction, SMOKE-03 precedent); default path parses MANIFEST.json with the demo_set_id filter. Every engine op runs headless with count/scan asserts; SMOKE-04 26/26 PASS = ROADMAP Phase-2 criterion 4 ([HEADLESS] E2E) GREEN.
 
+- (02-15) **Phase 2 COMPLETE** (all 5 ROADMAP criteria): SMOKE-05 closes DETECT-05 headlessly on the largest bundled molecule (largest_entry → benzamide) + tier-9 9×9 grid (82 objects exact) — extract 16.7–21 ms / detect 0.0 ms / 1285 atoms, asserted against the REAL headless budgets (detect < 100 ms, extract+detect < 1000 ms; the WSL 2.0 s loose guard never imports) with a ≥ 1 scripted pi_stacking count-assert; the stamp gate round-trips fresh parse (positive control) + refuses a 'det-0' re-stamp with the exact-match "stale or newer" message; 531 WSL tests, 5/5 smokes.
+- (02-15) tests/test_code_audit.py is the permanent mechanical audit (10 tests, ~0.5 s, ast-only): cross_pairs import-AND-call routing; brute_force_pairs oracle isolation (zero call/import sites in aamatch/ + smoke/); no-naive-pair-loop bans with the TOKEN-PAIR rule (flag only when BOTH nested loops iterate atom/record namespaces — the detector's linear objects×one-object-atoms packing pass that FEEDS cross_pairs is pinned NOT-flagged, negative controls prove the finders FIRE); banned-cmd-call gate (get_model/matrix_reset/get_object_ttt) via ast.Call (Gate-C immune) + prose-pin exact counts (placement matrix_reset ×3 / get_object_ttt ×1; engine matrix_reset ×2; geometry get_model ×1).
+- (02-15, Rule 1 deviation + file-set exception) placement._assert_pose is now float32-realizable: POSE_TOLERANCE (1e-6 floor) + FLOAT32_ULP_REL per-axis slack — at |coord| ~ 32.9 Å (tier-9 grid) a fixed 1e-6 is below 1 float32 ulp (~2.4e-6) and max-grid materialization raise-fired on a legitimate 1.24e-6 rounding; single fix site covers materialize/translate_to/reset_to_grid; SMOKE-01..04 regression PASS on re-run.
 - (02-11) Detector property battery landed (tests/test_detector_invariance.py, 521 green): 100-seed rigid-transform invariance on two retained-ligand scripted scenes covering 6 of 7 types + 25-seed permutation invariance with bond-block remap + determinism + thresholds-driven kill/restore sensitivity controls for ALL 7 types (metal includes the ZN→C→ZN ligand_has_metal gate toggle) + WSL loose perf guard (81 PHE + 200-atom crammed ligand, 81 real hydrophobic records, ~0.4-0.9 s vs 2.0 s guard — the <100 ms DETECT-05 budget stays 02-15-headless-only per research §8.4).
 - (02-11, Rule 1 deviation) Rigid-transform metric comparison is TWO-TIER: record structure EXACT; dot-product-conditioned metrics (distances/offsets) hold the plan's 1e-9 (observed drift ≤1e-13 with ~50 A translations); acos-derived `*_angle_deg` metrics at scripted degenerate geometries (parallel ring normals = exactly 0.0 deg) are sqrt(eps)-conditioned and drifted ~8.5e-7 in the worst of 100 seeds — 1e-9 is mathematically unattainable there, so angles use 1e-6 with the conditioning argument documented in-file.
 
@@ -127,15 +130,14 @@ Decisions are logged in PROJECT.md Key Decisions table. Seeded from PROJECT.md a
 
 ## Session Continuity
 
-Last session: 2026-09-06 (wave-8 executors on kimi-k3: 02-11 invariance suite + 02-14 engine/SMOKE-04 — both COMPLETE, both merged by orchestrator)
-Stopped at: Wave 8 COMPLETE (15/16) — wave 9 = 02-15 (perf smoke + AST audit + detector-version stamp), the last Phase-2 plan
+Last session: 2026-09-07 (wave-9 executor on Kimi-K3: 02-15 perf smoke + AST audit + stamp gate — COMPLETE on branch exec/02-15, awaiting orchestrator merge)
+Stopped at: **Phase 2 COMPLETE (16/16)** — 02-15 merged = phase verifier next
 Resume file: None
 
 ## Next Actions
 
-- Orchestrator: wave 9 = 02-15 (SMOKE-05 perf + banned-call AST audit + detector-version stamp) — the LAST Phase-2 plan; then verifier
-- **02-15 banned-call audit:** `grep -n "matrix_reset\|get_object_ttt" aamatch/ smoke/` must hit only DOCSTRING prohibition mentions — placement.py's list plus TWO prose mentions in engine.py docstrings (`(never matrix_reset)`); NO call sites anywhere (Gate-C prose rule: inspect, never blind-fail)
-- **02-15 (SMOKE-05) inherits the proven shape:** engine/geometry surfaces are import-ready (runner handles any smoke_NN_name.py); largest_entry selector from manifest.py; perf budget extract+detect < 1000 ms on the largest Phase-2 bundled molecule; the WSL loose perf guard baseline (~0.4-0.9 s crammed worst case, WSL_PERF_GUARD_SECONDS=2.0 in tests/test_detector_invariance.py) must NOT be imported into the smoke — the REAL <100 ms DETECT-05 budget stays headless-only
-- **Phase 3 spawn notes:** Confirm handler = engine.confirm(...) wrapper; pose scripting/hints must include the explicit baked ring-alignment step (02-14 decision: fragments have no guaranteed orientation); Reset = engine.reset_to_grid()
-- Fixture geometry (benzamide xy-plane pose, acetate tetrahedral methyl) is stable for E2E poses; pose asserts use 1e-6 tolerance (float32); metric-drift asserts use the SMOKE-04 float32 budget (5e-6 A / 3e-4 deg, printed)
+- Orchestrator: merge exec/02-15, then run the Phase-2 verifier; Phase 2's five ROADMAP criteria are all demonstrated GREEN
+- **Phase 3 spawn notes:** Confirm handler = engine.confirm(...) wrapper; pose scripting/hints must include the explicit baked ring-alignment step (02-14 decision: fragments have no guaranteed orientation; SMOKE-05 is the seed-agnostic reference); Reset = engine.reset_to_grid(); max-grid games are bake-safe (02-15 float32 pose-tolerance fix)
+- **Phase 3/4 heads-up:** tests/test_code_audit.py's PROSE_PIN will demand a deliberate update if any docstring adds/removes a banned-token mention (Gate-C: human re-review by construction)
+- Fixture geometry (benzamide xy-plane pose, acetate tetrahedral methyl) is stable for E2E poses; pose asserts use the 02-15 float32-realizable tolerance (1e-6 floor + per-axis ulp slack); metric-drift asserts use the SMOKE-04 float32 budget (5e-6 A / 3e-4 deg, printed)
 - SMOKE-03 reconciler result: materialized chempy fragments classify 100% against capability atom naming (unclassified_aa_atoms == 0) — _KNOWN_NON_SIDE_CHAIN untouched; the pre-authorized detector.py escape hatch stayed UNUSED

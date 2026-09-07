@@ -10,17 +10,17 @@ See: .planning/PROJECT.md (updated 2026-09-05)
 ## Current Position
 
 Phase: 2 of 9 (Headless Game Engine) — In progress
-Plan: 13 of 16 complete on main — **wave 7 COMPLETE** (02-07b + 02-10 + 02-12 + 02-13 all merged; waves 1-6 before that)
-Status: **Detector COMPLETE — all 7 types via detect()** (DETECT-01/02 done) + pure seeded generator + score/GameState + >=100-seed invariant suite (criterion 3 SATISFIED) + cmd-tier placement with SMOKE-03 PASS 28/28 (ligand_data profile contract PROVEN end-to-end); PURE_MODULES = 13
-Last activity: 2026-09-06 — 02-13 (placement.py + SMOKE-03) merged; wave 8 = 02-11 / 02-14 next
+Plan: 14 of 16 on exec/02-11 branch — **02-11 COMPLETE (pending wave-8 merge)**; 02-14 running in parallel on its own branch (wave 7 = 02-07b + 02-10 + 02-12 + 02-13 merged before that)
+Status: **Detector COMPLETE — all 7 types via detect()** (DETECT-01/02 done) + pure seeded generator + score/GameState + >=100-seed invariant suite (criterion 3 SATISFIED) + cmd-tier placement with SMOKE-03 PASS 28/28 + **detector property battery** (100-seed transform invariance / permutation / determinism / 7-type sensitivity / WSL perf guard — DETECT-05 WSL correctness half closed, 521 tests green); PURE_MODULES = 13
+Last activity: 2026-09-06 — 02-11 (detector invariance/sensitivity suite) complete on branch exec/02-11, awaiting wave-8 merge
 
-Progress: [████████░░] 81% of Phase 2 (13/16) · [███████████░] 92% of project (phase 2 of 9; plans 26/25)
+Progress: [█████████░] 88% of Phase 2 (14/16) · [███████████░] 92% of project (phase 2 of 9; plans 27/25)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 19 (Phase 1: 01-01…01-09; Phase 2: 02-01…02-09, 02-13)
-- Average duration: ~11 min (02-03); 6 min (02-04); ~29 min (02-05); 23 min (02-06); 4 min (02-09); 11 min (02-07); 17 min (02-08); ~20 min (02-13)
+- Total plans completed: 20 (Phase 1: 01-01…01-09; Phase 2: 02-01…02-09, 02-13, 02-11)
+- Average duration: ~11 min (02-03); 6 min (02-04); ~29 min (02-05); 23 min (02-06); 4 min (02-09); 11 min (02-07); 17 min (02-08); ~20 min (02-13); ~27 min (02-11)
 - Total execution time: —
 
 **By Phase:**
@@ -107,6 +107,9 @@ Decisions are logged in PROJECT.md Key Decisions table. Seeded from PROJECT.md a
 - (02-13) SMOKE-03 field-verified capability atom naming: materialized chempy fragments classify with unclassified_aa_atoms == 0 against the live detector — NO reconciliation edits to detector.py/_KNOWN_NON_SIDE_CHAIN or capability.py were needed (the pre-authorized escape hatch stayed unused, a STRONGER outcome than planned).
 - (02-13) SMOKE-03 candidates are restricted to the benzamide row by construction: block_exclusive (correctly) refuses checked-but-unsupported types on aromatic-less molecules, so passing both manifest entries would make the smoke seed-fragile; diversity proofs stay with SMOKE-02.
 
+- (02-11) Detector property battery landed (tests/test_detector_invariance.py, 521 green): 100-seed rigid-transform invariance on two retained-ligand scripted scenes covering 6 of 7 types + 25-seed permutation invariance with bond-block remap + determinism + thresholds-driven kill/restore sensitivity controls for ALL 7 types (metal includes the ZN→C→ZN ligand_has_metal gate toggle) + WSL loose perf guard (81 PHE + 200-atom crammed ligand, 81 real hydrophobic records, ~0.4-0.9 s vs 2.0 s guard — the <100 ms DETECT-05 budget stays 02-15-headless-only per research §8.4).
+- (02-11, Rule 1 deviation) Rigid-transform metric comparison is TWO-TIER: record structure EXACT; dot-product-conditioned metrics (distances/offsets) hold the plan's 1e-9 (observed drift ≤1e-13 with ~50 A translations); acos-derived `*_angle_deg` metrics at scripted degenerate geometries (parallel ring normals = exactly 0.0 deg) are sqrt(eps)-conditioned and drifted ~8.5e-7 in the worst of 100 seeds — 1e-9 is mathematically unattainable there, so angles use 1e-6 with the conditioning argument documented in-file.
+
 ### Pending Todos
 
 - Keep `aamatch/` pycache-free (live plugin-path loading runs from the repo; human cleans after local test runs).
@@ -120,13 +123,14 @@ Decisions are logged in PROJECT.md Key Decisions table. Seeded from PROJECT.md a
 
 ## Session Continuity
 
-Last session: 2026-09-06 (wave-7 executors on kimi-k3: 02-07b / 02-10 / 02-12 / 02-13 — all four COMPLETE, all merged by orchestrator)
-Stopped at: Wave 7 COMPLETE (13/16) — wave 8 next = 02-11 / 02-14, then wave 9 = 02-15
+Last session: 2026-09-06 (wave-8 executor on kimi-k3: 02-11 detector invariance/sensitivity suite COMPLETE on branch exec/02-11, commit 135036c + docs commit)
+Stopped at: 02-11 COMPLETE pending wave-8 merge (02-14 parallel) — after merge, wave 9 = 02-15
 Resume file: None
 
 ## Next Actions
 
-- Orchestrator: wave 8 = 02-11 (detector invariance/sensitivity suite) + 02-14 (engine + SMOKE-04) in parallel worktrees, then wave 9 = 02-15 (perf smoke + AST audit + detector-version stamp)
+- Orchestrator: merge exec/02-11 (then exec/02-14 when it returns), then wave 9 = 02-15 (perf smoke + AST audit + detector-version stamp)
+- **02-15 note from 02-11:** the WSL loose perf guard's actual runtime on the crammed worst case (81 PHE + 200-atom ligand, 1253 atoms) is ~0.4-0.9 s under python3.6 — use it as the regression baseline; the REAL <100 ms DETECT-05 budget stays headless-only and the test's WSL_PERF_GUARD_SECONDS = 2.0 constant must NOT be imported into the smoke
 - **02-14 (SMOKE-04) reuses SMOKE-03's ligand_data pattern verbatim:** temp _aam_tmp load -> extract_game_atoms -> bounding_sphere + ligand_profile over remapped get_bonds -> {'centroid','radius','profile'} (02-08 deviation 3 contract, PROVEN end-to-end by SMOKE-03); scripted placement consumes translate_to/transform_baked; rotation-invariance Part B bakes whole-scene rotates with camera=0
 - **02-14 (engine) wires detect() = extract_game_atoms() + ligand_bonds()** with the probe-pinned remap — bond position i → index_to_id[i+1] → atom id → position in the (object, id)-sorted ligand records; bounding_sphere() + ligand_profile feed generate(..., ligand_data, ...) keyed by (set_id, entry_id); productionize the smoke-local ligand_data build + bond remap helpers; scoring binds to detector.detect() (NOT detect_part1 — the 7-type surface)
 - **02-13 SMOKE-03 note for 02-11/02-14:** a materialized AA fragment whose acceptor atom sits > 2.0 A from every non-H same-object atom is malformed — `HALOGEN_Y_ATTACH_MAX` doubles as a fragment sanity bound alongside the unclassified-atoms assertion

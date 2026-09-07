@@ -27,11 +27,11 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Game Generation
 
-- [ ] **GEN-01**: Game generates multiple levels of increasing difficulty per the difficulty-count setting
-- [ ] **GEN-02**: Each level contains small molecules of a specific protonation state rendered with correct valence
-- [ ] **GEN-03**: For each molecule, an NxN grid (N by difficulty) of randomized, capped amino acids is laid out around the molecule beyond a gap
-- [ ] **GEN-04**: Every generated level is solvable by construction (grid contains AAs able to form all required interactions, plus distractors)
-- [ ] **GEN-05**: Difficulty is expressed through grid N, molecule size, and count of required interaction types
+- [x] **GEN-0- [ ] **GEN-01**: Game generates multiple levels of increasing difficulty per the difficulty-count setting
+- [x] **GEN-0- [ ] **GEN-02**: Each level contains small molecules of a specific protonation state rendered with correct valence
+- [x] **GEN-0- [ ] **GEN-03**: For each molecule, an NxN grid (N by difficulty) of randomized, capped amino acids is laid out around the molecule beyond a gap
+- [x] **GEN-0- [ ] **GEN-04**: Every generated level is solvable by construction (grid contains AAs able to form all required interactions, plus distractors)
+- [x] **GEN-0- [ ] **GEN-05**: Difficulty is expressed through grid N, molecule size, and count of required interaction types
 - [ ] **GEN-06**: Demo sets ship pre-downloaded (~9 tier slots: Easy ×3, Hard ×3, Challenge, Very challenging ×2) with protonation/interaction provenance from known binding databases; each entry records its selection rationale (educational coverage, tier fit) and chemical/interaction diversity across the set
 
 ### Viewer Gameplay
@@ -44,11 +44,11 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Interaction Detection
 
-- [ ] **DETECT-01**: Game detects H-bond, salt bridge (ionic folded in), π-stacking (parallel + T-shaped in one category), cation-π, and hydrophobic contact from atom types and geometry
-- [ ] **DETECT-02**: Game detects halogen bond (ligand-side donors) and metal coordination (conditional on metal present in the ligand)
-- [ ] **DETECT-03**: Detection criteria adopt one internally consistent in-house threshold table, transcribed from published sources (PLIP/ProLIF/BINANA) and explicitly human-approved before shipping
-- [ ] **DETECT-04**: Detection is explicit about partner sides (amino acid vs small molecule) so capability checks (hint, solvability) and scoring agree
-- [ ] **DETECT-05**: Detection is vectorized, not loop-bound: numpy vectorized geometry (no naive per-atom-pair Python loops) with spatial pruning (e.g. cell lists); criteria/pairing logic stays WSL-unit-testable (pure layer), vector math verified by headless perf smoke on the largest demo
+- [x] **DETECT-01**: Game detects H-bond, salt bridge (ionic folded in), π-stacking (parallel + T-shaped in one category), cation-π, and hydrophobic contact from atom types and geometry
+- [x] **DETECT-02**: Game detects halogen bond (ligand-side donors) and metal coordination (conditional on metal present in the ligand)
+- [x] **DETECT-03**: Detection criteria adopt one internally consistent in-house threshold table, transcribed from published sources (PLIP/ProLIF/BINANA) and explicitly human-approved before shipping
+- [x] **DETECT-04**: Detection is explicit about partner sides (amino acid vs small molecule) so capability checks (hint, solvability) and scoring agree
+- [x] **DETECT-05**: Detection is vectorized, not loop-bound: numpy vectorized geometry (no naive per-atom-pair Python loops) with spatial pruning (e.g. cell lists); criteria/pairing logic stays WSL-unit-testable (pure layer), vector math verified by headless perf smoke on the largest demo
 
 ### Scoring & Game Lifecycle
 
@@ -127,22 +127,22 @@ Which phases cover which requirements. Updated during roadmap creation (2026-09-
 | SETUP-09 | Phase 4 | Pending |
 | SETUP-10 | Phase 4 | Pending |
 | SETUP-11 | Phase 5 | Pending |
-| GEN-01 | Phase 2 | Pending |
-| GEN-02 | Phase 2 | Pending |
-| GEN-03 | Phase 2 | Pending |
-| GEN-04 | Phase 2 | Pending |
-| GEN-05 | Phase 2 | Pending |
+| GEN-01 | Phase 2 | Complete |
+| GEN-02 | Phase 2 | Complete |
+| GEN-03 | Phase 2 | Complete |
+| GEN-04 | Phase 2 | Complete |
+| GEN-05 | Phase 2 | Complete |
 | GEN-06 | Phase 8 | Pending |
 | PLAY-01 | Phase 3 | Pending |
 | PLAY-02 | Phase 3 | Pending |
 | PLAY-03 | Phase 3 | Pending |
 | PLAY-04 | Phase 3 | Pending |
 | PLAY-05 | Phase 5 | Pending |
-| DETECT-01 | Phase 2 | Pending |
-| DETECT-02 | Phase 2 | Pending |
-| DETECT-03 | Phase 2 | Pending |
-| DETECT-04 | Phase 2 | Pending |
-| DETECT-05 | Phase 2 | Pending |
+| DETECT-01 | Phase 2 | Complete |
+| DETECT-02 | Phase 2 | Complete |
+| DETECT-03 | Phase 2 | Complete |
+| DETECT-04 | Phase 2 | Complete |
+| DETECT-05 | Phase 2 | Complete |
 | SCORE-01 | Phase 6 | Pending |
 | SCORE-02 | Phase 6 | Pending |
 | SCORE-03 | Phase 6 | Pending |

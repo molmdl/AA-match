@@ -18,7 +18,7 @@ AA-match ships as a standard PyMOL 2.5.0 plugin implementing an educational smal
 ## Phases
 
 - [x] **Phase 1: Bootstrap & Pure Foundation** — installable plugin skeleton, WSL→Windows toolchain proof, pure setup/persistence/level-spec layer with WSL tests
-- [ ] **Phase 2: Headless Game Engine** — human-approved thresholds → detector → always-solvable generator → bundled data → cmd-only generate/place/detect/score, headless end-to-end
+- [x] **Phase 2: Headless Game Engine** — human-approved thresholds → detector → always-solvable generator → bundled data → cmd-only generate/place/detect/score, headless end-to-end
 - [ ] **Phase 3: Wizard Gameplay Loop** — click-to-select, move/rotate onto the ligand, Confirm; movement-model decision; no helper visuals
 - [ ] **Phase 4: Qt Setup Window** — modeless setup window: demo dropdown, upload, params, the seven bottom buttons
 - [ ] **Phase 5: Game Status Tab & Start Sequence** — start sequence, live status tab (info box / timer / required interactions), Hint
@@ -216,7 +216,7 @@ Lifted from PITFALLS.md "Pitfall-to-Phase Mapping" (topic names → this roadmap
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Bootstrap & Pure Foundation | 9/9 | Complete | 2026-09-06 |
-| 2. Headless Game Engine | 16/16 | Complete (all 16 plans executed; verification pending) | 2026-09-07 |
+| 2. Headless Game Engine | 16/16 | Complete (verified 2026-09-07 — 02-VERIFICATION.md passed 5/5) | 2026-09-07 |
 | 3. Wizard Gameplay Loop | 0/TBD | Not started | - |
 | 4. Qt Setup Window | 0/TBD | Not started | - |
 | 5. Game Status Tab & Start Sequence | 0/TBD | Not started | - |

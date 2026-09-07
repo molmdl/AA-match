@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-09-05)
 
 **Core value:** The player can place amino acids onto a small molecule in the PyMOL 3D viewer and the game correctly detects and scores the interactions they form — turning unguided 3D manipulation practice into a scored game.
-**Current focus:** Phase 2 — Headless Game Engine
+**Current focus:** Phase 3 — Wizard Gameplay Loop (next up)
 
 ## Current Position
 
-Phase: 2 of 9 (Headless Game Engine) — **PHASE 2 COMPLETE** (pending orchestrator verifier)
-Plan: 16 of 16 complete — PHASE 2 ALL PLANS EXECUTED (waves 1-9; 02-15 merged 2026-09-07)
-Status: **DETECT-05 CLOSED — SMOKE-05 PASS 23/23 (extract 16.7-21 ms / detect 0.0 ms / 1285 atoms vs <100 ms·<1000 ms budgets; stale-stamp refusal proven) + permanent AST code audit (10 tests)** + ENGINE (SMOKE-04) + detector 7-type + generator + score/GameState + invariant suites; **all 5 ROADMAP Phase-2 criteria GREEN**; 531 WSL tests; PURE_MODULES = 13
-Last activity: 2026-09-07 — 02-15 merged; phase 2 execution complete — VERIFICATION pending
+Phase: 2 of 9 (Headless Game Engine) — **COMPLETE ✓ (verified 2026-09-07)**
+Plan: 16 of 16 complete — PHASE 2 ALL PLANS EXECUTED (waves 1-9; 02-15 merged 2026-09-07); 02-VERIFICATION.md PASSED 5/5 must-haves
+Status: Verified — 531 WSL tests, SMOKE-01..05 all PASS (E2E + perf: detect 11.2 ms ≪ 100 ms on 1285 atoms; stale-spec refusal proven; AST audit permanent); requirements GEN-01..05 + DETECT-01..05 Complete; ready to plan Phase 3
+Last activity: 2026-09-07 — verifier PASSED (git-order proof: human gate 7214d66 precedes detector code; 15/15 sampled key_links wired)
 
-Progress: [██████████] 100% of Phase 2 (16/16) · [████████████] 100% of project plans executed (phase 2 of 9; plans 29/29)
+Progress: [██████████] 100% of Phase 2 · [██░░░░░░░░] 22% of project (2/9 phases)
 
 ## Performance Metrics
 
@@ -136,7 +136,7 @@ Resume file: None
 
 ## Next Actions
 
-- Orchestrator: merge exec/02-15, then run the Phase-2 verifier; Phase 2's five ROADMAP criteria are all demonstrated GREEN
+- Run `/gsd-discuss-phase 3` (recommended — movement-model spike P3 gate: `cmd.drag(wizard=0)` interplay + default `editor_scheme` must be spike-verified headlessly BEFORE freezing) or `/gsd-plan-phase 3`
 - **Phase 3 spawn notes:** Confirm handler = engine.confirm(...) wrapper; pose scripting/hints must include the explicit baked ring-alignment step (02-14 decision: fragments have no guaranteed orientation; SMOKE-05 is the seed-agnostic reference); Reset = engine.reset_to_grid(); max-grid games are bake-safe (02-15 float32 pose-tolerance fix)
 - **Phase 3/4 heads-up:** tests/test_code_audit.py's PROSE_PIN will demand a deliberate update if any docstring adds/removes a banned-token mention (Gate-C: human re-review by construction)
 - Fixture geometry (benzamide xy-plane pose, acetate tetrahedral methyl) is stable for E2E poses; pose asserts use the 02-15 float32-realizable tolerance (1e-6 floor + per-axis ulp slack); metric-drift asserts use the SMOKE-04 float32 budget (5e-6 A / 3e-4 deg, printed)

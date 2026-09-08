@@ -351,7 +351,7 @@ class TestResultLines(unittest.TestCase):
     def test_score_renders_with_exactly_two_decimals(self):
         lines = wizard_text.result_lines(0.5, ['h_bond'],
                                          _REQUIRED_LIST_2)
-        self.assertRegex(lines[0], r'score \d+\.\d\d$')
+        self.assertRegex(lines[0], r'score \d+\.\d\d\)$')
 
     def test_text_only_no_geometry_descriptors(self):
         # PLAY-04: no coordinates, no 'Angstrom', no geometry words.

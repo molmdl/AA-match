@@ -93,10 +93,16 @@ Plans:
   3. [HUMAN] Clicking another AA switches selection; Confirm finishes the molecule and runs detection, with the result visible in the wizard panel. (PLAY-03)
   4. [HUMAN + GATE] No helper lines/dots/geometry appear at any point during play; the movement-model spike verdict is recorded (object-matrix default; `cmd.drag(wizard=0)` headless spike result + default `editor_scheme` check); the prior wizard and `mouse_selection_mode` are restored when the game wizard exits. (PLAY-04)
 **Research notes**: PITFALLS topics *viewer-interaction*. Mandatory human GUI check on a fresh PyMOL (PITFALL 5). Movement-model decision gates detector input + reset semantics (PITFALLS 6, 12) — run the spike headlessly before freezing. Reset-to-grid via spec replay established here.
-**Plans**: TBD
+**Plans**: 7 plans
 
 Plans:
-- [ ] 03-01: (TBD)
+- [ ] 03-01-PLAN.md — pure wizard_core helpers (slot map, camera-step math, color bookkeeping) (TDD)
+- [ ] 03-02-PLAN.md — pure wizard_text builders (panel entries, prompt lines, result rendering) (TDD)
+- [ ] 03-03-PLAN.md — GameWizard (aamatch/wizard.py): stack-native lifecycle, pick routing, recolor feedback, baked-transform movement, confirm/reset
+- [ ] 03-04-PLAN.md — SMOKE-07 headless E2E wizard loop + no-helper-visuals source gate
+- [ ] 03-05-PLAN.md — gamestart starter + Plugins-menu wiring (run_plugin_gui) + SMOKE-08 starter proof
+- [ ] 03-06-PLAN.md — [HUMAN] gameplay-loop checkpoint (PLAY-01..03) + arrow-key delivery probe
+- [ ] 03-07-PLAN.md — [HUMAN] restoration + no-helper-visuals + drag-diagnostics checkpoint (PLAY-04 [HUMAN+GATE])
 
 ### Phase 4: Qt Setup Window
 **Goal**: From the Plugins menu the user gets a modeless setup window from which they can configure everything, save/load setups, export a shareable game, clean up the model, and start playing.
@@ -217,7 +223,7 @@ Lifted from PITFALLS.md "Pitfall-to-Phase Mapping" (topic names → this roadmap
 |-------|----------------|--------|-----------|
 | 1. Bootstrap & Pure Foundation | 9/9 | Complete | 2026-09-06 |
 | 2. Headless Game Engine | 16/16 | Complete (verified 2026-09-07 — 02-VERIFICATION.md passed 5/5) | 2026-09-07 |
-| 3. Wizard Gameplay Loop | 0/TBD | Not started | - |
+| 3. Wizard Gameplay Loop | 0/7 | Not started | - |
 | 4. Qt Setup Window | 0/TBD | Not started | - |
 | 5. Game Status Tab & Start Sequence | 0/TBD | Not started | - |
 | 6. Scoring Lifecycle & Endgame | 0/TBD | Not started | - |

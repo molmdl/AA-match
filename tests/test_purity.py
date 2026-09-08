@@ -80,9 +80,12 @@ if REPO_ROOT not in sys.path:
 #                   homes; NO itertools, NO numpy).
 # Phase 2 (02-10): game_state (SCORE-01 scoring + runtime container;
 #                   imports time + .setup_state INTERACTION_TYPES only).
+# Phase 3 (03-01): wizard_core (pure wizard logic: slot map, view math,
+#                   color bookkeeping; ZERO imports of any kind).
 PURE_MODULES = ['setup_state', 'level_spec', 'persistence', 'backup',
                 'paths', 'vec3', 'spatial', 'manifest', 'capability',
-                'thresholds', 'detector', 'generator', 'game_state']
+                'thresholds', 'detector', 'generator', 'game_state',
+                'wizard_core']
 
 # Roots that must NEVER appear in any import of a pure module, in ANY
 # scope (module level or function body -- B7). dataclasses is 3.7+.

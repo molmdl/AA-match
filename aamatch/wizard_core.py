@@ -56,8 +56,9 @@ HIGHLIGHT_COLOR = 'green'
 def build_slot_map(registry, molecule_index):
     """Reverse map {object_name: slot_id} for ONE molecule's slots.
 
-    ``registry`` is the materialize() return shape
-    (aamatch/placement.py)::
+    Consumes ``registry['molecules'][molecule_index]['slots']`` from
+    the materialize() return shape (aamatch/placement.py); the full
+    registry shape is::
 
         {'level_index': int,
          'pre_game_names': [...],

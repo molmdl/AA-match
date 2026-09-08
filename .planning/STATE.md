@@ -5,21 +5,21 @@
 See: .planning/PROJECT.md (updated 2026-09-05)
 
 **Core value:** The player can place amino acids onto a small molecule in the PyMOL 3D viewer and the game correctly detects and scores the interactions they form — turning unguided 3D manipulation practice into a scored game.
-**Current focus:** Phase 3 — Wizard Gameplay Loop (next up)
+**Current focus:** Phase 3 — Wizard Gameplay Loop (plan 03-01 complete; wave 2 next)
 
 ## Current Position
 
-Phase: 2 of 9 (Headless Game Engine) — **COMPLETE ✓ (verified 2026-09-07)**
-Plan: 16 of 16 complete — PHASE 2 ALL PLANS EXECUTED (waves 1-9; 02-15 merged 2026-09-07); 02-VERIFICATION.md PASSED 5/5 must-haves
-Status: Verified — 531 WSL tests, SMOKE-01..05 all PASS (E2E + perf: detect 11.2 ms ≪ 100 ms on 1285 atoms; stale-spec refusal proven; AST audit permanent); requirements GEN-01..05 + DETECT-01..05 Complete; ready to plan Phase 3
-Last activity: 2026-09-07 — verifier PASSED (git-order proof: human gate 7214d66 precedes detector code; 15/15 sampled key_links wired)
+Phase: 3 of 9 (Wizard Gameplay Loop) — IN PROGRESS
+Plan: 1 of 7 complete (03-01 wizard_core pure helpers — RED→GREEN→REGISTER, wave 1)
+Status: In progress — 549 WSL tests green (531 + 18 new); wizard_core gated as PURE_MODULES #14; SMOKE smokes unchanged
+Last activity: 2026-09-08 — completed 03-01-PLAN.md (aamatch/wizard_core.py + RED-first battery registered in tests/test_purity.py)
 
-Progress: [██████████] 100% of Phase 2 · [██░░░░░░░░] 22% of project (2/9 phases)
+Progress: [█░░░░░░░░░] 14% of Phase 3 (1/7) · [██░░░░░░░░] 22% of project (2/9 phases — phase 3 first plan done)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 22 (Phase 1: 01-01…01-09; Phase 2: 02-01…02-15)
+- Total plans completed: 23 (Phase 1: 01-01…01-09; Phase 2: 02-01…02-15; Phase 3: 03-01)
 - Average duration: ~11 min (02-03); 6 min (02-04); ~29 min (02-05); 23 min (02-06); 4 min (02-09); 11 min (02-07); 17 min (02-08); ~20 min (02-13); ~27 min (02-11); 16 min (02-14); 29 min (02-15)
 - Total execution time: —
 
@@ -113,6 +113,9 @@ Decisions are logged in PROJECT.md Key Decisions table. Seeded from PROJECT.md a
 
 - (02-15) **Phase 2 COMPLETE** (all 5 ROADMAP criteria): SMOKE-05 closes DETECT-05 headlessly on the largest bundled molecule (largest_entry → benzamide) + tier-9 9×9 grid (82 objects exact) — extract 16.7–21 ms / detect 0.0 ms / 1285 atoms, asserted against the REAL headless budgets (detect < 100 ms, extract+detect < 1000 ms; the WSL 2.0 s loose guard never imports) with a ≥ 1 scripted pi_stacking count-assert; the stamp gate round-trips fresh parse (positive control) + refuses a 'det-0' re-stamp with the exact-match "stale or newer" message; 531 WSL tests, 5/5 smokes.
 - (02-15) tests/test_code_audit.py is the permanent mechanical audit (10 tests, ~0.5 s, ast-only): cross_pairs import-AND-call routing; brute_force_pairs oracle isolation (zero call/import sites in aamatch/ + smoke/); no-naive-pair-loop bans with the TOKEN-PAIR rule (flag only when BOTH nested loops iterate atom/record namespaces — the detector's linear objects×one-object-atoms packing pass that FEEDS cross_pairs is pinned NOT-flagged, negative controls prove the finders FIRE); banned-cmd-call gate (get_model/matrix_reset/get_object_ttt) via ast.Call (Gate-C immune) + prose-pin exact counts (placement matrix_reset ×3 / get_object_ttt ×1; engine matrix_reset ×2; geometry get_model ×1).
+- (03-01) wizard_core = the PURE halves of the wizard gameplay loop (PURE_MODULES = 14, ZERO imports): build_slot_map scoped to ONE molecule_index (Phase-3 molecule-0 scoping, RESEARCH §5.4) with `.get`-based fail-closed ValueError refusals (never KeyError/TypeError into pick routing) over the placement registry {slot_id: (object, sorted ids)}; consumption path registry['molecules'][i]['slots'] pinned in docstring. transient_selection = transient-only delete guard ('sele'/'pk1'..'pk4'/'_'-prefixed; RESEARCH §10.2 decision) — game-object names never reach this guard (identity comes from pk1's model field).
+- (03-01) Camera→world nudge convention PINNED by unit tests: step_world = R^T.step over get_view's row-major world→camera block (identity view = pass-through; Rz(+90) hand-computed) — 03-04/SMOKE-07 live-verifies against scripted cmd.set_view; wizard_core is the SINGLE fix site if the live build proves the opposite convention. Movement constants: NUDGE_STEP=1.0 Å, ROTATE_STEP_DEG=10.0, ROTATE_BUTTON_STEP_DEG=90.0, HIGHLIGHT_COLOR='green' (v1 game.py:208-213 precedent).
+- (03-01) PLAY-01 color bookkeeping: ensure_snapshot stores a DEFENSIVE COPY of [(ID, color), ...] exactly once per slot (before first recolor; idempotent False afterwards), color_map = {ID: color} restore view (None when absent), snapshot_objects SORTED (3.6 no insertion-order guarantee). 03-01 added only the comment annotation to PURE_MODULES (02-08/02-10 added registration-pin TestCase classes) — optional pin test noted in SUMMARY.
 - (02-15, Rule 1 deviation + file-set exception) placement._assert_pose is now float32-realizable: POSE_TOLERANCE (1e-6 floor) + FLOAT32_ULP_REL per-axis slack — at |coord| ~ 32.9 Å (tier-9 grid) a fixed 1e-6 is below 1 float32 ulp (~2.4e-6) and max-grid materialization raise-fired on a legitimate 1.24e-6 rounding; single fix site covers materialize/translate_to/reset_to_grid; SMOKE-01..04 regression PASS on re-run.
 - (02-11) Detector property battery landed (tests/test_detector_invariance.py, 521 green): 100-seed rigid-transform invariance on two retained-ligand scripted scenes covering 6 of 7 types + 25-seed permutation invariance with bond-block remap + determinism + thresholds-driven kill/restore sensitivity controls for ALL 7 types (metal includes the ZN→C→ZN ligand_has_metal gate toggle) + WSL loose perf guard (81 PHE + 200-atom crammed ligand, 81 real hydrophobic records, ~0.4-0.9 s vs 2.0 s guard — the <100 ms DETECT-05 budget stays 02-15-headless-only per research §8.4).
 - (02-11, Rule 1 deviation) Rigid-transform metric comparison is TWO-TIER: record structure EXACT; dot-product-conditioned metrics (distances/offsets) hold the plan's 1e-9 (observed drift ≤1e-13 with ~50 A translations); acos-derived `*_angle_deg` metrics at scripted degenerate geometries (parallel ring normals = exactly 0.0 deg) are sqrt(eps)-conditioned and drifted ~8.5e-7 in the worst of 100 seeds — 1e-9 is mathematically unattainable there, so angles use 1e-6 with the conditioning argument documented in-file.
@@ -130,13 +133,13 @@ Decisions are logged in PROJECT.md Key Decisions table. Seeded from PROJECT.md a
 
 ## Session Continuity
 
-Last session: 2026-09-07 (wave-9 executor on Kimi-K3: 02-15 perf smoke + AST audit + stamp gate — COMPLETE on branch exec/02-15, awaiting orchestrator merge)
-Stopped at: **Phase 2 COMPLETE (16/16)** — 02-15 merged = phase verifier next
+Last session: 2026-09-08 (03-01 executor: pure wizard core RED→GREEN→REGISTER — COMPLETE on main)
+Stopped at: Completed 03-01-PLAN.md (wave 1 of 7); next = wave 2 plans per 03-XX-PLAN.md dependency graph
 Resume file: None
 
 ## Next Actions
 
-- Run `/gsd-discuss-phase 3` (recommended — movement-model spike P3 gate: `cmd.drag(wizard=0)` interplay + default `editor_scheme` must be spike-verified headlessly BEFORE freezing) or `/gsd-plan-phase 3`
+- Execute Phase 3 wave 2 (plans depending on 03-01: movement layer 03-02 per its depends_on) via `/gsd-execute-phase 3`
 - **Phase 3 spawn notes:** Confirm handler = engine.confirm(...) wrapper; pose scripting/hints must include the explicit baked ring-alignment step (02-14 decision: fragments have no guaranteed orientation; SMOKE-05 is the seed-agnostic reference); Reset = engine.reset_to_grid(); max-grid games are bake-safe (02-15 float32 pose-tolerance fix)
 - **Phase 3/4 heads-up:** tests/test_code_audit.py's PROSE_PIN will demand a deliberate update if any docstring adds/removes a banned-token mention (Gate-C: human re-review by construction)
 - Fixture geometry (benzamide xy-plane pose, acetate tetrahedral methyl) is stable for E2E poses; pose asserts use the 02-15 float32-realizable tolerance (1e-6 floor + per-axis ulp slack); metric-drift asserts use the SMOKE-04 float32 budget (5e-6 A / 3e-4 deg, printed)

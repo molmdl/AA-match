@@ -5,22 +5,22 @@
 See: .planning/PROJECT.md (updated 2026-09-05)
 
 **Core value:** The player can place amino acids onto a small molecule in the PyMOL 3D viewer and the game correctly detects and scores the interactions they form — turning unguided 3D manipulation practice into a scored game.
-**Current focus:** Phase 3 — Wizard Gameplay Loop (plan 03-01 complete; wave 2 next)
+**Current focus:** Phase 3 — Wizard Gameplay Loop (plans 03-01, 03-02 complete; wave 3 next)
 
 ## Current Position
 
 Phase: 3 of 9 (Wizard Gameplay Loop) — IN PROGRESS
-Plan: 1 of 7 complete (03-01 wizard_core pure helpers — RED→GREEN→REGISTER, wave 1)
-Status: In progress — 549 WSL tests green (531 + 18 new); wizard_core gated as PURE_MODULES #14; SMOKE smokes unchanged
-Last activity: 2026-09-08 — completed 03-01-PLAN.md (aamatch/wizard_core.py + RED-first battery registered in tests/test_purity.py)
+Plan: 2 of 7 complete (03-02 wizard_text pure builders — RED→GREEN→REGISTER, wave 2)
+Status: In progress — 590 WSL tests green (549 + 41 new); wizard_text gated as PURE_MODULES #15; SMOKE smokes unchanged
+Last activity: 2026-09-08 — completed 03-02-PLAN.md (aamatch/wizard_text.py + RED-first battery registered in tests/test_purity.py)
 
-Progress: [█░░░░░░░░░] 14% of Phase 3 (1/7) · [██░░░░░░░░] 22% of project (2/9 phases — phase 3 first plan done)
+Progress: [██░░░░░░░░] 29% of Phase 3 (2/7) · [██░░░░░░░░] 22% of project (2/9 phases — phase 3 first two plans done)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 23 (Phase 1: 01-01…01-09; Phase 2: 02-01…02-15; Phase 3: 03-01)
-- Average duration: ~11 min (02-03); 6 min (02-04); ~29 min (02-05); 23 min (02-06); 4 min (02-09); 11 min (02-07); 17 min (02-08); ~20 min (02-13); ~27 min (02-11); 16 min (02-14); 29 min (02-15)
+- Total plans completed: 24 (Phase 1: 01-01…01-09; Phase 2: 02-01…02-15; Phase 3: 03-01, 03-02)
+- Average duration: ~11 min (02-03); 6 min (02-04); ~29 min (02-05); 23 min (02-06); 4 min (02-09); 11 min (02-07); 17 min (02-08); ~20 min (02-13); ~27 min (02-11); 16 min (02-14); 29 min (02-15); ~15 min (03-01); ~55 min (03-02)
 - Total execution time: —
 
 **By Phase:**
@@ -29,6 +29,7 @@ Progress: [█░░░░░░░░░] 14% of Phase 3 (1/7) · [██░░
 |-------|-------|-------|----------|
 | 1 | 9/9 ✓ | — | — |
 | 2 | 16/16 ✓ | ~8 min (02-02) + ~25 min (02-01 cont.) + 11 min (02-03) + 6 min (02-04) + 29 min (02-05) + 23 min (02-06) + 4 min (02-09) + 11 min (02-07) + 17 min (02-08) + 45 min (02-12) + ~20 min (02-13) + 16 min (02-14) + 29 min (02-15) | — |
+| 3 | 2/7 | ~15 min (03-01) + ~55 min (03-02) | ~35 min |
 
 **Recent Trend:**
 - Last 5 plans: —
@@ -119,6 +120,8 @@ Decisions are logged in PROJECT.md Key Decisions table. Seeded from PROJECT.md a
 - (02-15, Rule 1 deviation + file-set exception) placement._assert_pose is now float32-realizable: POSE_TOLERANCE (1e-6 floor) + FLOAT32_ULP_REL per-axis slack — at |coord| ~ 32.9 Å (tier-9 grid) a fixed 1e-6 is below 1 float32 ulp (~2.4e-6) and max-grid materialization raise-fired on a legitimate 1.24e-6 rounding; single fix site covers materialize/translate_to/reset_to_grid; SMOKE-01..04 regression PASS on re-run.
 - (02-11) Detector property battery landed (tests/test_detector_invariance.py, 521 green): 100-seed rigid-transform invariance on two retained-ligand scripted scenes covering 6 of 7 types + 25-seed permutation invariance with bond-block remap + determinism + thresholds-driven kill/restore sensitivity controls for ALL 7 types (metal includes the ZN→C→ZN ligand_has_metal gate toggle) + WSL loose perf guard (81 PHE + 200-atom crammed ligand, 81 real hydrophobic records, ~0.4-0.9 s vs 2.0 s guard — the <100 ms DETECT-05 budget stays 02-15-headless-only per research §8.4).
 - (02-11, Rule 1 deviation) Rigid-transform metric comparison is TWO-TIER: record structure EXACT; dot-product-conditioned metrics (distances/offsets) hold the plan's 1e-9 (observed drift ≤1e-13 with ~50 A translations); acos-derived `*_angle_deg` metrics at scripted degenerate geometries (parallel ring normals = exactly 0.0 deg) are sqrt(eps)-conditioned and drifted ~8.5e-7 in the worst of 100 seeds — 1e-9 is mathematically unattainable there, so angles use 1e-6 with the conditioning argument documented in-file.
+- (03-02) wizard_text = the PURE text half of the wizard (PURE_MODULES = 15, imports ONLY `.wizard_core` NUDGE_STEP/ROTATE_BUTTON_STEP_DEG): required_summary / panel_entries / prompt_lines / result_lines / _clip as plain-data-in/plain-data-out builders. Panel contract pinned RED-first: always-3-element [kind, text, code] entries (kinds 0=blank/1=text/2=button — 2-element entries render BLANK, Wizard.cpp:239-246), 255-char clip (WordType[256], clip-never-crash — 400-char error proven in panel AND prompt), ASCII-only, exact button inventory (Left/Right/Up/Down/In/Out nudge_cam codes — camera-frame steps (−1..1,0,0)/(0,±1,0)/(0,0,∓1) pinned — Toward ligand, Rotate 90 deg, Confirm, Reset to Grid, canonical Done `cmd.set_wizard()`), every other code `^cmd\.get_wizard\(\)\.[a-z_]+\(` with NO module name (module-identity dodge by construction).
+- (03-02) Result-rendering shapes PINNED where the plan offered choice: 'Formed: (none)' when nothing formed; 'Nothing formed (score 0.00)' single line for empty 'any' mode; 'Missing:' omitted when nothing missing; list mode first line 'N/M required interactions formed (score x.xx)' with exactly 2 decimals; text-only (no-geometry-words assert pins PLAY-04 mechanically). Prompt order: status line first (click instruction / 'Selected: slot <id> (<object>). Move/rotate it, then Confirm.'), result lines VERBATIM, 'ERROR'-prefixed line LAST (measurement.py:262-263 shape). required_summary renders items in GIVEN order (payload carries canonical order).
 
 ### Pending Todos
 
@@ -133,13 +136,13 @@ Decisions are logged in PROJECT.md Key Decisions table. Seeded from PROJECT.md a
 
 ## Session Continuity
 
-Last session: 2026-09-08 (03-01 executor: pure wizard core RED→GREEN→REGISTER — COMPLETE on main)
-Stopped at: Completed 03-01-PLAN.md (wave 1 of 7); next = wave 2 plans per 03-XX-PLAN.md dependency graph
+Last session: 2026-09-08 (03-02 executor: pure wizard text builders RED→GREEN→REGISTER — COMPLETE on main)
+Stopped at: Completed 03-02-PLAN.md (wave 2 of 7); next = wave 3 plans per 03-XX-PLAN.md dependency graph
 Resume file: None
 
 ## Next Actions
 
-- Execute Phase 3 wave 2 (plans depending on 03-01: movement layer 03-02 per its depends_on) via `/gsd-execute-phase 3`
+- Execute Phase 3 wave 3 (`/gsd-execute-phase 3`) — 03-03 GameWizard cmd tier now wires proven builders: get_panel/get_prompt assemble the plain-data state dict and delegate to wizard_text.panel_entries/prompt_lines (03-02 key_links provide the exact shapes + button codes wired to wizard method names nudge_cam/step_to_ligand/rotate_view/confirm_molecule/reset_grid)
 - **Phase 3 spawn notes:** Confirm handler = engine.confirm(...) wrapper; pose scripting/hints must include the explicit baked ring-alignment step (02-14 decision: fragments have no guaranteed orientation; SMOKE-05 is the seed-agnostic reference); Reset = engine.reset_to_grid(); max-grid games are bake-safe (02-15 float32 pose-tolerance fix)
 - **Phase 3/4 heads-up:** tests/test_code_audit.py's PROSE_PIN will demand a deliberate update if any docstring adds/removes a banned-token mention (Gate-C: human re-review by construction)
 - Fixture geometry (benzamide xy-plane pose, acetate tetrahedral methyl) is stable for E2E poses; pose asserts use the 02-15 float32-realizable tolerance (1e-6 floor + per-axis ulp slack); metric-drift asserts use the SMOKE-04 float32 budget (5e-6 A / 3e-4 deg, printed)

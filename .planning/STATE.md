@@ -5,22 +5,22 @@
 See: .planning/PROJECT.md (updated 2026-09-05)
 
 **Core value:** The player can place amino acids onto a small molecule in the PyMOL 3D viewer and the game correctly detects and scores the interactions they form — turning unguided 3D manipulation practice into a scored game.
-**Current focus:** Phase 3 — Wizard Gameplay Loop (plans 03-01…03-04 complete; wave 5 next)
+**Current focus:** Phase 3 — Wizard Gameplay Loop (plans 03-01…03-05 complete; wave 6 = 03-06/03-07 human checkpoints next)
 
 ## Current Position
 
 Phase: 3 of 9 (Wizard Gameplay Loop) — IN PROGRESS
-Plan: 4 of 7 complete (03-04 SMOKE-07 wizard E2E, wave 4)
-Status: In progress — 593 WSL tests green; SMOKE-07 PASS 52/52 in real headless PyMOL; wizard.py field-verified UNCHANGED (zero bug fixes); permanent wizard-source AST gate landed
-Last activity: 2026-09-09 — completed 03-04-PLAN.md (SMOKE-07 headless E2E wizard loop + tests/test_wizard_source.py helper-visuals gate)
+Plan: 5 of 7 complete (03-05 gamestart entry, wave 5)
+Status: In progress — 593 WSL tests green; SMOKE-07 PASS 52/52; SMOKE-08 PASS (26 checks) — Plugins → AA-match now STARTS A REAL GAME and restart is proven idempotent on BOTH paths headlessly
+Last activity: 2026-09-09 — completed 03-05-PLAN.md (gamestart.py starter seam + menu re-point + SMOKE-08 starter proof)
 
-Progress: [██████░░░░] 57% of Phase 3 (4/7) · [██░░░░░░░░] 22% of project (2/9 phases — phase 3 four plans done)
+Progress: [███████░░░] 71% of Phase 3 (5/7) · [██░░░░░░░░] 22% of project (2/9 phases — phase 3 five plans done)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 26 (Phase 1: 01-01…01-09; Phase 2: 02-01…02-15; Phase 3: 03-01, 03-02, 03-03, 03-04)
-- Average duration: ~11 min (02-03); 6 min (02-04); ~29 min (02-05); 23 min (02-06); 4 min (02-09); 11 min (02-07); 17 min (02-08); ~20 min (02-13); ~27 min (02-11); 16 min (02-14); 29 min (02-15); ~15 min (03-01); ~55 min (03-02); ~14 min (03-03); ~27 min (03-04)
+- Total plans completed: 27 (Phase 1: 01-01…01-09; Phase 2: 02-01…02-15; Phase 3: 03-01, 03-02, 03-03, 03-04, 03-05)
+- Average duration: ~11 min (02-03); 6 min (02-04); ~29 min (02-05); 23 min (02-06); 4 min (02-09); 11 min (02-07); 17 min (02-08); ~20 min (02-13); ~27 min (02-11); 16 min (02-14); 29 min (02-15); ~15 min (03-01); ~55 min (03-02); ~14 min (03-03); ~27 min (03-04); ~14 min (03-05)
 - Total execution time: —
 
 **By Phase:**
@@ -29,7 +29,7 @@ Progress: [██████░░░░] 57% of Phase 3 (4/7) · [██░░
 |-------|-------|-------|----------|
 | 1 | 9/9 ✓ | — | — |
 | 2 | 16/16 ✓ | ~8 min (02-02) + ~25 min (02-01 cont.) + 11 min (02-03) + 6 min (02-04) + 29 min (02-05) + 23 min (02-06) + 4 min (02-09) + 11 min (02-07) + 17 min (02-08) + 45 min (02-12) + ~20 min (02-13) + 16 min (02-14) + 29 min (02-15) | — |
-| 3 | 4/7 | ~15 min (03-01) + ~55 min (03-02) + ~14 min (03-03) + ~27 min (03-04) | ~28 min |
+| 3 | 5/7 | ~15 min (03-01) + ~55 min (03-02) + ~14 min (03-03) + ~27 min (03-04) + ~14 min (03-05) | ~25 min |
 
 **Recent Trend:**
 - Last 5 plans: —
@@ -128,6 +128,11 @@ Decisions are logged in PROJECT.md Key Decisions table. Seeded from PROJECT.md a
 - (03-04) **SMOKE-07 = the wizard loop PROVEN headlessly in real PyMOL (52/52 PASS), wizard.py UNCHANGED**: scripted-pick recipe `cmd.select('sele', '<slot object> and name CA')` + `do_select('sele')` reproduces the C-layer pick route; movement invariant re-asserted by the smoke after every press (the wizard's internal invariant fail-closes into _error, so assert BOTH _error None and the matrix); R^T live-verification scripts ONLY the get_view rotation block with the tail copied verbatim.
 - (03-04, probe-pinned empirics) `cmd.unpick()` DELETES the pk1 selection buffer in this build (survives deselect, gone after unpick) — do_pick's hygiene unpick consumes pk1 per pick; cleanup's pk1 deletion is defensive; color restore fires the SANDBOX branch (`color=m[ID]` dict subscript accepted — per-id fallback dormant); wizard_core.view_camera_to_world R^T convention LIVE-CORRECT (scripted Rz(90) nudge dev 2.51e-08 — the 03-01 single fix site stayed untouched).
 - (03-04) tests/test_wizard_source.py = the permanent PLAY-04 source gate: AST scan of every ast.Call in aamatch/wizard.py for the helper-visual primitives (exactly-2-findings negative control; Gate-C immune) + zero-mention pin of the placement.py banned-token list scoped to the wizard file; SCANNED_MODULES grows one line per new cmd-tier UI module (03-05: gamestart.py). Smoke-authoring pattern recorded: never call cmd APIs that may throw inside an eager check-detail string.
+- (03-05) aamatch/gamestart.py = THE one-call game entry seam (cmd tier, never PURE_MODULES): cleanup_game_objects FIRST -> engine.new_game(setup or DEFAULTS, seed, candidates) -> engine.materialize(payload, 0) -> GameWizard(payload, registry, 0, 0).activate(replace) where replace is CONDITIONAL (recorded, checker-revised): 1 iff the prior top-of-stack wizard is a GameWizard (restart pop+clean); 0 over a user wizard or empty stack (stack-native auto-resume after Done). Returns the live wizard; prints version/molecules/slots/seed/cleaned. Phase 4's Qt setup window calls the SAME function. editor_scheme start-guard NOT implemented (03-RESEARCH-movement §5.6 contingency only).
+- (03-05) run_plugin_gui launches the game: `from . import gamestart` + `return gamestart.start_game()` — Gate A2 green (zero module-level imports), metadata block byte-identical, __version__ stays 0.1.0. tests/test_package_skeleton.py asserts the seam as an AST source contract (lazy relative import + returned start_game call + no leftover print) — pymol-needing execution stays with the smokes, zero stubs preserved.
+- (03-05) SMOKE-08 PASS (26 checks): the Plugins-menu function is a plain callable headless — smokes call aamatch.run_plugin_gui() directly and assert on the RETURNED wizard's registry/payload. BOTH restart paths proven idempotent: post-Done empty stack (replace=0) and mid-game without Done (replace=1, newest on top, snapshot == TRUE pre-game msm, Done restores 1 — the ORDER-LAW regression-teeth assert now fires on the replace path).
+- (03-05, restart-identity pattern) Object NAMES are not instance identity across restarts: same-seed same-shape restarts REBUILD the same _aam_* names after cleanup frees them — generation-gone asserts must stamp INSTANCES (b-factor marker band; sentinel b=-999.0 sits outside), never compare name sets.
+- (03-05, Rule-1 deviation record) The Phase-1 placeholder-print skeleton test was replaced by the AST seam contract (test_package_skeleton.py); the smoke-check design fix (instance marker) replaced the plan's name-based "old objects gone" expectation. gamestart.py itself needed ZERO fixes.
 
 ### Pending Todos
 
@@ -142,14 +147,14 @@ Decisions are logged in PROJECT.md Key Decisions table. Seeded from PROJECT.md a
 
 ## Session Continuity
 
-Last session: 2026-09-09 (03-04 executor: SMOKE-07 wizard E2E — COMPLETE on main)
-Stopped at: Completed 03-04-PLAN.md (wave 4 of 7); next = wave 5 plans per 03-XX-PLAN.md dependency graph
+Last session: 2026-09-09 (03-05 executor: gamestart entry + SMOKE-08 — COMPLETE on main)
+Stopped at: Completed 03-05-PLAN.md (wave 5 of 7); next = wave 6 (03-06/03-07 human checkpoints)
 Resume file: None
 
 ## Next Actions
 
-- Execute Phase 3 wave 5 (`/gsd-execute-phase 3`) — 03-05 gamestart wiring: add gamestart.py to SCANNED_MODULES in tests/test_wizard_source.py when it lands; activate(replace=1) mid-game-restart semantics are NOT yet smoke-covered (single activate only in SMOKE-07) — gamestart owns the restart-or-push decision
-- **03-06/03-07 human checkpoints:** ONLY real-mouse delivery remains open — arrow-key Qt focus-path delivery, drag feel, q/e camera-z-sign feel, visual recolor review; everything else about the wizard loop is headlessly proven (SMOKE-07 52/52)
+- Execute Phase 3 wave 6 (03-06/03-07 human checkpoints) — the Plugins → AA-match menu item STARTS A REAL GAME now (defaulted: molecules 2, D 3, unset, seed 42; Phase 4 adds the Qt setup window over the same start_game seam); restart hygiene human-verifiable both ways (Done → menu = replace=0; menu mid-game = replace=1); a user wizard beneath the game auto-resumes after Done (replace=0 push by construction)
+- **03-06/03-07 human checkpoints:** ONLY real-mouse delivery remains open — arrow-key Qt focus-path delivery, drag feel, q/e camera-z-sign feel, visual recolor review; the whole entry path + wizard loop is headlessly proven (SMOKE-07 52/52 + SMOKE-08 26 checks)
 - **Phase 3 spawn notes:** Confirm handler = engine.confirm(...) wrapper; pose scripting/hints must include the explicit baked ring-alignment step (02-14 decision: fragments have no guaranteed orientation; SMOKE-05 is the seed-agnostic reference); Reset = engine.reset_to_grid(); max-grid games are bake-safe (02-15 float32 pose-tolerance fix)
 - **Phase 3/4 heads-up:** tests/test_code_audit.py's PROSE_PIN will demand a deliberate update if any docstring adds/removes a banned-token mention (Gate-C: human re-review by construction)
 - Fixture geometry (benzamide xy-plane pose, acetate tetrahedral methyl) is stable for E2E poses; pose asserts use the 02-15 float32-realizable tolerance (1e-6 floor + per-axis ulp slack); metric-drift asserts use the SMOKE-04 float32 budget (5e-6 A / 3e-4 deg, printed)

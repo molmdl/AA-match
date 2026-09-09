@@ -5,22 +5,22 @@
 See: .planning/PROJECT.md (updated 2026-09-05)
 
 **Core value:** The player can place amino acids onto a small molecule in the PyMOL 3D viewer and the game correctly detects and scores the interactions they form — turning unguided 3D manipulation practice into a scored game.
-**Current focus:** Phase 3 — Wizard Gameplay Loop (plans 03-01, 03-02, 03-03 complete; wave 4 next)
+**Current focus:** Phase 3 — Wizard Gameplay Loop (plans 03-01…03-04 complete; wave 5 next)
 
 ## Current Position
 
 Phase: 3 of 9 (Wizard Gameplay Loop) — IN PROGRESS
-Plan: 3 of 7 complete (03-03 GameWizard cmd tier — full gameplay loop, wave 3)
-Status: In progress — 590 WSL tests green (unchanged); aamatch/wizard.py (601 lines) cmd-tier, NEVER PURE_MODULES; zero banned-token mentions
-Last activity: 2026-09-09 — completed 03-03-PLAN.md (aamatch/wizard.py GameWizard: lifecycle, pick routing, recolor, baked-transform movement, confirm/reset, keyboard)
+Plan: 4 of 7 complete (03-04 SMOKE-07 wizard E2E, wave 4)
+Status: In progress — 593 WSL tests green; SMOKE-07 PASS 52/52 in real headless PyMOL; wizard.py field-verified UNCHANGED (zero bug fixes); permanent wizard-source AST gate landed
+Last activity: 2026-09-09 — completed 03-04-PLAN.md (SMOKE-07 headless E2E wizard loop + tests/test_wizard_source.py helper-visuals gate)
 
-Progress: [████░░░░░░] 43% of Phase 3 (3/7) · [██░░░░░░░░] 22% of project (2/9 phases — phase 3 three plans done)
+Progress: [██████░░░░] 57% of Phase 3 (4/7) · [██░░░░░░░░] 22% of project (2/9 phases — phase 3 four plans done)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 25 (Phase 1: 01-01…01-09; Phase 2: 02-01…02-15; Phase 3: 03-01, 03-02, 03-03)
-- Average duration: ~11 min (02-03); 6 min (02-04); ~29 min (02-05); 23 min (02-06); 4 min (02-09); 11 min (02-07); 17 min (02-08); ~20 min (02-13); ~27 min (02-11); 16 min (02-14); 29 min (02-15); ~15 min (03-01); ~55 min (03-02); ~14 min (03-03)
+- Total plans completed: 26 (Phase 1: 01-01…01-09; Phase 2: 02-01…02-15; Phase 3: 03-01, 03-02, 03-03, 03-04)
+- Average duration: ~11 min (02-03); 6 min (02-04); ~29 min (02-05); 23 min (02-06); 4 min (02-09); 11 min (02-07); 17 min (02-08); ~20 min (02-13); ~27 min (02-11); 16 min (02-14); 29 min (02-15); ~15 min (03-01); ~55 min (03-02); ~14 min (03-03); ~27 min (03-04)
 - Total execution time: —
 
 **By Phase:**
@@ -29,7 +29,7 @@ Progress: [████░░░░░░] 43% of Phase 3 (3/7) · [██░░
 |-------|-------|-------|----------|
 | 1 | 9/9 ✓ | — | — |
 | 2 | 16/16 ✓ | ~8 min (02-02) + ~25 min (02-01 cont.) + 11 min (02-03) + 6 min (02-04) + 29 min (02-05) + 23 min (02-06) + 4 min (02-09) + 11 min (02-07) + 17 min (02-08) + 45 min (02-12) + ~20 min (02-13) + 16 min (02-14) + 29 min (02-15) | — |
-| 3 | 3/7 | ~15 min (03-01) + ~55 min (03-02) + ~14 min (03-03) | ~28 min |
+| 3 | 4/7 | ~15 min (03-01) + ~55 min (03-02) + ~14 min (03-03) + ~27 min (03-04) | ~28 min |
 
 **Recent Trend:**
 - Last 5 plans: —
@@ -125,6 +125,9 @@ Decisions are logged in PROJECT.md Key Decisions table. Seeded from PROJECT.md a
 - (03-03) aamatch/wizard.py = the cmd-tier GameWizard (NEVER PURE_MODULES; 601 lines, zero banned-token mentions): stack-native lifecycle (activate pushes via cmd.set_wizard(self); Done = canonical cmd.set_wizard() pops + auto-resumes prior wizard — v1 saved-wizard pattern rejected as duplicate-stack leak). msm ORDER LAW: push BEFORE snapshot (a popped GameWizard's cleanup restores the user's true msm INSIDE set_wizard — a snapshot-before-push records the stale defensive 0 on mid-game restart); restore = SNAPSHOT, never hard-coded 0 (stock default is 1).
 - (03-03) Movement = baked world-frame transforms ONLY (cmd.translate state=1 camera=0 / cmd.rotate selection-form camera=0; object= keyword form and transform_baked/transform_object banned in game paths) with a FAIL-CLOSED identity-object-matrix assert after every move (WizardError naming the object — on-screen == stored == detected by construction, PLAY-02 contract). reset_grid = position-only replay (rotations persist, recorded planner option a; re-materialize rejected — invalidates pick map + color snapshots), selection + recolor persist, stale result cleared, identity asserted for every recolored-slot object after replay.
 - (03-03) Wizard code patterns: `from . import engine` RELATIVELY INSIDE methods (module-identity-safe both as aamatch and pmg_tk.startup.aamatch); handler split public() -> _guard(_impl) where _guard maps the ValueError family (EngineError/PlacementError/WizardError) to visible _error + refresh and lets unexpected exceptions propagate; do_special owns LEFT(100)/RIGHT(102) only (UP/DOWN co-fire command history — never game keys); do_key owns w/s/q/e + ','/'.', everything else falls through; color restore tries the alter sandbox dict-subscript 'color=m[ID]' with a per-id cmd.alter fallback (SMOKE-07 field-verifies which branch fires); repeated Confirm appends molecule_scores (Phase 6 owns score-history lifecycle).
+- (03-04) **SMOKE-07 = the wizard loop PROVEN headlessly in real PyMOL (52/52 PASS), wizard.py UNCHANGED**: scripted-pick recipe `cmd.select('sele', '<slot object> and name CA')` + `do_select('sele')` reproduces the C-layer pick route; movement invariant re-asserted by the smoke after every press (the wizard's internal invariant fail-closes into _error, so assert BOTH _error None and the matrix); R^T live-verification scripts ONLY the get_view rotation block with the tail copied verbatim.
+- (03-04, probe-pinned empirics) `cmd.unpick()` DELETES the pk1 selection buffer in this build (survives deselect, gone after unpick) — do_pick's hygiene unpick consumes pk1 per pick; cleanup's pk1 deletion is defensive; color restore fires the SANDBOX branch (`color=m[ID]` dict subscript accepted — per-id fallback dormant); wizard_core.view_camera_to_world R^T convention LIVE-CORRECT (scripted Rz(90) nudge dev 2.51e-08 — the 03-01 single fix site stayed untouched).
+- (03-04) tests/test_wizard_source.py = the permanent PLAY-04 source gate: AST scan of every ast.Call in aamatch/wizard.py for the helper-visual primitives (exactly-2-findings negative control; Gate-C immune) + zero-mention pin of the placement.py banned-token list scoped to the wizard file; SCANNED_MODULES grows one line per new cmd-tier UI module (03-05: gamestart.py). Smoke-authoring pattern recorded: never call cmd APIs that may throw inside an eager check-detail string.
 
 ### Pending Todos
 
@@ -139,13 +142,14 @@ Decisions are logged in PROJECT.md Key Decisions table. Seeded from PROJECT.md a
 
 ## Session Continuity
 
-Last session: 2026-09-09 (03-03 executor: GameWizard cmd tier — COMPLETE on main)
-Stopped at: Completed 03-03-PLAN.md (wave 3 of 7); next = wave 4 plans per 03-XX-PLAN.md dependency graph
+Last session: 2026-09-09 (03-04 executor: SMOKE-07 wizard E2E — COMPLETE on main)
+Stopped at: Completed 03-04-PLAN.md (wave 4 of 7); next = wave 5 plans per 03-XX-PLAN.md dependency graph
 Resume file: None
 
 ## Next Actions
 
-- Execute Phase 3 wave 4 (`/gsd-execute-phase 3`) — 03-04 SMOKE-07: drive GameWizard headlessly (script picks via cmd.select + do_select('sele'); use move_to with the EXPLICIT baked ring-alignment step first for the exact 4.5 A pi-stacking pose per 02-14/SMOKE-06 PART A); live-verify wizard_core.view_camera_to_world against scripted cmd.set_view (single fix site); observe which color-restore branch fires (sandbox 'color=m[ID]' vs per-id fallback); arrow-key Qt focus-path delivery + q/e z-sign feel are HUMAN-checkpoint items
+- Execute Phase 3 wave 5 (`/gsd-execute-phase 3`) — 03-05 gamestart wiring: add gamestart.py to SCANNED_MODULES in tests/test_wizard_source.py when it lands; activate(replace=1) mid-game-restart semantics are NOT yet smoke-covered (single activate only in SMOKE-07) — gamestart owns the restart-or-push decision
+- **03-06/03-07 human checkpoints:** ONLY real-mouse delivery remains open — arrow-key Qt focus-path delivery, drag feel, q/e camera-z-sign feel, visual recolor review; everything else about the wizard loop is headlessly proven (SMOKE-07 52/52)
 - **Phase 3 spawn notes:** Confirm handler = engine.confirm(...) wrapper; pose scripting/hints must include the explicit baked ring-alignment step (02-14 decision: fragments have no guaranteed orientation; SMOKE-05 is the seed-agnostic reference); Reset = engine.reset_to_grid(); max-grid games are bake-safe (02-15 float32 pose-tolerance fix)
 - **Phase 3/4 heads-up:** tests/test_code_audit.py's PROSE_PIN will demand a deliberate update if any docstring adds/removes a banned-token mention (Gate-C: human re-review by construction)
 - Fixture geometry (benzamide xy-plane pose, acetate tetrahedral methyl) is stable for E2E poses; pose asserts use the 02-15 float32-realizable tolerance (1e-6 floor + per-axis ulp slack); metric-drift asserts use the SMOKE-04 float32 budget (5e-6 A / 3e-4 deg, printed)

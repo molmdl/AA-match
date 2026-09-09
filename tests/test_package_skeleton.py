@@ -13,7 +13,9 @@ These tests replicate the PyMOL 2.5.0 plugin-loader contract against
    lets every pure-layer test run with no stubs — PITFALLS.md Pitfall 1,
    research R8.5).
 4. Entry points: ``__init_plugin__``, ``run_plugin_gui``, ``__version__``.
-5. Placeholder output: prints a version line using zero Qt code.
+5. Phase-3 menu launch (plan 03-05): run_plugin_gui lazily imports
+   gamestart and returns start_game()'s live wizard — an AST source
+   contract (executing it needs pymol; SMOKE-08 covers that headlessly).
 
 Run either way from the repo root:
     python3.6 -m unittest tests.test_package_skeleton -v
@@ -21,7 +23,6 @@ Run either way from the repo root:
 """
 
 import ast
-import contextlib
 import io
 import os
 import sys
@@ -106,15 +107,51 @@ class TestPackageSkeleton(unittest.TestCase):
         self.assertTrue(callable(aamatch.run_plugin_gui))
         self.assertEqual(aamatch.__version__, '0.1.0')
 
-    def test_run_plugin_gui_prints_version(self):
-        """Placeholder prints a version line containing version and label."""
-        import aamatch
-        buf = io.StringIO()
-        with contextlib.redirect_stdout(buf):
-            aamatch.run_plugin_gui()
-        output = buf.getvalue()
-        self.assertIn('0.1.0', output)
-        self.assertIn('AA-match', output)
+    def test_run_plugin_gui_launches_gamestart_lazily(self):
+        """Phase 3 (plan 03-05): run_plugin_gui's body is exactly the
+        gamestart seam — a RELATIVE import of gamestart INSIDE the
+        function (Gate A2: zero module-level imports) followed by a
+        call whose value is RETURNED (smokes assert on the returned
+        live GameWizard). No Qt, no leftover Phase-1 placeholder print.
+        Source-level by design: aamatch/gamestart.py is cmd tier and
+        needs pymol to execute (SMOKE-08 runs this path headlessly);
+        the WSL purity rule is preserved (no sys.modules stubs)."""
+        tree = ast.parse(self.src)
+        funcs = [node for node in tree.body
+                 if isinstance(node, ast.FunctionDef)
+                 and node.name == 'run_plugin_gui']
+        self.assertEqual(len(funcs), 1)
+        func = funcs[0]
+        lazy = [n for n in ast.walk(func)
+                if isinstance(n, ast.ImportFrom) and n.module is None
+                and any(alias.name == 'gamestart' for alias in n.names)]
+        self.assertTrue(
+            lazy,
+            'run_plugin_gui must carry `from . import gamestart` INSIDE '
+            'its body (lazy import — Gate A2 keeps zero module-level '
+            'imports in aamatch/__init__.py)')
+        returned_calls = [n.value for n in ast.walk(func)
+                          if isinstance(n, ast.Return)
+                          and n.value is not None
+                          and isinstance(n.value, ast.Call)]
+        seam = [c for c in returned_calls
+                if isinstance(c.func, ast.Attribute)
+                and c.func.attr == 'start_game'
+                and isinstance(c.func.value, ast.Name)
+                and c.func.value.id == 'gamestart']
+        self.assertTrue(
+            seam,
+            'run_plugin_gui must `return gamestart.start_game()` — the '
+            'returned GameWizard is the headless caller\'s assertion '
+            'handle (SMOKE-08 checks 1/5)')
+        placeholder = [n for n in ast.walk(func)
+                       if isinstance(n, ast.Call)
+                       and isinstance(n.func, ast.Name)
+                       and n.func.id == 'print']
+        self.assertEqual(
+            placeholder, [],
+            'the Phase-1 placeholder print is gone (the launcher '
+            'delegates all printing to gamestart.start_game)')
 
 
 if __name__ == '__main__':

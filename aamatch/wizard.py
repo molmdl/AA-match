@@ -77,7 +77,7 @@ THE BINDING CONTRACTS:
 from pymol import cmd
 from pymol.wizard import Wizard
 
-from . import wizard_core
+from . import wizard_core, wizard_text
 
 
 class WizardError(ValueError):
@@ -221,3 +221,117 @@ class GameWizard(Wizard):
             for atom_id, color in sorted(m.items()):
                 cmd.alter('%s and id %d' % (obj, atom_id),
                           'color=%d' % (color,), space={})
+
+    def do_select(self, name):
+        """The ONLY pick entry in default 3-Button Viewing -- do_pick
+        never fires in stock Viewing mode (RESEARCH sec. 1.3/5.1):
+        SceneMouse builds the active selection and calls do_select
+        with its NAME. Canonical do_select -> do_pick map
+        (measurement.py:295-306 shape), PINNED sequence:
+
+        1. cmd.unpick() -- drop the leftover pick marker.
+        2. cmd.select('pk1', name) -- copy the pick into the pk1
+           buffer while the user's selection still holds its atoms.
+        3. cmd.deselect() -- clear the user's ACTIVE selection state
+           (the named selection object itself survives untouched; the
+           pick was already read from it via pk1).
+        4. Delete ``name`` ONLY when transient (wizard_core guard:
+           'sele', pk1..pk4, '_'-prefixed). RECORDED PLANNER DECISION:
+           transient-only delete -- a user's NAMED selection is NEVER
+           deleted (canonical always-delete was rejected as user-data
+           loss, contrary to the project's restore discipline).
+        5. self.do_pick(0).
+        """
+        cmd.unpick()
+        cmd.select('pk1', name)
+        cmd.deselect()
+        if wizard_core.transient_selection(name):
+            cmd.delete(name)
+        self.do_pick(0)
+
+    def do_pick(self, bondFlag):
+        """Hygienic pk1 read -> slot identity (PLAY-01).
+
+        Explicit space dict ALWAYS; uppercase ID; no round() in the
+        expression (Pitfall-8 conformant). Reads (model, ID, alt,
+        resv) as a uniform 4-tuple -- the AA click needs only the
+        model (object name) for identity, but the full tuple keeps the
+        discipline intact for ligand-side reads in later phases.
+
+        The reverse map IS the filter: a click whose object is not a
+        registered slot of the current molecule (ligand, user object,
+        another molecule's AA) is a NO-OP (v1 game.py:169-171
+        precedent; PLAY-03 first half).
+        """
+        rows = []
+        cmd.iterate('pk1', 'stored.append((model, ID, alt, resv))',
+                    space={'stored': rows})
+        cmd.unpick()
+        if not rows:
+            return
+        slot_id = self._slot_by_object.get(rows[0][0])
+        if slot_id is None:
+            return
+        self._error = None
+        self._select_slot(slot_id)
+
+    def _select_slot(self, slot_id):
+        """Switch selection to ``slot_id`` with recolor feedback
+        (PLAY-01/03).
+
+        Switch semantics: the OLD slot's colors are restored FIRST
+        (via its snapshot -- the snapshot entry is KEPT so cleanup()
+        re-restores harmlessly; idempotent), then the new slot is
+        snapshotted (lazily, exactly once, BEFORE its first recolor)
+        and recolored HIGHLIGHT_COLOR.
+
+        Recolor is detection-safe (extract_game_atoms never reads atom
+        color -- geometry.py:134-138) and is property-only -- NOT
+        helper geometry (PLAY-04). Documented edge: if the player
+        manually recolored an AA mid-game, our restore overwrites
+        their change (acceptable; v1 precedent).
+        """
+        if self._current_slot is not None and self._current_slot != slot_id:
+            old_obj = self._objects_by_slot[self._current_slot]
+            self._restore_slot_colors(old_obj)
+        obj = self._objects_by_slot[slot_id]
+        wizard_core.ensure_snapshot(self._color_store, obj,
+                                    self._atom_colors(obj))
+        cmd.color(wizard_core.HIGHLIGHT_COLOR, obj)
+        self._current_slot = slot_id
+        cmd.refresh_wizard()
+
+    def _required(self):
+        """The current molecule's required dict
+        ({'mode': 'any'|'list', 'items': [...]} -- level_spec shape)."""
+        return self._payload['levels'][self._level_index]\
+            ['molecules'][self._molecule_index]['required']
+
+    def _state_dict(self):
+        """The plain-data state dict the pure text builders consume."""
+        selected = None
+        if self._current_slot is not None:
+            selected = {'slot_id': self._current_slot,
+                        'object': self._objects_by_slot[
+                            self._current_slot]}
+        return {
+            'molecule_id': self._registry['molecules'][
+                self._molecule_index]['molecule_id'],
+            'molecule_pos': self._molecule_index + 1,
+            'molecule_total': len(self._registry['molecules']),
+            'required': self._required(),
+            'selected': selected,
+            'result': self._result,
+            'error': self._error,
+        }
+
+    def get_prompt(self):
+        """List-of-strings prompt, built by the pure builder (the
+        wizard assembles plain data; wizard_text renders it)."""
+        return wizard_text.prompt_lines(self._state_dict())
+
+    def get_panel(self):
+        """The [kind, text, code] panel entry list, built by the pure
+        builder (button codes are cmd.get_wizard().method(...) strings
+        -- instance-relative, module-identity-safe by construction)."""
+        return wizard_text.panel_entries(self._state_dict())

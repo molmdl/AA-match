@@ -74,10 +74,21 @@ THE BINDING CONTRACTS:
    aamatch/wizard_text.py. No lines, dots, CGO, no cmd.indicate.
 """
 
+import math
+
 from pymol import cmd
 from pymol.wizard import Wizard
 
-from . import wizard_core, wizard_text
+from . import geometry, wizard_core, wizard_text
+
+_MATRIX_TOL = 1e-6    # identity-matrix invariant slack (SMOKE-06
+                      # _is_identity pattern; float32-tight)
+_IDENT_3X4 = (1.0, 0.0, 0.0, 0.0,
+              0.0, 1.0, 0.0, 0.0,
+              0.0, 0.0, 1.0, 0.0)
+
+_KEY_NUDGES = {'w': (0.0, 1.0, 0.0), 's': (0.0, -1.0, 0.0),
+               'q': (0.0, 0.0, -1.0), 'e': (0.0, 0.0, 1.0)}
 
 
 class WizardError(ValueError):
@@ -335,3 +346,256 @@ class GameWizard(Wizard):
         builder (button codes are cmd.get_wizard().method(...) strings
         -- instance-relative, module-identity-safe by construction)."""
         return wizard_text.panel_entries(self._state_dict())
+
+    # -- Movement model (PLAY-02) ------------------------------------------
+    # 03-RESEARCH-movement-spike.md verdict: baked world-frame
+    # coordinate transforms on identity-matrix objects ONLY --
+    # cmd.translate(v, obj, state=1, camera=0) and cmd.rotate(axis, deg,
+    # selection=obj, camera=0, origin=C) bake stored coordinates and
+    # provably leave the object matrix at identity. NEVER the object=
+    # keyword form of translate/rotate (matrix-only -- the detector is
+    # blind to it, spike Q2 confirmed), NEVER placement.transform_baked
+    # or cmd.transform_object in game paths (they bake coords BUT record
+    # the applied matrix -- render semantics unverified), and NEVER the
+    # banned matrix calls (see module docstring contract 5).
+
+    def _current_object(self):
+        """The selected slot's object name, or None with a visible
+        error line when nothing is selected (fail-closed with a
+        VISIBLE message -- movement buttons are always pressable)."""
+        if self._current_slot is None:
+            self._error = 'Select an amino acid first.'
+            cmd.refresh_wizard()
+            return None
+        return self._objects_by_slot[self._current_slot]
+
+    def _matrix16(self, obj):
+        """cmd.get_object_matrix as a 16-float row-major list; a build
+        that hands back the 3x4 (12-value) block is normalized by
+        appending the homogeneous row."""
+        raw = cmd.get_object_matrix(obj)
+        if raw is None:
+            raise WizardError(
+                'wizard: cmd.get_object_matrix(%r) returned None -- '
+                'cannot verify the identity-matrix invariant' % (obj,))
+        vals = [float(v) for v in raw]
+        if len(vals) == 12:
+            vals = vals + [0.0, 0.0, 0.0, 1.0]
+        if len(vals) != 16:
+            raise WizardError(
+                'wizard: cmd.get_object_matrix(%r) returned %d values '
+                '(expected 16 row-major, or 12 for the 3x4 block)'
+                % (obj, len(vals)))
+        return vals
+
+    def _assert_identity(self, obj):
+        """THE PLAY-02 invariant: the object matrix of every game
+        object stays IDENTITY, so on-screen == stored == detected by
+        construction (the detector reads stored coords; the screen
+        renders the matrix composed over them). Rotation block
+        (indices 0,1,2,4,5,6,8,9,10) must read the identity rotation
+        and translation (3,7,11) ~ 0 within _MATRIX_TOL; anything else
+        is a fail-closed game error NAMING the object (SMOKE-06's
+        _is_identity pattern)."""
+        m = self._matrix16(obj)
+        for i in (0, 1, 2, 4, 5, 6, 8, 9, 10, 3, 7, 11):
+            if abs(m[i] - _IDENT_3X4[i]) > _MATRIX_TOL:
+                raise WizardError(
+                    'wizard: object %r carries a NON-IDENTITY object '
+                    'matrix (element %d = %g, expected %g) -- the '
+                    'on-screen pose would diverge from the detected '
+                    'pose; baked-transform moves keep this matrix at '
+                    'identity by construction'
+                    % (obj, i, m[i], _IDENT_3X4[i]))
+
+    def _guard(self, op, *args, **kwargs):
+        """Run one wizard handler body fail-closed with a VISIBLE
+        message: house errors (the ValueError family -- EngineError,
+        PlacementError, WizardError) land on self._error + refresh;
+        UNEXPECTED exceptions propagate (bug surfacing, never a silent
+        swallow)."""
+        try:
+            op(*args, **kwargs)
+        except ValueError as e:
+            self._error = str(e)
+            cmd.refresh_wizard()
+
+    def nudge_cam(self, dx, dy, dz):
+        """Camera-frame nudge of the selected AA:
+        (dx, dy, dz) in {-1, 0, 1} is converted to the WORLD frame via
+        wizard_core.view_camera_to_world over cmd.get_view(), scaled by
+        wizard_core.NUDGE_STEP, and BAKED via
+        cmd.translate(..., state=1, camera=0) + identity assert."""
+        self._guard(self._nudge_cam_impl, float(dx), float(dy),
+                    float(dz))
+
+    def _nudge_cam_impl(self, dx, dy, dz):
+        obj = self._current_object()
+        if obj is None:
+            return
+        w = wizard_core.view_camera_to_world(cmd.get_view(),
+                                             (dx, dy, dz))
+        step = wizard_core.NUDGE_STEP
+        cmd.translate([step * w[0], step * w[1], step * w[2]], obj,
+                      state=1, camera=0)
+        self._assert_identity(obj)
+        cmd.refresh_wizard()
+
+    def rotate_axis(self, axis, deg, origin=None):
+        """Generic WORLD-FRAME rotation of the selected AA about
+        ``axis`` (3-vector) by ``deg`` degrees; origin defaults to the
+        object's centroid (geometry.centroid_of -- baked world-frame
+        coords). cmd.rotate(axis, deg, selection=obj, camera=0,
+        origin=origin) -- the selection FORM, which bakes stored
+        coords (SMOKE-06 Q1 CONFIRMED) -- + identity assert."""
+        self._guard(self._rotate_axis_impl, axis, float(deg), origin)
+
+    def _rotate_axis_impl(self, axis, deg, origin):
+        obj = self._current_object()
+        if obj is None:
+            return
+        if origin is None:
+            origin = geometry.centroid_of(obj)
+        cmd.rotate([float(axis[0]), float(axis[1]), float(axis[2])],
+                   float(deg), selection=obj, camera=0, origin=origin)
+        self._assert_identity(obj)
+        cmd.refresh_wizard()
+
+    def rotate_view(self, deg):
+        """View-axis rotation: the camera +z axis converted to world
+        frame (wizard_core.view_camera_to_world over cmd.get_view()),
+        then rotate_axis."""
+        axis = wizard_core.view_camera_to_world(cmd.get_view(),
+                                                (0.0, 0.0, 1.0))
+        self._guard(self._rotate_axis_impl, axis, float(deg), None)
+
+    def step_to_ligand(self):
+        """One NUDGE_STEP towards the ligand: unit vector from the
+        selected AA's centroid towards the current molecule's ligand
+        centroid, scaled by NUDGE_STEP, baked through the SAME path as
+        nudge_cam (cmd.translate camera=0) + identity assert."""
+        self._guard(self._step_to_ligand_impl)
+
+    def _step_to_ligand_impl(self):
+        obj = self._current_object()
+        if obj is None:
+            return
+        aa = geometry.centroid_of(obj)
+        lig = geometry.centroid_of(self._ligand_object)
+        d = (lig[0] - aa[0], lig[1] - aa[1], lig[2] - aa[2])
+        length = math.sqrt(d[0] * d[0] + d[1] * d[1] + d[2] * d[2])
+        if length < 1e-9:
+            self._error = 'Already at the ligand.'
+            cmd.refresh_wizard()
+            return
+        step = wizard_core.NUDGE_STEP
+        cmd.translate([step * d[0] / length,
+                       step * d[1] / length,
+                       step * d[2] / length], obj, state=1, camera=0)
+        self._assert_identity(obj)
+        cmd.refresh_wizard()
+
+    def move_to(self, position):
+        """DETERMINISTIC scripted placement: engine.place_aa (the
+        Phase-2 op -- count- and pose-asserted, baked world-frame) +
+        identity assert. This is the scripted-pose path (SMOKE-07 uses
+        it for the exact 4.5 A pi-stacking pose, with the explicit
+        baked ring-alignment step scripted there first -- the 02-14
+        decision: fragments carry no guaranteed ring orientation)."""
+        self._guard(self._move_to_impl, position)
+
+    def _move_to_impl(self, position):
+        obj = self._current_object()
+        if obj is None:
+            return
+        from . import engine
+        engine.place_aa(self._current_slot, position)
+        self._assert_identity(obj)
+        cmd.refresh_wizard()
+
+    def confirm_molecule(self):
+        """PLAY-03 Confirm: the engine.confirm wrapper VERBATIM
+        (binding STATE.md decision) -- detect + score composition ->
+        (records, score, formed_types); the result is rendered as
+        panel/prompt TEXT (wizard_text; no result geometry, PLAY-04).
+
+        CAVEAT (documented): repeated Confirm appends to the engine
+        GameState's molecule_scores -- score-history semantics are
+        Phase 6's lifecycle; Phase 3 allows re-Confirm for
+        verification."""
+        self._guard(self._confirm_molecule_impl)
+
+    def _confirm_molecule_impl(self):
+        from . import engine
+        required = self._required()
+        records, score, formed = engine.confirm(self._level_index,
+                                                self._molecule_index,
+                                                required)
+        self._result = {'score': float(score), 'formed': list(formed),
+                        'required': required}
+        self._error = None
+        cmd.refresh_wizard()
+
+    def reset_grid(self):
+        """PLAY-03 Reset: engine.reset_to_grid() -- POSITION replay
+        (RECORDED PLANNER DECISION: option a) -- every AA's centroid
+        re-bakes to its spec grid pose; ROTATIONS PERSIST (detection
+        stays consistent -- SMOKE-06: detect returns 0 records on-grid
+        even with the 4.64 A orientation residual; grid margins keep
+        rotated side chains beyond cutoffs). The Phase-9 help text
+        notes orientation is kept. Re-materialize (option b) was
+        REJECTED: it rebuilds objects/registry mid-game, invalidating
+        the pick map and color snapshots.
+
+        After the replay: matrix identity asserted for every
+        recolored-slot object (research sec. 5.3 -- a silent matrix
+        failure can never hide); self._result cleared (poses changed,
+        the old result is stale); the current SELECTION + its recolor
+        PERSIST (only positions reset)."""
+        self._guard(self._reset_grid_impl)
+
+    def _reset_grid_impl(self):
+        from . import engine
+        engine.reset_to_grid()
+        for obj in wizard_core.snapshot_objects(self._color_store):
+            self._assert_identity(obj)
+        self._result = None
+        cmd.refresh_wizard()
+
+    # -- Keyboard channels (RESEARCH-wizard sec. 6) ------------------------
+
+    def do_special(self, k, x, y, mod):
+        """GLUT special keys: LEFT (100) / RIGHT (102) nudge the
+        selected AA in camera x. LEFT/RIGHT are cleanly ownable
+        (wizard-first dispatch consumes them when the command line has
+        not grabbed arrows); UP/DOWN are NOT -- they co-fire
+        command-line history unconditionally (OrthoSpecial), so they
+        are NEVER used as game keys. Returning None falls through."""
+        if k == 100:
+            self.nudge_cam(-1, 0, 0)
+            return 1
+        if k == 102:
+            self.nudge_cam(1, 0, 0)
+            return 1
+        return None
+
+    def do_key(self, k, x, y, mod):
+        """ASCII keys: w/s camera-y nudges, q/e camera-z nudges ('q' =
+        In = INTO the screen; if the live build's camera z-sign proves
+        inverted in SMOKE-07 / the human checkpoint, flip here --
+        cosmetic, detector-neutral), ','/'.' view-axis rotation by
+        wizard_core.ROTATE_STEP_DEG. Owned keys return 1 (consumed --
+        wizard-first dispatch); everything else returns None so all
+        other PyMOL shortcuts keep working."""
+        ch = chr(k) if 0 <= k < 127 else ''
+        step = _KEY_NUDGES.get(ch)
+        if step is not None:
+            self.nudge_cam(*step)
+            return 1
+        if ch == ',':
+            self.rotate_view(-wizard_core.ROTATE_STEP_DEG)
+            return 1
+        if ch == '.':
+            self.rotate_view(wizard_core.ROTATE_STEP_DEG)
+            return 1
+        return None

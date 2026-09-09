@@ -45,9 +45,10 @@ PKG_DIR = os.path.join(REPO_ROOT, 'aamatch')
 if REPO_ROOT not in sys.path:
     sys.path.insert(0, REPO_ROOT)
 
-# The scanned set grows as cmd-tier UI modules land (03-05 adds
-# gamestart.py per the 03-03 spawn notes).
-SCANNED_MODULES = ['wizard.py']
+# The scanned set grows as cmd-tier UI modules land (03-05 added
+# gamestart.py per the 03-03 spawn notes; both scans apply to every
+# module in the set).
+SCANNED_MODULES = ['wizard.py', 'gamestart.py']
 
 # Helper-visual primitives banned by PLAY-04 (no scene geometry ever:
 # measurement distance objects, measure-mode overlays, CGO primitives).

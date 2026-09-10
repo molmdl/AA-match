@@ -3,7 +3,7 @@
 > 
 > !! Under Development !!
 
-# AA-mtch
+# AA-match
 
 A matching game of small molecule and biomolecular interactions based on common (bio-)molecular viewer.
 

@@ -28,9 +28,14 @@ from any state to a playable game:
    value is what the new game captures -- no explicit pre-pop needed
    here). Otherwise replace=0 (plain push): a user's wizard (e.g.
    ``wizard measurement``) is NEVER popped at start -- it goes dormant
-   beneath the game and auto-resumes after Done (stack-native
-   lifecycle, 03-RESEARCH-wizard-interaction sec. 1.2/2.3). On a fresh
-   PyMOL (empty stack, prior is None) this degenerates to a plain push.
+      beneath the game and auto-resumes after Done (stack-native
+      lifecycle, 03-RESEARCH-wizard-interaction sec. 1.2/2.3). On a fresh
+      PyMOL (empty stack, prior is None) this degenerates to a plain push.
+5. Zoom the camera to frame the WHOLE game (grids + all ligands) with a
+   small spatial margin (03-06 field report: PyMOL's fresh camera sat
+   zoomed-in on the ligand and the player could not see the grid). The
+   zoom selection is the game sentinel ('segi AAM') -- every game atom
+   carries it, so no long name list and no user object can ever match.
 
 Engine state (payload / registry / GameState) lives module-side in
 ``aamatch.engine`` -- the wizard requires it live, which start_game
@@ -77,6 +82,7 @@ def start_game(setup=None, seed=42, candidates=None):
     prior = cmd.get_wizard()
     wiz = GameWizard(payload, registry, 0, 0)
     wiz.activate(replace=(1 if isinstance(prior, GameWizard) else 0))
+    cmd.zoom('segi %s' % placement.SENTINEL_SEGI, buffer=5.0)
     slots = sum(len(mol['slots']) for mol in registry['molecules'])
     print('AA-match %s: game started -- %d molecule(s), %d amino-acid '
           'slot(s), seed %d (cleaned %d prior game object(s)).'

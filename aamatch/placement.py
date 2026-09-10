@@ -155,6 +155,17 @@ def _sentinel_tag(object_name):
     cmd.sort(object_name)
 
 
+def _normalize_reps(object_name):
+    """Uniform gameplay look for one AA slot object: clear the
+    auto-assigned representations, then sticks ONLY (03-06 field
+    report: the new-object display heuristic split the grid into
+    sticks+cartoon for neutral fragments and lines+nonbonded dots for
+    charged ones -- same class of object must LOOK the same; the
+    detector never reads representations)."""
+    cmd.hide('everything', object_name)
+    cmd.show('sticks', object_name)
+
+
 def _assert_pose(object_name, target, where):
     """Fail-closed pose assert: centroid of the baked object must equal
     the spec target within the float32-realizable per-axis tolerance
@@ -345,6 +356,7 @@ def materialize(payload, level_index=0):
             cmd.translate(delta, aa_name, state=1, camera=0)
             _assert_pose(aa_name, target,
                          'materialize slot %s' % slot_id)
+            _normalize_reps(aa_name)
             slot_entries[slot_id] = (aa_name, _sorted_ids(aa_name))
             created += 1
 

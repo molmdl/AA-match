@@ -85,6 +85,42 @@ def score(required, results):
         % (mode,))
 
 
+def records_for_molecule(records, slot_objects, ligand_object):
+    """Keep only the records formed OVER one molecule (03-06
+    cross-molecule scoring guard).
+
+    The detector runs on a COMBINED ligand feature layer (all ligand
+    objects in the scene join one 'lig' feature set); without scoping,
+    a required-type record formed over the WRONG molecule's ligand
+    would count as formed for the scored molecule. A record belongs to
+    the molecule iff its AA partner is one of the molecule's slot
+    objects AND its ligand partner is that molecule's ligand object.
+
+    ``records``     canonical detector records (each must carry 'aa' /
+                    'lig' dicts with an 'object' name -- fail-closed on
+                    any other shape, never silently mis-scope).
+    ``slot_objects``    iterable of the molecule's AA object names.
+    ``ligand_object``   the molecule's ONE ligand object name.
+
+    Returns a NEW list (input order preserved); the caller's list is
+    untouched. Pure: plain data in, plain data out.
+    """
+    allowed = set(slot_objects)
+    out = []
+    for r in records:
+        aa = r.get('aa') if isinstance(r, dict) else None
+        lig = r.get('lig') if isinstance(r, dict) else None
+        if not isinstance(aa, dict) or not isinstance(lig, dict) \
+                or 'object' not in aa or 'object' not in lig:
+            raise ValueError(
+                "records_for_molecule: every record must carry 'aa' and "
+                "'lig' dicts with an 'object' name (canonical detector "
+                "record contract)")
+        if aa['object'] in allowed and lig['object'] == ligand_object:
+            out.append(r)
+    return out
+
+
 def _formed_types(required, record_types):
     """The set of formed type names, deduped by type (counts never
     inflate, same rule as score).

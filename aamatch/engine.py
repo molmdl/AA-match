@@ -19,6 +19,17 @@ STATE SPLIT (the one data-flow rule, research SS7.2 / ARCHITECTURE):
   state.
 - PyMOL holds ATOMS + SENTINELS only.
 
+MOLECULE SCOPING (03-06 cross-molecule scoring guard): the detector
+runs on a COMBINED ligand feature layer, so an unscoped Confirm would
+credit a required-type record formed over the WRONG molecule's ligand
+(benign in the 1-scored-molecule field games, a landmine for real
+multi-molecule play). ``detect_molecule`` restricts the detector's
+INPUT to one molecule (its ligand object + its slot objects) -- the
+wrong partner is absent by construction -- and post-filters with the
+WSL-testable pure half ``game_state.records_for_molecule``;
+``score_current``/``confirm`` consume the scoped pass. ``detect()``
+remains the canonical WHOLE-SCENE surface (smoke/grid hygiene asserts).
+
 OPS (each count-asserted; plain-data in/out):
 
 1. ``new_game(setup, seed) -> (payload, manifest_entries)`` -- manifest
@@ -41,13 +52,20 @@ OPS (each count-asserted; plain-data in/out):
    geometry.ligand_bonds per registered ligand object with the
    probe-pinned remap (bond position i -> index_to_id[i+1] -> atom id
    -> position in the (object, id)-sorted ligand records) ->
-   detector.detect (the 7-type surface, NOT detect_part1).
+   detector.detect (the 7-type surface, NOT detect_part1). Whole-scene.
+5b. ``detect_molecule(level_index, molecule_index) -> records`` -- the
+   MOLECULE-SCOPED variant (see MOLECULE SCOPING above): input atoms
+   restricted to the molecule's ligand + slot objects, bonds remapped
+   for that ligand only, detector.detect over the subset, then the
+   pure records_for_molecule post-filter.
 6. ``score_current(level_index, molecule_index, required,
    records=None) -> (score, formed_types)`` -- game_state.score via
    record_molecule_result (score + formed types stored together);
-   returns plain data for a future UI.
+   records None -> a fresh detect_molecule pass; returns plain data
+   for a future UI.
 7. ``confirm(level_index, molecule_index, required) -> (records,
-   score, formed_types)`` -- detect + score_current composition; the
+   score, formed_types)`` -- detect_molecule + score_current
+   composition (records returned are the MOLECULE-SCOPED set); the
    Phase-3 Confirm handler wraps exactly this.
 
 Python floor: PyMOL's Windows Python 3.9 at runtime, written 3.6-safe
@@ -278,16 +296,51 @@ def detect():
     return detector.detect(records, lig_bonds)
 
 
+def detect_molecule(level_index, molecule_index):
+    """Op 5b: detection SCOPED to one molecule (03-06 cross-molecule
+    scoring guard; see the module docstring's MOLECULE SCOPING note).
+
+    The input atoms are restricted to the molecule's ligand object plus
+    its slot objects (the wrong-ligand partner is absent by
+    construction), the bond block is remapped for that ligand only,
+    and the output runs through the pure
+    game_state.records_for_molecule post-filter (belt-and-braces; the
+    detector's group-based records name their ligand object via a
+    single shared feature layer, so the post-filter also pins the
+    attribution the combined layer cannot). Returns the canonically
+    sorted scoped record list.
+    """
+    registry = _current_registry()
+    molecules = registry['molecules']
+    index = int(molecule_index)
+    if not 0 <= index < len(molecules):
+        raise EngineError(
+            'engine.detect_molecule: molecule_index %d out of range '
+            '(registry has %d molecule(s))' % (index, len(molecules)))
+    molecule = molecules[index]
+    lig_object = molecule['ligand'][0]
+    slot_objects = set(entry[0]
+                       for entry in molecule['slots'].values())
+    keep = slot_objects | set((lig_object,))
+    records = [r for r in geometry.extract_game_atoms()
+               if r['object'] in keep]
+    _, lig_bonds = _remap_ligand_bonds(records, [lig_object])
+    found = detector.detect(records, lig_bonds)
+    return game_state.records_for_molecule(found, slot_objects,
+                                           lig_object)
+
+
 def score_current(level_index, molecule_index, required, records=None):
     """Op 6: score the current scene against ``required``.
 
-    ``records`` None -> a fresh detect() pass. Score + formed types are
-    recorded into the module-level GameState in ONE call
-    (record_molecule_result -- the two views can never drift). Returns
-    (score, formed_types): plain data for a future UI.
+    ``records`` None -> a fresh MOLECULE-SCOPED detect pass
+    (detect_molecule -- the 03-06 cross-molecule scoring guard). Score
+    + formed types are recorded into the module-level GameState in ONE
+    call (record_molecule_result -- the two views can never drift).
+    Returns (score, formed_types): plain data for a future UI.
     """
     if records is None:
-        records = detect()
+        records = detect_molecule(level_index, molecule_index)
     game = _current_game()
     value = game.record_molecule_result(level_index, molecule_index,
                                         required, records)
@@ -297,9 +350,10 @@ def score_current(level_index, molecule_index, required, records=None):
 
 
 def confirm(level_index, molecule_index, required):
-    """Op 7: detect + score composition -> (records, score,
-    formed_types). The Phase-3 Confirm handler wraps exactly this."""
-    records = detect()
+    """Op 7: detect_molecule + score composition -> (records, score,
+    formed_types); records are the MOLECULE-SCOPED set (03-06 guard).
+    The Phase-3 Confirm handler wraps exactly this."""
+    records = detect_molecule(level_index, molecule_index)
     value, formed = score_current(level_index, molecule_index,
                                   required, records=records)
     return records, value, formed

@@ -14,7 +14,7 @@ satisfies the same contract.
 
 import unittest
 
-from aamatch.game_state import score, GameState
+from aamatch.game_state import score, GameState, records_for_molecule
 from aamatch.setup_state import INTERACTION_TYPES
 
 
@@ -229,6 +229,83 @@ class TestGameStateRoundTrip(unittest.TestCase):
         self.assertEqual(back.timer_anchor, 999.25)
         self.assertEqual(back.formed_types_per_molecule,
                          gs.formed_types_per_molecule)
+
+
+def _mol_rec(rtype, aa_object, lig_object):
+    """A record-shaped-enough fixture for the molecule-scope filter:
+    canonical records carry 'aa'/'lig' dicts with an 'object' name."""
+
+    # NOTE: score() itself reads only 'type' -- this fixture serves the
+    # records_for_molecule scoping layer (03-06 guard).
+    return {'type': rtype,
+            'aa': {'object': aa_object},
+            'lig': {'object': lig_object}}
+
+
+class TestRecordsForMolecule(unittest.TestCase):
+    """The 03-06 cross-molecule scoring guard: a required-type record
+    formed over the WRONG molecule's ligand or over another molecule's
+    AA must never count for the scored molecule."""
+
+    SLOTS0 = ['_aam_aa01', '_aam_aa02']
+    SLOTS1 = ['_aam_aa10', '_aam_aa11']
+
+    def _filter(self, records):
+        return records_for_molecule(records, self.SLOTS0, '_aam_lig01')
+
+    def test_keeps_records_over_the_molecule(self):
+        recs = [_mol_rec('h_bond', '_aam_aa01', '_aam_lig01'),
+                _mol_rec('pi_stacking', '_aam_aa02', '_aam_lig01')]
+        self.assertEqual(self._filter(recs), recs)
+
+    def test_drops_records_over_the_wrong_ligand(self):
+        wrong = _mol_rec('h_bond', '_aam_aa01', '_aam_lig02')
+        right = _mol_rec('h_bond', '_aam_aa02', '_aam_lig01')
+        self.assertEqual(self._filter([wrong, right]), [right])
+
+    def test_drops_records_over_the_wrong_aa(self):
+        wrong = _mol_rec('h_bond', '_aam_aa10', '_aam_lig01')
+        right = _mol_rec('h_bond', '_aam_aa01', '_aam_lig01')
+        self.assertEqual(self._filter([wrong, right]), [right])
+
+    def test_returns_new_list_preserving_order(self):
+        recs = [_mol_rec('h_bond', '_aam_aa02', '_aam_lig01'),
+                _mol_rec('salt_bridge', '_aam_aa10', '_aam_lig02'),
+                _mol_rec('hydrophobic', '_aam_aa01', '_aam_lig01')]
+        out = self._filter(recs)
+        self.assertEqual(out, [recs[0], recs[2]])
+        self.assertIsNot(out, recs)
+
+    def test_scoping_flips_a_leaked_score(self):
+        # THE GUARD'S TEETH at the pure level: unscoped, the wrong-ligand
+        # h_bond record scores 1.00 against mol-0's required list;
+        # scoped, the score is 0.00.
+        required = {'mode': 'list',
+                    'items': [{'type': 'h_bond', 'count': 1}]}
+        leaked = [_mol_rec('h_bond', '_aam_aa01', '_aam_lig02')]
+        self.assertEqual(score(required, leaked), 1.0)
+        self.assertEqual(score(required, self._filter(leaked)), 0.0)
+
+    def test_fail_closed_on_missing_partner_side(self):
+        with self.assertRaises(ValueError):
+            self._filter([{'type': 'h_bond',
+                           'aa': {'object': '_aam_aa01'}}])
+        with self.assertRaises(ValueError):
+            self._filter([{'type': 'h_bond',
+                           'lig': {'object': '_aam_lig01'}}])
+
+    def test_fail_closed_on_object_less_side(self):
+        with self.assertRaises(ValueError):
+            self._filter([{'type': 'h_bond',
+                           'aa': {'object': '_aam_aa01'},
+                           'lig': {'role': 'donor'}}])
+
+    def test_fail_closed_on_non_dict_record(self):
+        with self.assertRaises(ValueError):
+            self._filter(['not-a-record'])
+
+    def test_empty_input_scores_nothing(self):
+        self.assertEqual(self._filter([]), [])
 
 
 if __name__ == '__main__':

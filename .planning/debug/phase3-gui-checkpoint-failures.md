@@ -78,3 +78,9 @@ root_cause: PLAY-02 = DESIGN compound: (1) seed-42 mol-0 requires h_bond x1, not
 fix: see prioritized fix list in final report (no code changes made — diagnose-only)
 verification: headless probes tmp/probe_gui_0306.py + tmp/probe_gui_0306b.py (outputs in agent log)
 files_changed: []
+
+## Human confirmations (2026-09-10, checkpoint session 2)
+
+- PHE was posed over **benzamide** (the ring ligand, correct target); panel showed `Required: h_bond` — CONFIRMS root cause (1): pi_stacking not required on this level, so the score could never move. The 03-06 plan's step-9 wording ("pose ring AA, expect change") was written generically and is invalid for an unset-random level that drew h_bond — checklist defect, replaced by the H-bond scoring test.
+- `No key mapping for 'CTSH-V'`: human confirms an accidental Shift press while pasting — explained, ignorable, no action.
+- Still pending from human: msm baseline pre-game + post-Done; H-bond scoring test (SER/ASN near benzamide -> 1.00, then away -> drop); strict mol-0 color re-test (aa02->aa03->aa04).

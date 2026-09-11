@@ -10,9 +10,9 @@ See: .planning/PROJECT.md (updated 2026-09-05)
 ## Current Position
 
 Phase: 3 of 9 (Wizard Gameplay Loop) — IN PROGRESS
-Plan: 5 of 7 complete (03-05 gamestart entry, wave 5)
-Status: In progress — 593 WSL tests green; SMOKE-07 PASS 52/52; SMOKE-08 PASS (26 checks) — Plugins → AA-match now STARTS A REAL GAME and restart is proven idempotent on BOTH paths headlessly
-Last activity: 2026-09-09 — completed 03-05-PLAN.md (gamestart.py starter seam + menu re-point + SMOKE-08 starter proof)
+Plan: 5 of 7 complete (03-05 gamestart entry, wave 5) — 03-06 human checkpoint IN RETEST after the fix batch
+Status: In progress — 614 WSL tests green; SMOKE-03/04/07/08 PASS (SMOKE-07 +26 PART-F checks, SMOKE-08 +3 fix asserts) — the 03-06 checkpoint surfaced bugs; the consolidated fix batch is committed and AWAITS human re-test
+Last activity: 2026-09-11 — 03-06 checkpoint-deviation FIX batch (switch display-rebuild, uniform reps, zoom-to-frame, extras result line, multi-molecule notice, cross-molecule scoring guard) — NO 03-06-SUMMARY yet; human re-test pending
 
 Progress: [███████░░░] 71% of Phase 3 (5/7) · [██░░░░░░░░] 22% of project (2/9 phases — phase 3 five plans done)
 
@@ -139,6 +139,18 @@ Decisions are logged in PROJECT.md Key Decisions table. Seeded from PROJECT.md a
 - Keep `aamatch/` pycache-free (live plugin-path loading runs from the repo; human cleans after local test runs).
 - (Optional) Annotate 01-RESEARCH-plugin-install.md §1.3/§3.1: `load()` return ≠ `loaded` property; `__file__` unusable in `-cq` scripts.
 
+### 03-06 Checkpoint Verdicts So Far (human, 2026-09-10/11)
+
+- PLAY-01 (click-select, camera drag, empty-space click): **PASS**.
+- Scoring verified: SER/ASN near benzamide → Confirm → **1.00 h_bond** (guard: do not regress).
+- msm lifecycle **VERIFIED**: pre-game 1 / during 0 / post-Done 1.
+- Keyboard delivery set recorded: LEFT/RIGHT + comma + period + q/w/e/d work; UP/DOWN dead by design; `CTSH-V` noise = accidental shift-paste (explained, no action).
+- `editor_scheme` = never a setting in this build (API fn reads 1); nothing to restore in 03-07.
+- **Bugs FIXED in the 03-06 fix batch** (2026-09-11, pending human re-test): (a) cumulative greening = display-list staleness on color restore → restore now rebuilds the object's display lists (data level was always exact — full field sequence headless-repro proves it); (b) AA rep split charged-2176/neutral-49 → uniform sticks at materialize; (c) game opened zoomed-in → zoom-to-frame over the game sentinel at start.
+- **UX additions** (same batch): 'Formed (not required): <type> xN' result line (detected-but-not-required now visible); multi-molecule scope notice 'Only molecule N of M counts and is clickable; the rest are context.' in prompt + panel.
+- **Design-gap guard**: Confirm/scoring now runs the molecule-scoped detection pass (wrong-ligand records can no longer count; whole-scene `engine.detect()` kept for grid/hygiene asserts).
+- **RE-TEST PENDING** (the human re-plays the 03-06 steps; exact re-test list delivered with the fix-batch report). 03-06-SUMMARY.md is created only after the re-test.
+
 ### Blockers/Concerns Carried Forward
 
 - **Phase 2 gate DETECT-03: RESOLVED (approved 2026-09-06, provisional pending Phase-8 dataset revisit)** — plans 02-05..02-08 transcribe constants from docs/DETECTION_THRESHOLDS.md row-by-row; the units/atom-typing check passed at approval.
@@ -147,13 +159,14 @@ Decisions are logged in PROJECT.md Key Decisions table. Seeded from PROJECT.md a
 
 ## Session Continuity
 
-Last session: 2026-09-09 (03-05 executor: gamestart entry + SMOKE-08 — COMPLETE on main)
-Stopped at: Completed 03-05-PLAN.md (wave 5 of 7); next = wave 6 (03-06/03-07 human checkpoints)
+Last session: 2026-09-11 (03-06 checkpoint-deviation FIX batch — all 6 fixes + smoke extensions committed on main; gates green)
+Stopped at: 03-06 human checkpoint re-test PENDING (fix batch awaits field verification; then 03-06-SUMMARY.md + 03-07)
 Resume file: None
 
 ## Next Actions
 
-- Execute Phase 3 wave 6 (03-06/03-07 human checkpoints) — the Plugins → AA-match menu item STARTS A REAL GAME now (defaulted: molecules 2, D 3, unset, seed 42; Phase 4 adds the Qt setup window over the same start_game seam); restart hygiene human-verifiable both ways (Done → menu = replace=0; menu mid-game = replace=1); a user wizard beneath the game auto-resumes after Done (replace=0 push by construction)
+- **03-06 human RE-TEST (checkpoint continuation):** re-play the field steps against the fix batch — single-green invariant incl. same-slot re-click; uniform sticks for every AA; zoom frames grid + ligands at start; 'Formed (not required)' line after Confirm; 'Only molecule 1 of 2...' notice; scoring still 1.00; other-molecule clicks no-op; Reset restores colors of all but the selection. Then record verdicts in 03-06-SUMMARY.md and proceed to 03-07.
+- Execute Phase 3 wave 6 remainder (03-07 human checkpoint) — the Plugins → AA-match menu item STARTS A REAL GAME now (defaulted: molecules 2, D 3, unset, seed 42; Phase 4 adds the Qt setup window over the same start_game seam); restart hygiene human-verifiable both ways (Done → menu = replace=0; menu mid-game = replace=1); a user wizard beneath the game auto-resumes after Done (replace=0 push by construction)
 - **03-06/03-07 human checkpoints:** ONLY real-mouse delivery remains open — arrow-key Qt focus-path delivery, drag feel, q/e camera-z-sign feel, visual recolor review; the whole entry path + wizard loop is headlessly proven (SMOKE-07 52/52 + SMOKE-08 26 checks)
 - **Phase 3 spawn notes:** Confirm handler = engine.confirm(...) wrapper; pose scripting/hints must include the explicit baked ring-alignment step (02-14 decision: fragments have no guaranteed orientation; SMOKE-05 is the seed-agnostic reference); Reset = engine.reset_to_grid(); max-grid games are bake-safe (02-15 float32 pose-tolerance fix)
 - **Phase 3/4 heads-up:** tests/test_code_audit.py's PROSE_PIN will demand a deliberate update if any docstring adds/removes a banned-token mention (Gate-C: human re-review by construction)

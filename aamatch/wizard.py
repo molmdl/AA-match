@@ -221,6 +221,17 @@ class GameWizard(Wizard):
         expression sandbox. Some builds may reject dict subscripting in
         the sandbox; fall back to a per-id loop (both house-legal;
         explicit space dict either way). Absent snapshot -> no-op.
+
+        DISPLAY-STALENESS LAW (03-06 field bug, cumulative greening):
+        cmd.alter updates the atom-color DATA without rebuilding the
+        object's drawn lists, while cmd.color redraws immediately -- so
+        in the GUI a restored object kept SHOWING the highlight color
+        until some later op (e.g. Reset's per-object translate) forced
+        a redraw, even though the data was exact (headless probes on
+        the full multi-switch field sequence prove the data level).
+        The restore therefore ALWAYS re-issues the object's display
+        lists with the data-exact colors (scoped, never a global
+        refresh).
         """
         m = wizard_core.color_map(self._color_store, obj)
         if m is None:
@@ -232,6 +243,7 @@ class GameWizard(Wizard):
             for atom_id, color in sorted(m.items()):
                 cmd.alter('%s and id %d' % (obj, atom_id),
                           'color=%d' % (color,), space={})
+        cmd.rebuild(obj)
 
     def do_select(self, name):
         """The ONLY pick entry in default 3-Button Viewing -- do_pick

@@ -442,6 +442,41 @@ class TestResultLinesExtras(unittest.TestCase):
         self.assertIn('Formed (not required): pi_stacking x1', texts)
 
 
+class TestMoleculeScopeNotice(unittest.TestCase):
+    """The 03-06 multi-molecule notice: with >1 molecule the prompt and
+    panel must make unmistakable that only the current molecule counts
+    and is clickable (the field session clicked the out-of-scope
+    molecule's AAs and read the no-op as a broken switch)."""
+
+    def test_panel_notice_present_with_two_molecules(self):
+        texts = [e[1] for e in wizard_text.panel_entries(_state())]
+        hits = [t for t in texts if 'counts and is clickable' in t]
+        self.assertEqual(len(hits), 1)
+        self.assertIn('1 of 2', hits[0])
+
+    def test_panel_notice_absent_single_molecule(self):
+        texts = [e[1] for e in wizard_text.panel_entries(
+            _state(molecule_total=1, molecule_pos=1))]
+        self.assertFalse(any('counts and is clickable' in t
+                             for t in texts))
+
+    def test_prompt_notice_follows_status_line(self):
+        lines = wizard_text.prompt_lines(_state())
+        self.assertTrue(lines[1].startswith('Only molecule'),
+                        'notice must follow the status line: %r'
+                        % (lines,))
+
+    def test_prompt_notice_absent_single_molecule(self):
+        lines = wizard_text.prompt_lines(
+            _state(molecule_total=1, molecule_pos=1))
+        self.assertEqual(len(lines), 1)
+
+    def test_notice_is_ascii_and_clipped(self):
+        notice = wizard_text._molecule_scope_line(_state())
+        notice.encode('ascii')
+        self.assertLessEqual(len(notice), 255)
+
+
 class TestClip(unittest.TestCase):
     """The 255-char cap helper: clip, never crash (WordType[256])."""
 

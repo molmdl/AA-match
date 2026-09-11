@@ -175,16 +175,32 @@ def result_lines(score, formed, required, extras=None):
     return [_clip(line) for line in lines]
 
 
+def _molecule_scope_line(state):
+    """The multi-molecule notice (03-06 UX addition): with more than one
+    molecule on the level, make it UNMISTAKABLE that only the current
+    molecule is scored and clickable -- the field session clicked the
+    out-of-scope molecule's AAs and read the no-op as a broken switch.
+    Returns None for a single-molecule game. ASCII-only wording; the
+    text must NEVER carry 'score' as a substring token collision with
+    the result-line probes pinned in the test battery -> 'counts'."""
+    total = state.get('molecule_total')
+    if not total or int(total) <= 1:
+        return None
+    return ('Only molecule %s of %s counts and is clickable; the rest '
+            'are context.' % (state.get('molecule_pos'), total))
+
+
 def panel_entries(state):
     """The full wizard panel as a list of 3-element [kind, text, code]
     entries (Wizard.cpp contract -- see module docstring).
 
-    Documented build order: header (molecule id + pos/total), required
-    summary, [result lines when state['result'] is set, an 'ERROR:'
-    text line when state['error'] is set], blank, movement header
-    (embeds NUDGE_STEP), the six nudge buttons + 'Toward ligand' +
-    'Rotate 90 deg', blank, 'Confirm', 'Reset to Grid', 'Done'
-    (canonical cmd.set_wizard()).
+    Documented build order: header (molecule id + pos/total), the
+    multi-molecule notice when the level has more than one molecule,
+    required summary, [result lines when state['result'] is set, an
+    'ERROR:' text line when state['error'] is set], blank, movement
+    header (embeds NUDGE_STEP), the six nudge buttons + 'Toward
+    ligand' + 'Rotate 90 deg', blank, 'Confirm', 'Reset to Grid',
+    'Done' (canonical cmd.set_wizard()).
 
     ``state`` is plain data; this builder never imports cmd and never
     touches PyMOL state (the GameWizard assembles the dict it will hand
@@ -195,6 +211,9 @@ def panel_entries(state):
                              % (state.get('molecule_id'),
                                 state.get('molecule_pos'),
                                 state.get('molecule_total'))), ''])
+    scope = _molecule_scope_line(state)
+    if scope is not None:
+        entries.append([1, _clip(scope), ''])
     entries.append([1, _clip('Required: '
                              + required_summary(state.get('required'))),
                     ''])
@@ -224,13 +243,17 @@ def prompt_lines(state):
 
     Order: the state-machine line first (click instruction when nothing
     is selected, else the Move/rotate guidance naming slot id + object),
-    then the result lines VERBATIM when a result is present, then an
-    'ERROR'-prefixed line LAST (appended after status -- the
+    then the multi-molecule notice when the level has more than one
+    molecule, then the result lines VERBATIM when a result is present,
+    then an 'ERROR'-prefixed line LAST (appended after status -- the
     measurement.py:262-263 shape). Result lines are produced by
     result_lines, so prompt and panel show identical text.
     """
     lines = []
     lines.append(_clip(_status_line(state.get('selected'))))
+    scope = _molecule_scope_line(state)
+    if scope is not None:
+        lines.append(_clip(scope))
     result = state.get('result')
     if result:
         lines.extend(result_lines(result['score'], result['formed'],

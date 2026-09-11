@@ -52,6 +52,26 @@ PART E  MULTI-MOLECULE SCOPING: a second DEFAULTS-shaped 2-molecule
         game documents the molecule-0 scoping decision (a molecule-1 AA
         pick leaves _current_slot None); teardown returns the scene to
         the pre-game snapshot EXACTLY.
+PART F  THE 03-06 FIELD BUG BATTERIES (checkpoint fix pass):
+        (1) the FULL multi-switch click sequence from the field report
+        (mol-0 re-click chain incl. a same-slot re-click, then ligand /
+        other-molecule no-op interleave) asserting AT DATA LEVEL the
+        invariants the GUI must show: exactly ONE green AA at any time
+        (the current selection), a switch restores the previous object
+        EXACTLY, a same-slot re-click changes nothing, ligand /
+        non-game / other-molecule picks change nothing, and Reset
+        restores every recolored object except the current selection
+        (the selection's green is intended); (2) a rebuild spy proves
+        the switch path re-issues the restored object's DISPLAY lists
+        (the field bug's root cause: cmd.alter restores the data but
+        leaves the stale drawn lists on screen until some later op
+        rebuilds them -- headless could never see that; the spy makes
+        the display path mechanical); (3) the cross-molecule scoring
+        guard: with mol-0 scored, a mol-0 charged AA parked on mol-1's
+        ligand provably forms an interaction in the WHOLE-SCENE
+        detect() yet confirm_molecule()/engine.confirm returns the
+        scope -- score 0.00, empty result -- the wrong-ligand record
+        can no longer count.
 
 Pick scripting (real-mouse delivery is the human checkpoint,
 03-RESEARCH-wizard-interaction.md SS8): the C layer would route a
@@ -720,6 +740,173 @@ try:
 except Exception:
     traceback.print_exc()
     check('part E multi-molecule scoping', False, 'raised (see traceback)')
+    try:
+        cmd.set_wizard()
+    except Exception:
+        pass
+    placement.cleanup_game_objects()
+
+# ============================================================
+# PART F: the 03-06 field bug batteries (multi-switch greening +
+# display rebuild + cross-molecule scoring guard)
+# ============================================================
+try:
+    setup_f = validate_state({'interaction_mode': 'unset',
+                              'molecules_per_level': 2,
+                              'difficulty_levels': 3})
+    payload_f, rows_f = engine.new_game(setup_f, 42,
+                                        candidates=list(entries))
+    registry_f = engine.materialize(payload_f, level_index=0)
+    mol0_f = registry_f['molecules'][0]
+    mol1_f = registry_f['molecules'][1]
+    lig0_f = mol0_f['ligand'][0]
+    lig1_f = mol1_f['ligand'][0]
+    req_f = payload_f['levels'][0]['molecules'][0]['required']
+    slots0_f = sorted(mol0_f['slots'])
+    objs0_f = [mol0_f['slots'][s][0] for s in slots0_f]
+    objs1_f = [mol1_f['slots'][s][0] for s in sorted(mol1_f['slots'])]
+    print('SMOKE-ENV part F game: mol0=%s lig=%s mol1=%s lig=%s '
+          'required=%s'
+          % (slots0_f, lig0_f, sorted(mol1_f['slots']), lig1_f, req_f),
+          flush=True)
+
+    originals_f = {}
+    for ob in objs0_f + objs1_f:
+        originals_f[ob] = _color_map(ob)
+    green_f = int(cmd.get_color_index(wizard_core.HIGHLIGHT_COLOR))
+
+    def _green_objects_f():
+        out = []
+        for ob in objs0_f + objs1_f:
+            cm = _color_map(ob)
+            if cm and all(c == green_f for c in cm.values()):
+                out.append(ob)
+        return out
+
+    def _others_restored_f(current):
+        return all(_color_map(ob) == originals_f[ob]
+                   for ob in objs0_f + objs1_f if ob != current)
+
+    def _pick_atom_f(obj, first=True):
+        ids = []
+        cmd.iterate(obj, 'stored.append(ID)', space={'stored': ids})
+        ids = sorted(int(i) for i in ids)
+        atom_id = ids[0] if first else ids[-1]
+        cmd.select('sele', '%s and id %d' % (obj, atom_id))
+        wiz_f.do_select('sele')
+
+    wiz_f = GameWizard(payload_f, registry_f, 0, 0)
+    wiz_f.activate()
+
+    # (1) THE FIELD SEQUENCE: mol-0 chain incl. a same-slot re-click.
+    sequence_f = [(objs0_f[3], True), (objs0_f[3], False),
+                  (objs0_f[2], False), (objs0_f[1], False),
+                  (objs0_f[0], False), (objs0_f[3], False),
+                  (objs0_f[6], False), (objs0_f[7], False),
+                  (objs0_f[8], False)]
+    for step, (ob, first) in enumerate(sequence_f):
+        _pick_atom_f(ob, first)
+        want_slot = wiz_f._slot_by_object[ob]
+        check('switch %d %s: exactly one green + it is current'
+              % (step + 1, ob),
+              _green_objects_f() == [ob]
+              and wiz_f._current_slot == want_slot,
+              'greens=%s current=%r'
+              % (_green_objects_f(), wiz_f._current_slot))
+        check('switch %d %s: every other object restored EXACTLY'
+              % (step + 1, ob), _others_restored_f(ob), '')
+
+    # (1b) Ligand / other-molecule / double-click no-op interleave.
+    _pick_atom_f(lig0_f, True)
+    for ob in (objs1_f[6], objs1_f[6], objs1_f[3], objs1_f[3],
+               objs1_f[0]):
+        _pick_atom_f(ob, True)
+    check('ligand + other-molecule + double picks are no-ops',
+          _green_objects_f() == [objs0_f[8]]
+          and wiz_f._current_slot == wiz_f._slot_by_object[objs0_f[8]],
+          'greens=%s current=%r'
+          % (_green_objects_f(), wiz_f._current_slot))
+
+    # (2) THE REBUILD SPY: the field bug was DISPLAY staleness; the
+    # switch path must re-issue the restored object's display lists.
+    rebuild_calls = []
+    orig_rebuild = cmd.rebuild
+
+    def _spy_rebuild(*args, **kwargs):
+        rebuild_calls.append(args[0] if args else None)
+        return orig_rebuild(*args, **kwargs)
+
+    try:
+        cmd.rebuild = _spy_rebuild
+        _pick_atom_f(objs0_f[0], True)
+    finally:
+        cmd.rebuild = orig_rebuild
+    check('switch re-issues the restored object display lists',
+          objs0_f[8] in rebuild_calls
+          and _green_objects_f() == [objs0_f[0]],
+          'rebuild_calls=%s greens=%s'
+          % (rebuild_calls, _green_objects_f()))
+
+    # (1c) Reset restores every recolored object EXCEPT the current
+    # selection (the selection's green persists -- intended).
+    wiz_f.reset_grid()
+    check('reset: current stays green, every other color restored',
+          _green_objects_f() == [objs0_f[0]]
+          and _others_restored_f(objs0_f[0])
+          and wiz_f._current_slot == wiz_f._slot_by_object[objs0_f[0]],
+          'greens=%s current=%r'
+          % (_green_objects_f(), wiz_f._current_slot))
+    cmd.set_wizard()
+
+    # (3) THE CROSS-MOLECULE SCORING GUARD: park a mol-0 charged AA on
+    # the mol-1 ligand; the whole-scene detect() must provably catch an
+    # interaction, yet the confirm path must return the EMPTY scope.
+    charged = [s for s in payload_f['levels'][0]['molecules'][0]
+               ['grid']['slots'] if s.get('aa') in ('LYS', 'ARG', 'HIS')]
+    check('a cationic mol-0 slot exists for the guard',
+          bool(charged),
+          'cationic slots=%s' % [s['slot_id'] for s in charged])
+    c_slot = charged[0]['slot_id']
+    c_obj = mol0_f['slots'][c_slot][0]
+    c_name = 'NZ' if charged[0]['aa'] == 'LYS' else 'CZ'
+    nz_rows = []
+    cmd.iterate_state(1, '%s and name %s' % (c_obj, c_name),
+                      'stored.append((x, y, z))', space={'stored': nz_rows})
+    check('charged atom located', len(nz_rows) == 1,
+          '%s in %s: %d' % (c_name, c_obj, len(nz_rows)))
+    lig1_c = _tofloat(geometry.centroid_of(lig1_f))
+    target_c = _add(lig1_c, (0.0, 0.0, 3.0))
+    cur = (float(nz_rows[0][0]), float(nz_rows[0][1]),
+           float(nz_rows[0][2]))
+    cmd.translate([target_c[0] - cur[0], target_c[1] - cur[1],
+                   target_c[2] - cur[2]], c_obj, state=1, camera=0)
+    whole = engine.detect()
+    guard_teeth = [r for r in whole if r['aa']['object'] == c_obj]
+    check('whole-scene detect DOES form with the wrong ligand nearby',
+          bool(guard_teeth),
+          'records over %s: %s'
+          % (c_obj, [(r['type'], r['lig']['object'])
+                     for r in guard_teeth]))
+    scoped_recs, guard_score, guard_formed = engine.confirm(
+        0, 0, req_f)
+    leaked = [r for r in scoped_recs
+              if r['lig']['object'] == lig1_f
+              or r['aa']['object'] == c_obj]
+    check('confirm returns the molecule scope -- no cross-molecule '
+          'records, score 0.00',
+          not leaked and guard_score == 0.0 and guard_formed == [],
+          'scoped=%s score=%s formed=%s leaked=%s'
+          % ([(r['type'], r['aa']['object'], r['lig']['object'])
+              for r in scoped_recs], guard_score, guard_formed,
+             leaked))
+
+    placement.cleanup_game_objects()
+    check('part F teardown leaves scene pre-game EXACTLY',
+          list(cmd.get_names('objects')) == pre_names,
+          'post=%s' % list(cmd.get_names('objects')))
+except Exception:
+    traceback.print_exc()
+    check('part F field-bug batteries', False, 'raised (see traceback)')
     try:
         cmd.set_wizard()
     except Exception:

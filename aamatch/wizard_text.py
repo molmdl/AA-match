@@ -103,19 +103,24 @@ def required_summary(required):
         'any, list)' % (mode,))
 
 
-def result_lines(score, formed, required):
+def result_lines(score, formed, required, extras=None):
     """TEXT-ONLY detection-result lines (PLAY-04, PLAY-03).
 
     Consumes the plain data engine.confirm returns: the score float,
-    the canonical-order formed type names, and the required payload.
-    SCORE-01 semantics mirror game_state.score:
+    the canonical-order formed type names, the required payload, and
+    optionally ``extras`` -- the 03-06 UX addition: [(type, count)]
+    entries for detected-but-not-required interactions (the field's
+    fired-but-invisible pi_stacking), rendered in list mode as
+    'Formed (not required): <type> xN, ...' after the 'Missing:' line.
+    In 'any' mode extras are ignored BY DESIGN (every record satisfies
+    an 'any' requirement -- nothing can be "not required").
 
     - 'list' mode: first line 'N/M required interactions formed (score
       x.xx)' (N = required items whose type is formed; counts never
       inflate, one item per type presence), then 'Formed: ...' (or the
       PINNED 'Formed: (none)' shape), then 'Missing: ...' listing the
       required types NOT formed (item order, deduped) -- omitted when
-      nothing is missing.
+      nothing is missing -- then the optional extras line.
     - 'any' mode: binary. Formed types -> 'Interaction formed (score
       1.00)' + 'Formed: ...'; nothing -> the PINNED single line
       'Nothing formed (score 0.00)'. Never a 'Missing:' line (the 'any'
@@ -154,6 +159,9 @@ def result_lines(score, formed, required):
                 missing.append(itype)
         if missing:
             lines.append('Missing: ' + ', '.join(missing))
+        if extras:
+            lines.append('Formed (not required): ' + ', '.join(
+                '%s x%s' % (entry[0], entry[1]) for entry in extras))
     elif mode == 'any':
         if formed_list:
             lines.append('Interaction formed (score %.2f)' % value)
@@ -193,7 +201,8 @@ def panel_entries(state):
     result = state.get('result')
     if result:
         for line in result_lines(result['score'], result['formed'],
-                                 result['required']):
+                                 result['required'],
+                                 result.get('extras')):
             entries.append([1, line, ''])
     error = state.get('error')
     if error:
@@ -225,7 +234,8 @@ def prompt_lines(state):
     result = state.get('result')
     if result:
         lines.extend(result_lines(result['score'], result['formed'],
-                                  result['required']))
+                                  result['required'],
+                                  result.get('extras')))
     error = state.get('error')
     if error:
         lines.append(_clip('ERROR: %s' % error))

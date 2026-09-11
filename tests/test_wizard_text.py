@@ -377,6 +377,71 @@ class TestResultLines(unittest.TestCase):
                                                'items': []})
 
 
+class TestResultLinesExtras(unittest.TestCase):
+    """The 03-06 'Formed (not required)' addition: records whose type
+    is NOT required still happened on screen -- the player must see
+    them (the field's fired-but-invisible pi_stacking). TEXT-ONLY
+    counts, list mode only."""
+
+    def test_extras_render_after_missing_with_counts(self):
+        lines = wizard_text.result_lines(
+            1.0, ['h_bond'], _REQUIRED_LIST_2,
+            extras=[('pi_stacking', 1)])
+        extra = [l for l in lines if l.startswith('Formed (not required):')]
+        self.assertEqual(extra, ['Formed (not required): pi_stacking x1'])
+
+    def test_extras_multiple_in_given_order(self):
+        lines = wizard_text.result_lines(
+            1.0, ['h_bond'], _REQUIRED_LIST_2,
+            extras=[('hydrophobic', 2), ('pi_stacking', 1)])
+        self.assertIn('Formed (not required): hydrophobic x2, '
+                      'pi_stacking x1', lines)
+
+    def test_no_extras_line_when_none_or_empty(self):
+        for extras in (None, [], ()):
+            lines = wizard_text.result_lines(
+                1.0, ['h_bond'], _REQUIRED_LIST_2, extras=extras)
+            self.assertFalse(
+                any(l.startswith('Formed (not required):')
+                    for l in lines),
+                'no extras must render no extras line: %r' % (lines,))
+
+    def test_any_mode_ignores_extras_by_design(self):
+        # In 'any' mode every record satisfies the requirement, so
+        # 'not required' is meaningless -- extras must never render.
+        lines = wizard_text.result_lines(
+            1.0, ['h_bond'], {'mode': 'any', 'items': []},
+            extras=[('salt_bridge', 3)])
+        self.assertEqual(lines, ['Interaction formed (score 1.00)',
+                                 'Formed: h_bond'])
+
+    def test_extras_line_text_only_no_geometry_descriptors(self):
+        forbidden = ('x:', 'y:', 'z:', 'Angstrom', 'A ')
+        lines = wizard_text.result_lines(
+            0.5, ['pi_stacking'], _REQUIRED_LIST_2,
+            extras=[('hydrophobic', 1)])
+        for line in lines:
+            for token in forbidden:
+                self.assertNotIn(token, line)
+
+    def test_extras_255_clipped_never_crash(self):
+        extras = [('x' * 100, 9999999)] * 5
+        lines = wizard_text.result_lines(
+            0.5, ['pi_stacking'], _REQUIRED_LIST_2, extras=extras)
+        for line in lines:
+            self.assertLessEqual(len(line), 255)
+
+    def test_extras_in_prompt_and_panel_via_result_dict(self):
+        result = {'score': 1.0, 'formed': ['h_bond'],
+                  'required': _REQUIRED_LIST_2,
+                  'extras': [('pi_stacking', 1)]}
+        prompt = wizard_text.prompt_lines(_state(result=result))
+        self.assertIn('Formed (not required): pi_stacking x1', prompt)
+        entries = wizard_text.panel_entries(_state(result=result))
+        texts = [e[1] for e in entries]
+        self.assertIn('Formed (not required): pi_stacking x1', texts)
+
+
 class TestClip(unittest.TestCase):
     """The 255-char cap helper: clip, never crash (WordType[256])."""
 

@@ -79,7 +79,7 @@ import math
 from pymol import cmd
 from pymol.wizard import Wizard
 
-from . import geometry, wizard_core, wizard_text
+from . import geometry, setup_state, wizard_core, wizard_text
 
 _MATRIX_TOL = 1e-6    # identity-matrix invariant slack (SMOKE-06
                       # _is_identity pattern; float32-tight)
@@ -543,8 +543,27 @@ class GameWizard(Wizard):
         records, score, formed = engine.confirm(self._level_index,
                                                 self._molecule_index,
                                                 required)
+        # 03-06 UX addition: records whose type is NOT required still
+        # happened on screen -- surface them as 'Formed (not required)'
+        # counts (plan's invisible-pi-stacking bug). 'any' mode has no
+        # such concept (every record satisfies the requirement), so
+        # extras stay empty there by construction.
+        extras = []
+        if required.get('mode') == 'list':
+            required_types = set(item['type']
+                                 for item in (required.get('items')
+                                              or ()))
+            order = dict((t, i) for i, t in
+                         enumerate(setup_state.INTERACTION_TYPES))
+            counts = {}
+            for record in records:
+                rtype = record['type']
+                if rtype not in required_types:
+                    counts[rtype] = counts.get(rtype, 0) + 1
+            extras = [(t, counts[t])
+                      for t in sorted(counts, key=order.get)]
         self._result = {'score': float(score), 'formed': list(formed),
-                        'required': required}
+                        'required': required, 'extras': extras}
         self._error = None
         cmd.refresh_wizard()
 

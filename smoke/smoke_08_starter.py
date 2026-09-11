@@ -18,7 +18,11 @@ PART 1  start: run_plugin_gui() returns the live GameWizard and it is
         carries the click instruction; the scene grew by exactly
         len(registry['molecules']) x (1 + n*n) objects (the count is
         DERIVED from the returned wizard's registry/payload, never
-        hard-coded).
+        hard-coded); the 03-06 fix-pass asserts live here -- uniform
+        AA representations (every slot object reads the sticks bit
+        ONLY), the zoom-to-frame (view changed and the camera sits
+        outside the scene bounding sphere), and the multi-molecule
+        scope notice in the panel (2-molecule defaults).
 PART 2  restore-table spot check: a scripted pick (the 03-04 recipe:
         cmd.select('sele', '<slot object> and name CA') ->
         do_select('sele')) routes to a slot identity and recolors the
@@ -61,6 +65,7 @@ only (the 03-04 eager-detail lesson).
 
 Python floor: runs inside PyMOL's Windows Python (3.9); written 3.6-safe.
 """
+import math
 import os
 import sys
 import traceback
@@ -157,6 +162,7 @@ def _ligand_files(wiz):
 # ============================================================
 pre_names = list(cmd.get_names('objects'))
 pre_msm = int(cmd.get('mouse_selection_mode'))
+pre_view = list(cmd.get_view())
 REC['pre_msm'] = pre_msm
 check('clean pre-start scene and stock msm',
       not _game_objects() and pre_msm == 1,
@@ -196,6 +202,44 @@ try:
           len(grew) == gen1_expected and _game_objects() == grew,
           'grew=%d want %d (derived from the returned registry)'
           % (len(grew), gen1_expected))
+
+    # -- 03-06 fix: uniform AA representations (sticks ONLY) ----------
+    reps_bad = []
+    for mol in wiz1._registry['molecules']:
+        for slot_id, entry in mol['slots'].items():
+            rows = []
+            cmd.iterate(entry[0], 'stored.append(reps)',
+                        space={'stored': rows})
+            vals = sorted(set(int(r) for r in rows))
+            if vals != [1]:        # bit 0 = sticks, nothing else
+                reps_bad.append('%s(%s)=%s' % (slot_id, entry[0], vals))
+    check('every AA reads the sticks bit ONLY (uniform reps)',
+          not reps_bad,
+          'non-uniform: %s (the old split was neutral 49 vs charged '
+          '2176)' % reps_bad)
+
+    # -- 03-06 fix: zoom-to-frame the whole game ----------------------
+    view_post = list(cmd.get_view())
+    atoms = geometry.extract_game_atoms()
+    cx = sum(a['x'] for a in atoms) / len(atoms)
+    cy = sum(a['y'] for a in atoms) / len(atoms)
+    cz = sum(a['z'] for a in atoms) / len(atoms)
+    r_scene = max(math.sqrt((a['x'] - cx) ** 2 + (a['y'] - cy) ** 2
+                            + (a['z'] - cz) ** 2) for a in atoms)
+    cam_d = -float(view_post[11])    # viewer distance behind the origin
+    REC['scene_radius'] = r_scene
+    REC['zoom_camera_dist'] = cam_d
+    check('zoom pulled the camera back and frames the scene',
+          view_post != pre_view and cam_d >= r_scene,
+          'camera dist %.2f >= scene radius %.2f (view changed: %s)'
+          % (cam_d, r_scene, view_post != pre_view))
+
+    # -- 03-06 fix: multi-molecule scope notice in the panel ----------
+    panel_texts = [e[1] for e in panel]
+    notices = [t for t in panel_texts if 'counts and is clickable' in t]
+    check('2-molecule panel carries the scope notice',
+          len(notices) == 1 and '1 of 2' in notices[0],
+          'notice=%r' % (notices,))
 except Exception:
     traceback.print_exc()
     check('part 1 starter path', False, 'raised (see traceback above)')

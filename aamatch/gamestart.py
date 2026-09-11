@@ -36,6 +36,13 @@ from any state to a playable game:
    zoomed-in on the ligand and the player could not see the grid). The
    zoom selection is the game sentinel ('segi AAM') -- every game atom
    carries it, so no long name list and no user object can ever match.
+6. Roll the camera about its forward axis so the ACTIVE ligand (the
+   one Confirm scores) composes ABOVE the AA grid on screen (03-06
+   human preference). CAMERA COMPOSITION ONLY -- the game geometry is
+   generator-owned and never moved; roll does not change distance,
+   scale, or what falls inside the zoomed frame, and the wizard's
+   nudge math re-reads cmd.get_view() per press so a rolled start
+   view needs no movement-side change.
 
 Engine state (payload / registry / GameState) lives module-side in
 ``aamatch.engine`` -- the wizard requires it live, which start_game
@@ -51,10 +58,61 @@ Python floor: PyMOL's Windows Python 3.9 at runtime, written 3.6-safe
 (Gate D compiles every aamatch/*.py under python3.6).
 """
 
+import math
+
 from pymol import cmd
 
-from . import __version__, engine, placement, setup_state
+from . import __version__, engine, geometry, placement, setup_state
 from .wizard import GameWizard
+
+
+def _frame_ligand_above_grid(registry):
+    """Roll the camera so molecule 0's ligand sits ABOVE the AA grid.
+
+    Camera composition only (03-06 human preference) -- no game object
+    moves. ``view`` per cmd.get_view(): view[0:9] = row-major world->cam
+    rotation R, view[9:12] = origin, view[12:14] clip front/rear,
+    view[15:] flag block; this rewrites ONLY rows 0/1 of R. Fail-soft:
+    an empty/distributed scene keeps the plain zoom view.
+    """
+    view = list(cmd.get_view())
+    atoms = geometry.extract_game_atoms()
+    lig_name = registry['molecules'][0]['ligand'][0]
+    lig = [a for a in atoms
+           if a['side'] == 'lig' and a['object'] == lig_name]
+    grid = [a for a in atoms if a['side'] == 'aa']
+    if not lig or not grid:
+        return
+
+    def centroid(rows):
+        return (sum(a['x'] for a in rows) / len(rows),
+                sum(a['y'] for a in rows) / len(rows),
+                sum(a['z'] for a in rows) / len(rows))
+
+    def cam_x(p):   # screen-x of a world point, R row 0 . (p - origin)
+        return (view[0] * (p[0] - view[9])
+                + view[1] * (p[1] - view[10])
+                + view[2] * (p[2] - view[11]))
+
+    def cam_y(p):   # screen-y (up) of a world point, R row 1
+        return (view[3] * (p[0] - view[9])
+                + view[4] * (p[1] - view[10])
+                + view[5] * (p[2] - view[11]))
+
+    lpt, gpt = centroid(lig), centroid(grid)
+    sx = cam_x(lpt) - cam_x(gpt)
+    sy = cam_y(lpt) - cam_y(gpt)
+    h = math.hypot(sx, sy)
+    if h < 1.0e-8:      # grid<->ligand axis along the sight line: no roll
+        return
+    phi = math.atan2(-sx, sy)           # roll: ligand->up, centered-x
+    c, s = math.cos(phi), math.sin(phi)
+    r0 = list(view[0:3])
+    r1 = list(view[3:6])
+    for i in range(3):
+        view[0 + i] = c * r0[i] + s * r1[i]
+        view[3 + i] = -s * r0[i] + c * r1[i]
+    cmd.set_view(view)
 
 
 def start_game(setup=None, seed=42, candidates=None):
@@ -83,6 +141,7 @@ def start_game(setup=None, seed=42, candidates=None):
     wiz = GameWizard(payload, registry, 0, 0)
     wiz.activate(replace=(1 if isinstance(prior, GameWizard) else 0))
     cmd.zoom('segi %s' % placement.SENTINEL_SEGI, buffer=5.0)
+    _frame_ligand_above_grid(registry)
     slots = sum(len(mol['slots']) for mol in registry['molecules'])
     print('AA-match %s: game started -- %d molecule(s), %d amino-acid '
           'slot(s), seed %d (cleaned %d prior game object(s)).'

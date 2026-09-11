@@ -230,9 +230,33 @@ try:
     REC['scene_radius'] = r_scene
     REC['zoom_camera_dist'] = cam_d
     check('zoom pulled the camera back and frames the scene',
-          view_post != pre_view and cam_d >= r_scene,
-          'camera dist %.2f >= scene radius %.2f (view changed: %s)'
-          % (cam_d, r_scene, view_post != pre_view))
+           view_post != pre_view and cam_d >= r_scene,
+           'camera dist %.2f >= scene radius %.2f (view changed: %s)'
+           % (cam_d, r_scene, view_post != pre_view))
+
+    # -- 03-06: ligand composes ABOVE the grid at start (deterministic
+    # view-matrix assert -- no rendering). Camera-space screen coords
+    # of a world point: R rows 0/1 of get_view . (p - origin). --------
+    _lig_name = wiz1._registry['molecules'][0]['ligand'][0]
+    _lig = [a for a in atoms
+            if a['side'] == 'lig' and a['object'] == _lig_name]
+    _grid = [a for a in atoms if a['side'] == 'aa']
+
+    def _cam_xy(rows):
+        px = sum(a['x'] for a in rows) / len(rows) - view_post[9]
+        py = sum(a['y'] for a in rows) / len(rows) - view_post[10]
+        pz = sum(a['z'] for a in rows) / len(rows) - view_post[11]
+        return (view_post[0] * px + view_post[1] * py + view_post[2] * pz,
+                view_post[3] * px + view_post[4] * py + view_post[5] * pz)
+    _lx, _ly = _cam_xy(_lig)
+    _gx, _gy = _cam_xy(_grid)
+    check('active ligand composes above the grid (camera-space y)',
+           _ly > _gy,
+           'ligand cam-y %.3f > grid cam-y %.3f' % (_ly, _gy))
+    check('ligand and grid screen-aligned (camera roll composed)',
+           abs(_lx - _gx) <= max(1.0e-6, r_scene * 0.01),
+           'cam-x delta %.4f within 1%% of scene radius %.2f'
+           % (abs(_lx - _gx), r_scene))
 
     # -- 03-06 fix: multi-molecule scope notice in the panel ----------
     panel_texts = [e[1] for e in panel]

@@ -21,7 +21,9 @@ PART 1  start: run_plugin_gui() returns the live GameWizard and it is
         hard-coded); the 03-06 fix-pass asserts live here -- uniform
         AA representations (every slot object reads the sticks bit
         ONLY), the zoom-to-frame (view changed and the camera sits
-        outside the scene bounding sphere), and the multi-molecule
+        outside the scene bounding sphere), the 03-07 depth
+        composition (ligand in front of the grid layer, per-atom
+        non-occlusion on its own grid), and the multi-molecule
         scope notice in the panel (2-molecule defaults).
 PART 2  restore-table spot check: a scripted pick (the 03-04 recipe:
         cmd.select('sele', '<slot object> and name CA') ->
@@ -234,22 +236,25 @@ try:
            'camera dist %.2f >= scene radius %.2f (view changed: %s)'
            % (cam_d, r_scene, view_post != pre_view))
 
-    # -- 03-06: ligand composes ABOVE the grid at start (deterministic
-    # view-matrix assert -- no rendering). Camera-space screen coords
-    # of a world point: R rows 0/1 of get_view . (p - origin). --------
+    # -- 03-06/03-07: ligand composes ABOVE and IN FRONT OF the grid at
+    # start (deterministic view-matrix asserts -- no rendering).
+    # Camera-space coords of a world point: R rows of get_view .
+    # (p - origin); cam-z is distance from the camera, so "in front"
+    # reads as the SMALLER cam-z. --------------------------------------
     _lig_name = wiz1._registry['molecules'][0]['ligand'][0]
     _lig = [a for a in atoms
             if a['side'] == 'lig' and a['object'] == _lig_name]
     _grid = [a for a in atoms if a['side'] == 'aa']
 
-    def _cam_xy(rows):
+    def _cam_xyz(rows):
         px = sum(a['x'] for a in rows) / len(rows) - view_post[9]
         py = sum(a['y'] for a in rows) / len(rows) - view_post[10]
         pz = sum(a['z'] for a in rows) / len(rows) - view_post[11]
         return (view_post[0] * px + view_post[1] * py + view_post[2] * pz,
-                view_post[3] * px + view_post[4] * py + view_post[5] * pz)
-    _lx, _ly = _cam_xy(_lig)
-    _gx, _gy = _cam_xy(_grid)
+                view_post[3] * px + view_post[4] * py + view_post[5] * pz,
+                view_post[6] * px + view_post[7] * py + view_post[8] * pz)
+    _lx, _ly, _lz = _cam_xyz(_lig)
+    _gx, _gy, _gz = _cam_xyz(_grid)
     check('active ligand composes above the grid (camera-space y)',
            _ly > _gy,
            'ligand cam-y %.3f > grid cam-y %.3f' % (_ly, _gy))
@@ -257,6 +262,24 @@ try:
            abs(_lx - _gx) <= max(1.0e-6, r_scene * 0.01),
            'cam-x delta %.4f within 1%% of scene radius %.2f'
            % (abs(_lx - _gx), r_scene))
+    # 03-07: depth composition -- the ligand is NEARER the viewer than
+    # the grid layer (eyes -> ligand -> grid, never occluded).
+    check('active ligand sits in front of the grid centroid (depth)',
+           _lz < _gz,
+           'ligand cam-z %.3f < grid cam-z %.3f (smaller = nearer)'
+           % (_lz, _gz))
+    _slot_objects = set(e[0] for e in
+                        wiz1._registry['molecules'][0]['slots'].values())
+    _own_grid = [a for a in atoms
+                 if a['side'] == 'aa' and a['object'] in _slot_objects]
+    _own_z = min(
+        view_post[6] * (a['x'] - view_post[9])
+        + view_post[7] * (a['y'] - view_post[10])
+        + view_post[8] * (a['z'] - view_post[11]) for a in _own_grid)
+    check('active ligand clears its OWN grid layer (non-occlusion)',
+           _lz < _own_z,
+           'ligand cam-z %.3f in front of nearest own-grid atom %.3f '
+           '(lead %.3f A)' % (_lz, _own_z, _own_z - _lz))
 
     # -- 03-06 fix: multi-molecule scope notice in the panel ----------
     panel_texts = [e[1] for e in panel]

@@ -43,6 +43,19 @@ from any state to a playable game:
    scale, or what falls inside the zoomed frame, and the wizard's
    nudge math re-reads cmd.get_view() per press so a rolled start
    view needs no movement-side change.
+7. Pitch the camera about its screen-x axis through the ACTIVE ligand's
+   centroid so the ligand composes clearly IN FRONT of its own AA-grid
+   layer (03-07 human requirement: from the eye outward it must read
+   eyes -> ligand -> grid, never occluded). The generator places the
+   ligand floating ~5 Angstrom in front of its grid's CENTER, so a
+   face-on start view buries it inside the grid layer; the pitch tips
+   the grid layer back (its far side recedes; the ligand stays put as
+   the pivot) which creates the depth cue. The angle is chosen
+   deterministically per scene: the largest pitch (capped) that still
+   keeps every atom of the active grid at least _PITCH_MIN_GAP
+   Angstrom BEHIND the ligand centroid, or no pitch when that is
+   infeasible (fail-soft: the rolled view remains, which was already
+   centroid-in-front on all generated layouts). Camera-only as above.
 
 Engine state (payload / registry / GameState) lives module-side in
 ``aamatch.engine`` -- the wizard requires it live, which start_game
@@ -64,6 +77,15 @@ from pymol import cmd
 
 from . import __version__, engine, geometry, placement, setup_state
 from .wizard import GameWizard
+
+# 03-07 depth-composition design constants (see step 7 above):
+# the pitch is the largest angle up to _PITCH_MAX_DEG that keeps every
+# atom of the active molecule's grid at least _PITCH_MIN_GAP Angstrom
+# behind the ligand centroid; both were sized on the seed-42 probe
+# (ligand floats ~5.3 Angstrom in front of its grid center; theta limit
+# for a 2 Angstrom gap was 31.7 deg, so 25 deg is comfortably inside).
+_PITCH_MAX_DEG = 25.0
+_PITCH_MIN_GAP = 2.0
 
 
 def _frame_ligand_above_grid(registry):
@@ -115,6 +137,87 @@ def _frame_ligand_above_grid(registry):
     cmd.set_view(view)
 
 
+def _pitch_ligand_in_front(registry):
+    """Tip the camera so the active ligand reads clearly IN FRONT of
+    its own AA-grid layer (03-07 human requirement).
+
+    Rotation about the camera's screen-x axis (get_view row 0) through
+    the active ligand's centroid -- CAMERA ONLY, no game object moves;
+    the pivot keeps the ligand's own cam-space coordinates (hence the
+    03-06 above-grid roll composition and its x-alignment) untouched.
+    Screen-x is never affected by an x-axis pitch, so the roll's
+    asserts survive verbatim. The sign is picked so the grid side of
+    the ligand RECEDES (deepens); atoms on the ligand's far side then
+    approach, so the angle is the largest one (capped at
+    _PITCH_MAX_DEG) that still leaves every atom of the ACTIVE
+    molecule's grid at least _PITCH_MIN_GAP behind the ligand
+    centroid. Molecule-1's grid sits below the ligand on screen (the
+    03-06 roll stacks the two molecules vertically) and only ever
+    recedes further under this sign. Fail-soft: an empty/degenerate
+    scene or an infeasible gap keeps the rolled view (all generated
+    layouts already start centroid-in-front).
+    """
+    view = list(cmd.get_view())
+    atoms = geometry.extract_game_atoms()
+    molecule = registry['molecules'][0]
+    lig_name = molecule['ligand'][0]
+    lig = [a for a in atoms
+           if a['side'] == 'lig' and a['object'] == lig_name]
+    slot_objects = set(entry[0] for entry in molecule['slots'].values())
+    grid = [a for a in atoms
+            if a['side'] == 'aa' and a['object'] in slot_objects]
+    if not lig or not grid:
+        return
+
+    def cam(p):     # cam-space coords under the CURRENT view
+        dx, dy, dz = p[0] - view[9], p[1] - view[10], p[2] - view[11]
+        return (view[0] * dx + view[1] * dy + view[2] * dz,
+                view[3] * dx + view[4] * dy + view[5] * dz,
+                view[6] * dx + view[7] * dy + view[8] * dz)
+
+    cpt = (sum(a['x'] for a in lig) / len(lig),
+           sum(a['y'] for a in lig) / len(lig),
+           sum(a['z'] for a in lig) / len(lig))
+    cx, cy, cz = cam(cpt)
+
+    g_rows = [cam((a['x'], a['y'], a['z'])) for a in grid]
+    gy_cen = sum(p[1] for p in g_rows) / len(g_rows)
+    side = -1.0 if gy_cen <= cy else 1.0     # which side the grid is on
+
+    # theta limit: atoms OPPOSING the grid side approach the ligand
+    # plane under the pitch; keep them _PITCH_MIN_GAP behind.
+    limit = math.radians(_PITCH_MAX_DEG)
+    for px, py, pz in g_rows:
+        y_rel = py - cy
+        if y_rel * side >= 0.0:
+            continue            # grid side: recedes under the pitch
+        depth = pz - cz
+        if depth <= _PITCH_MIN_GAP:
+            return              # cannot guarantee the gap: keep roll
+        limit = min(limit, math.atan2(depth - _PITCH_MIN_GAP,
+                                      abs(y_rel)))
+    if limit < math.radians(0.5):
+        return                  # effect below visual noise
+
+    alpha = side * limit        # sin(alpha) matches the grid side
+    c, s = math.cos(alpha), math.sin(alpha)
+    r1 = list(view[3:6])
+    r2 = list(view[6:9])
+    for i in range(3):
+        view[3 + i] = c * r1[i] - s * r2[i]
+        view[6 + i] = s * r1[i] + c * r2[i]
+    # re-anchor the view origin so the ligand pivot is invariant:
+    # o' = o + R_old^T . (c_cam - Rx^T . c_cam), Rx the cam-space
+    # rotation (r1/r2 still hold the OLD rows -- row 0 is pitch-invariant)
+    rx_c = (cx, c * cy + s * cz, -s * cy + c * cz)
+    delta = (cx - rx_c[0], cy - rx_c[1], cz - rx_c[2])
+    for i in range(3):
+        view[9 + i] += (view[0 + i] * delta[0]
+                        + r1[i] * delta[1]
+                        + r2[i] * delta[2])
+    cmd.set_view(view)
+
+
 def start_game(setup=None, seed=42, candidates=None):
     """One call: fresh/cleaned scene -> materialized game -> active
     GameWizard. Returns the LIVE wizard instance (smokes assert on its
@@ -142,6 +245,7 @@ def start_game(setup=None, seed=42, candidates=None):
     wiz.activate(replace=(1 if isinstance(prior, GameWizard) else 0))
     cmd.zoom('segi %s' % placement.SENTINEL_SEGI, buffer=5.0)
     _frame_ligand_above_grid(registry)
+    _pitch_ligand_in_front(registry)
     slots = sum(len(mol['slots']) for mol in registry['molecules'])
     print('AA-match %s: game started -- %d molecule(s), %d amino-acid '
           'slot(s), seed %d (cleaned %d prior game object(s)).'

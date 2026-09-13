@@ -114,10 +114,24 @@ Plans:
   3. [HUMAN] Reset restores defaults; Randomize produces a valid random configuration; Save Setup / Load Setup round-trip the versioned setup file. (SETUP-07)
   4. [HUMAN] Generate and export writes a shareable, versioned game file; Cleanup removes only game-generated objects (sentinel/prefix rules) and restores the original scene; Start generates the configured game and drops the player into playable wizard gameplay. (SETUP-08, SETUP-09, SETUP-10)
 **Research notes**: PITFALLS topic *setup-GUI* — first GUI architectural decision (PITFALL 4: modeless `show()`, module-level singleton, Qt imports via `pymol.Qt` only; grep gates). Export format reuses the Phase-1 versioned-format discipline; Import-side round-trip completes in Phase 7 (PERSIST-02). Cleanup button wired to Phase-2 sentinel conventions (PITFALL 13).
-**Plans**: TBD
+**Plans**: 15 plans
 
 Plans:
-- [ ] 04-01: (TBD)
+- [ ] 04-01-PLAN.md — offscreen-Qt headless probe (research Q1): settles the T1b widget-construction tier for every later plan
+- [ ] 04-02-PLAN.md — pure setup_form helpers: build_state fatal pre-checks, usable_randomized_state fix-up, manifest_sets (TDD)
+- [ ] 04-03-PLAN.md — pure game_file core: GAME_VERSION gate, make/parse container, ligand_files base64 codec (TDD)
+- [ ] 04-04-PLAN.md — ligand_content threading (engine/placement/gamestart) + SMOKE-10 uploaded-flow plumbing proof
+- [ ] 04-05-PLAN.md — setup_window Qt-tier shell (modeless singleton, open_window) + menu rewire + deliberate test evolution (skeleton contract, SCANNED_MODULES, SMOKE-08 re-point)
+- [ ] 04-06-PLAN.md — pure game_file upload helpers: split/supply-cap/read/row-build/validate (TDD)
+- [ ] 04-07-PLAN.md — window form: source selector, dropdown, spinboxes, mode group, 7 checkboxes, collect/apply round-trip
+- [ ] 04-08-PLAN.md — cmd-tier upload.py extraction pipeline + SMOKE-12 (parity + multi-record SDF + MOL2 probe)
+- [ ] 04-09-PLAN.md — SETUP-07 buttons: Reset, Randomize, Save Setup, Load Setup (+ shared _guard)
+- [ ] 04-10-PLAN.md — upload ingestion handler (single-select, session slot, upload_ready plumbing)
+- [ ] 04-11-PLAN.md — Cleanup handler (GameWizard pop-first, prefix-only deletion)
+- [ ] 04-12-PLAN.md — Generate-and-export handler (game container write, seed policy, _last_export)
+- [ ] 04-13-PLAN.md — Start handler (build_state pre-checks before cleanup, seed policy, thin start_game seam)
+- [ ] 04-14-PLAN.md — [HUMAN] checkpoint A: ROADMAP criteria 1-3 (modeless window, form, setup-file round-trip)
+- [ ] 04-15-PLAN.md — [HUMAN] checkpoint B: ROADMAP criterion 4 (export/cleanup/start) + upload E2E + extension confirms
 
 ### Phase 5: Game Status Tab & Start Sequence
 **Goal**: Starting a game feels like a game: the start sequence stores state and builds representations, the Game status tab takes over with live status, a 3-2-1 countdown starts play, and Hint works.
@@ -224,7 +238,7 @@ Lifted from PITFALLS.md "Pitfall-to-Phase Mapping" (topic names → this roadmap
 | 1. Bootstrap & Pure Foundation | 9/9 | Complete | 2026-09-06 |
 | 2. Headless Game Engine | 16/16 | Complete (verified 2026-09-07 — 02-VERIFICATION.md passed 5/5) | 2026-09-07 |
 | 3. Wizard Gameplay Loop | 0/7 | Not started | - |
-| 4. Qt Setup Window | 0/TBD | Not started | - |
+| 4. Qt Setup Window | 0/15 | Not started | - |
 | 5. Game Status Tab & Start Sequence | 0/TBD | Not started | - |
 | 6. Scoring Lifecycle & Endgame | 0/TBD | Not started | - |
 | 7. Checkpoint & Game-File Persistence | 0/TBD | Not started | - |

@@ -23,8 +23,11 @@ PART 1  start: run_plugin_gui() returns the live GameWizard and it is
         ONLY), the zoom-to-frame (view changed and the camera sits
         outside the scene bounding sphere), the 03-07 depth
         composition (ligand in front of the grid layer, per-atom
-        non-occlusion on its own grid), and the multi-molecule
-        scope notice in the panel (2-molecule defaults).
+        non-occlusion on its own grid, and the 03-07 blank-frame
+        regression fit assert -- every game atom inside the framed
+        frustum + clip slab after the full composition), and the
+        multi-molecule scope notice in the panel (2-molecule
+        defaults).
 PART 2  restore-table spot check: a scripted pick (the 03-04 recipe:
         cmd.select('sele', '<slot object> and name CA') ->
         do_select('sele')) routes to a slot identity and recolors the
@@ -280,6 +283,68 @@ try:
            _lz < _own_z,
            'ligand cam-z %.3f in front of nearest own-grid atom %.3f '
            '(lead %.3f A)' % (_lz, _own_z, _own_z - _lz))
+
+    # -- 03-07 REGRESSION (blank start view): the WHOLE scene must sit
+    # inside the framed view after the full start composition. TRUE
+    # render map (pymolwiki Get_View, verified on this build: view
+    # [12:15] reads exactly the selection centroid after a zoom):
+    #   T(p) = R . (p - view[12:15]) + view[9:12]   (camera at cam-space
+    #   origin looking down -z; view[9:12] = rotation origin in CAMERA
+    #   coords; view[12:15] = rotation origin in WORLD coords;
+    #   view[15]/[16] = front/rear clip distances from the camera).
+    # Visibility criterion (both must hold for EVERY game atom):
+    #   depth/slab : -view[16] + 2.0 <= T_z <= -view[15] - 2.0
+    #                (2 Angstrom margin inside the clip slab; a stock
+    #                zoom(buffer=5) leaves ~30 Angstrom of slab slack)
+    #   lateral    : max(|T_x|, |T_y|) <= 0.90 * tan(fov/2) * (-T_z)
+    #                (perspective frustum at the atom's OWN depth; the
+    #                VERTICAL fov is applied to BOTH axes -- strictly
+    #                conservative on any landscape viewport, 640x480
+    #                here; 0.90 = atoms must sit 10% INSIDE the frame,
+    #                not at its edge).
+    # Regression teeth: the pre-fix ordering (zoom BEFORE roll/pitch --
+    # the pitch wrote its pivot re-anchor into the camera-space origin
+    # field view[9:12] across a ~180 A camera lever arm) put ALL 359 of
+    # 359 seed-42 game atoms OUTSIDE this frame (headless probe tmp/
+    # probe_0308_reframe.py: worst lateral 88.5 A vs 24.6 A allowed --
+    # the human's "1st frame is blank" report). The fix runs ONE final
+    # cmd.zoom AFTER all orientation changes: zoom is a pure dolly/
+    # re-aim (R untouched -- probe: rotation element delta exactly 0.0)
+    # so every composition assert above survives, while the origin
+    # fields and clip slab are re-derived from the pitched R. Relative
+    # camera-space depths are translation-invariant, so the depth
+    # asserts above need no re-ordering.
+    _fov_tan = math.tan(math.radians(
+        float(cmd.get('field_of_view'))) / 2.0)
+    _front, _rear = float(view_post[15]), float(view_post[16])
+    _unframed = []
+    _worst = (0.0, '?', 0.0, 0.0)   # (lat/bound, object, lat, bound)
+    for _a in atoms:
+        _dx = _a['x'] - view_post[12]
+        _dy = _a['y'] - view_post[13]
+        _dz = _a['z'] - view_post[14]
+        _tx = (view_post[0] * _dx + view_post[1] * _dy
+               + view_post[2] * _dz + view_post[9])
+        _ty = (view_post[3] * _dx + view_post[4] * _dy
+               + view_post[5] * _dz + view_post[10])
+        _tz = (view_post[6] * _dx + view_post[7] * _dy
+               + view_post[8] * _dz + view_post[11])
+        _depth = -_tz
+        _bound = 0.90 * _fov_tan * _depth
+        _ok = (_depth > 1.0e-9 and max(abs(_tx), abs(_ty)) <= _bound
+               and -_rear + 2.0 <= _tz <= -_front - 2.0)
+        if not _ok:
+            _unframed.append('%s/%s' % (_a['object'], _a['name']))
+        if _depth > 1.0e-9:
+            _lat = max(abs(_tx), abs(_ty))
+            if _lat / _bound > _worst[0]:
+                _worst = (_lat / _bound, _a['object'], _lat, _bound)
+    check('every game atom framed after full composition',
+          not _unframed,
+          'worst %s lateral %.2f vs bound %.2f (%.0f%% of frame); '
+          'unframed %d/%d %s'
+          % (_worst[1], _worst[2], _worst[3], _worst[0] * 100.0,
+             len(_unframed), len(atoms), _unframed[:4]))
 
     # -- 03-06 fix: multi-molecule scope notice in the panel ----------
     panel_texts = [e[1] for e in panel]

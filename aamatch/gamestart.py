@@ -31,19 +31,13 @@ from any state to a playable game:
       beneath the game and auto-resumes after Done (stack-native
       lifecycle, 03-RESEARCH-wizard-interaction sec. 1.2/2.3). On a fresh
       PyMOL (empty stack, prior is None) this degenerates to a plain push.
-5. Zoom the camera to frame the WHOLE game (grids + all ligands) with a
-   small spatial margin (03-06 field report: PyMOL's fresh camera sat
-   zoomed-in on the ligand and the player could not see the grid). The
-   zoom selection is the game sentinel ('segi AAM') -- every game atom
-   carries it, so no long name list and no user object can ever match.
-6. Roll the camera about its forward axis so the ACTIVE ligand (the
+5. Roll the camera about its forward axis so the ACTIVE ligand (the
    one Confirm scores) composes ABOVE the AA grid on screen (03-06
    human preference). CAMERA COMPOSITION ONLY -- the game geometry is
-   generator-owned and never moved; roll does not change distance,
-   scale, or what falls inside the zoomed frame, and the wizard's
-   nudge math re-reads cmd.get_view() per press so a rolled start
-   view needs no movement-side change.
-7. Pitch the camera about its screen-x axis through the ACTIVE ligand's
+   generator-owned and never moved; the wizard's nudge math re-reads
+   cmd.get_view() per press so a rolled start view needs no
+   movement-side change.
+6. Pitch the camera about its screen-x axis through the ACTIVE ligand's
    centroid so the ligand composes clearly IN FRONT of its own AA-grid
    layer (03-07 human requirement: from the eye outward it must read
    eyes -> ligand -> grid, never occluded). The generator places the
@@ -56,6 +50,29 @@ from any state to a playable game:
    Angstrom BEHIND the ligand centroid, or no pitch when that is
    infeasible (fail-soft: the rolled view remains, which was already
    centroid-in-front on all generated layouts). Camera-only as above.
+7. Zoom the camera to frame the WHOLE game (grids + all ligands) with a
+   small spatial margin -- LAST, after ALL orientation changes (03-06
+   field report: PyMOL's fresh camera sat zoomed-in on the ligand and
+   the player could not see the grid; 03-07 REGRESSION LAW below). The
+   zoom selection is the game sentinel ('segi AAM') -- every game atom
+   carries it, so no long name list and no user object can ever match.
+   cmd.zoom is a pure dolly/re-aim: it preserves the rotation matrix
+   exactly (headless probe: element delta 0.0) and therefore the roll/
+   pitch compositions and every relative camera-space depth, while it
+   re-derives the origin fields and clip slab from the current R.
+
+   03-07 REGRESSION LAW (blank start view): an earlier build zoomed
+   FIRST (step 7 before 5/6). The pitch then rewrote view[9:12] --
+   the rotation origin RELATIVE TO THE CAMERA in camera coords
+   (pymolwiki Get_View layout: 0:9 R, 9:12 origin-in-cam, 12:15 origin
+   in world, 15/16 front/rear clip distances, 17 ortho) -- through a
+   ~180 Angstrom lever arm (the camera-to-origin offset), shifting the
+   whole scene ~76 Angstrom out of the framed frustum (probe: all 359
+   seed-42 game atoms outside; human report "1st frame is blank").
+   Zooming after composition is mandatory whenever the composition
+   writes view fields itself: zoom re-derives 9:12/12:15/15:16 from
+   the selection and the CURRENT rotation, so the pitched orientation
+   and depth order survive unchanged inside a guaranteed frame.
 
 Engine state (payload / registry / GameState) lives module-side in
 ``aamatch.engine`` -- the wizard requires it live, which start_game
@@ -156,6 +173,15 @@ def _pitch_ligand_in_front(registry):
     recedes further under this sign. Fail-soft: an empty/degenerate
     scene or an infeasible gap keeps the rolled view (all generated
     layouts already start centroid-in-front).
+
+    NOTE (03-07 regression law, module docstring step 7): all angle/
+    gap math below is DIFFERENCE-based, so it stays exact regardless
+    of view-origin conventions; but the pivot write-back touches
+    view[9:12] -- camera-SPACE origin, lever-armed by the ~180
+    Angstrom camera distance -- which necessarily shifts the framed
+    frustum. start_game therefore runs this function BEFORE the final
+    framing zoom, which re-derives the origin/clip fields; the view
+    leaving this function is intermediate state, never rendered.
     """
     view = list(cmd.get_view())
     atoms = geometry.extract_game_atoms()
@@ -243,9 +269,14 @@ def start_game(setup=None, seed=42, candidates=None):
     prior = cmd.get_wizard()
     wiz = GameWizard(payload, registry, 0, 0)
     wiz.activate(replace=(1 if isinstance(prior, GameWizard) else 0))
-    cmd.zoom('segi %s' % placement.SENTINEL_SEGI, buffer=5.0)
+    # ALL orientation changes FIRST (roll then pitch), ONE final
+    # framing zoom LAST -- see the module docstring's 03-07 regression
+    # law: zoom-then-compose threw the scene out of the frame (blank
+    # start view); zoom-last keeps R (hence both compositions and all
+    # relative camera-space depths) and re-derives origin + clip slab.
     _frame_ligand_above_grid(registry)
     _pitch_ligand_in_front(registry)
+    cmd.zoom('segi %s' % placement.SENTINEL_SEGI, buffer=5.0)
     slots = sum(len(mol['slots']) for mol in registry['molecules'])
     print('AA-match %s: game started -- %d molecule(s), %d amino-acid '
           'slot(s), seed %d (cleaned %d prior game object(s)).'

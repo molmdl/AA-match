@@ -21,16 +21,21 @@ PART 1  start: run_plugin_gui() returns the live GameWizard and it is
         hard-coded); the 03-06 fix-pass asserts live here -- uniform
         AA representations (every slot object reads the sticks bit
         ONLY), the zoom-to-frame (view changed and the camera sits
-        outside the scene bounding sphere), the 03-07 depth
-        composition -- GEOMETRY-side (gamestart translates the ligand
-        in WORLD space in front of its own grid layer; the retired
-        camera-only pitch is gone): ligand in front of the grid
-        centroid, per-atom non-occlusion on its own grid with a >= 5 A
-        viewer-relative lead, sentinel integrity after the translate,
-        and the 03-07 blank-frame regression fit assert -- every game
-        atom inside the framed frustum + clip slab after the full
-        composition -- and the multi-molecule scope notice in the
-        panel (2-molecule defaults).
+        outside the ACTIVE molecule's bounding sphere -- 03-07 human
+        decision 2026-09-10: frame ONLY the active molecule's grid +
+        ligand so the view matches the panel's "molecule 1 of 2"
+        notice), the 03-07 depth composition -- GEOMETRY-side
+        (gamestart translates the ligand in WORLD space in front of
+        its own grid layer; the retired camera-only pitch is gone):
+        ligand in front of the grid centroid, per-atom non-occlusion
+        on its own grid with a >= 5 A viewer-relative lead, sentinel
+        integrity after the translate, the 03-07 blank-frame
+        regression fit assert -- every ACTIVE-molecule atom inside the
+        framed frustum + clip slab after the full composition -- the
+        INACTIVE-molecule centroid OUTSIDE that frame (documents the
+        active-only framing intent mechanically), and the
+        multi-molecule scope notice in the panel (2-molecule
+        defaults).
 PART 2  restore-table spot check: a scripted pick (the 03-04 recipe:
         cmd.select('sele', '<slot object> and name CA') ->
         do_select('sele')) routes to a slot identity and recolors the
@@ -226,31 +231,43 @@ try:
           'non-uniform: %s (the old split was neutral 49 vs charged '
           '2176)' % reps_bad)
 
-    # -- 03-06 fix: zoom-to-frame the whole game ----------------------
+    # -- 03-07 fix: zoom-to-frame the ACTIVE molecule only ------------
+    # 03-07 human decision 2026-09-10 ("zooming to only the AA grid of
+    # current active mol"): gamestart's final zoom names the ACTIVE
+    # molecule's objects (slot objects + ligand, from the registry) --
+    # the inactive molecule stays in the scene as context, out of the
+    # initial frame. All composition asserts below are computed on the
+    # ACTIVE molecule's atoms.
     view_post = list(cmd.get_view())
     atoms = geometry.extract_game_atoms()
-    cx = sum(a['x'] for a in atoms) / len(atoms)
-    cy = sum(a['y'] for a in atoms) / len(atoms)
-    cz = sum(a['z'] for a in atoms) / len(atoms)
+    _lig_name = wiz1._registry['molecules'][0]['ligand'][0]
+    _slot_objects = set(e[0] for e in
+                        wiz1._registry['molecules'][0]['slots'].values())
+    _active_objects = _slot_objects | {_lig_name}
+    _active = [a for a in atoms if a['object'] in _active_objects]
+    _inactive = [a for a in atoms if a['object'] not in _active_objects]
+    cx = sum(a['x'] for a in _active) / len(_active)
+    cy = sum(a['y'] for a in _active) / len(_active)
+    cz = sum(a['z'] for a in _active) / len(_active)
     r_scene = max(math.sqrt((a['x'] - cx) ** 2 + (a['y'] - cy) ** 2
-                            + (a['z'] - cz) ** 2) for a in atoms)
+                            + (a['z'] - cz) ** 2) for a in _active)
     cam_d = -float(view_post[11])    # viewer distance behind the origin
     REC['scene_radius'] = r_scene
     REC['zoom_camera_dist'] = cam_d
-    check('zoom pulled the camera back and frames the scene',
+    check('zoom pulled the camera back and frames the ACTIVE molecule',
            view_post != pre_view and cam_d >= r_scene,
-           'camera dist %.2f >= scene radius %.2f (view changed: %s)'
-           % (cam_d, r_scene, view_post != pre_view))
+           'camera dist %.2f >= active-molecule radius %.2f (view '
+           'changed: %s)' % (cam_d, r_scene, view_post != pre_view))
 
-    # -- 03-06/03-07: ligand composes ABOVE and IN FRONT OF the grid at
-    # start (deterministic view-matrix asserts -- no rendering).
-    # Camera-space coords of a world point: R rows of get_view .
-    # (p - origin); cam-z is distance from the camera, so "in front"
-    # reads as the SMALLER cam-z. --------------------------------------
-    _lig_name = wiz1._registry['molecules'][0]['ligand'][0]
+    # -- 03-06/03-07: ligand composes ABOVE and IN FRONT OF its own
+    # grid at start (deterministic view-matrix asserts -- no rendering;
+    # ACTIVE molecule only). Camera-space coords of a world point: R
+    # rows of get_view . (p - origin); cam-z grows toward the camera
+    # (sign law proven by the fit theorem below). --------------------
     _lig = [a for a in atoms
             if a['side'] == 'lig' and a['object'] == _lig_name]
-    _grid = [a for a in atoms if a['side'] == 'aa']
+    _grid = [a for a in atoms
+             if a['side'] == 'aa' and a['object'] in _slot_objects]
 
     def _cam_xyz(rows):
         px = sum(a['x'] for a in rows) / len(rows) - view_post[9]
@@ -285,14 +302,10 @@ try:
            _lz > _gz,
            'ligand cam-z %.3f > grid cam-z %.3f (larger = nearer)'
            % (_lz, _gz))
-    _slot_objects = set(e[0] for e in
-                        wiz1._registry['molecules'][0]['slots'].values())
-    _own_grid = [a for a in atoms
-                 if a['side'] == 'aa' and a['object'] in _slot_objects]
     _own_z = max(
         view_post[6] * (a['x'] - view_post[9])
         + view_post[7] * (a['y'] - view_post[10])
-        + view_post[8] * (a['z'] - view_post[11]) for a in _own_grid)
+        + view_post[8] * (a['z'] - view_post[11]) for a in _grid)
     _LEAD_MIN = 5.0
     _lead = _lz - _own_z
     check('active ligand leads its OWN grid layer by >= 5 A (geometry offset)',
@@ -311,8 +324,11 @@ try:
                for (s, b) in _lig_tags),
            '%d ligand atoms, tags %s' % (len(_lig_tags), _lig_tags[:2]))
 
-    # -- 03-07 REGRESSION (blank start view): the WHOLE scene must sit
-    # inside the framed view after the full start composition. TRUE
+    # -- 03-07 REGRESSION (blank start view): the whole ACTIVE molecule
+    # must sit inside the framed view after the full start composition
+    # (zoom now targets the active molecule's objects only -- 03-07
+    # human decision 2026-09-10; the inactive molecule is asserted
+    # OUTSIDE this frame below). TRUE
     # render map (pymolwiki Get_View, verified on this build: view
     # [12:15] reads exactly the selection centroid after a zoom):
     #   T(p) = R . (p - view[12:15]) + view[9:12]   (camera at cam-space
@@ -344,12 +360,15 @@ try:
     _fov_tan = math.tan(math.radians(
         float(cmd.get('field_of_view'))) / 2.0)
     _front, _rear = float(view_post[15]), float(view_post[16])
-    _unframed = []
-    _worst = (0.0, '?', 0.0, 0.0)   # (lat/bound, object, lat, bound)
-    for _a in atoms:
-        _dx = _a['x'] - view_post[12]
-        _dy = _a['y'] - view_post[13]
-        _dz = _a['z'] - view_post[14]
+
+    def _T_in_frame(p):
+        """One world point through the render map -> (framed?, T_x,
+        T_y, T_z, lateral bound). Same visibility criterion as the fit
+        loop: inside the perspective frustum at the point's own depth
+        AND inside the clip slab with a 2 A margin."""
+        _dx = p[0] - view_post[12]
+        _dy = p[1] - view_post[13]
+        _dz = p[2] - view_post[14]
         _tx = (view_post[0] * _dx + view_post[1] * _dy
                + view_post[2] * _dz + view_post[9])
         _ty = (view_post[3] * _dx + view_post[4] * _dy
@@ -360,18 +379,47 @@ try:
         _bound = 0.90 * _fov_tan * _depth
         _ok = (_depth > 1.0e-9 and max(abs(_tx), abs(_ty)) <= _bound
                and -_rear + 2.0 <= _tz <= -_front - 2.0)
+        return (_ok, _tx, _ty, _tz, _bound)
+
+    _unframed = []
+    _worst = (0.0, '?', 0.0, 0.0)   # (lat/bound, object, lat, bound)
+    for _a in _active:
+        _ok, _tx, _ty, _tz, _bound = _T_in_frame(
+            (_a['x'], _a['y'], _a['z']))
         if not _ok:
             _unframed.append('%s/%s' % (_a['object'], _a['name']))
-        if _depth > 1.0e-9:
+        if -_tz > 1.0e-9:
             _lat = max(abs(_tx), abs(_ty))
             if _lat / _bound > _worst[0]:
                 _worst = (_lat / _bound, _a['object'], _lat, _bound)
-    check('every game atom framed after full composition',
+    check('every ACTIVE-molecule atom framed after full composition',
           not _unframed,
           'worst %s lateral %.2f vs bound %.2f (%.0f%% of frame); '
           'unframed %d/%d %s'
           % (_worst[1], _worst[2], _worst[3], _worst[0] * 100.0,
-             len(_unframed), len(atoms), _unframed[:4]))
+             len(_unframed), len(_active), _unframed[:4]))
+
+    # -- 03-07 NEW: the INACTIVE molecule must fall OUTSIDE the active
+    # frame -- documents the human decision mechanically ("zooming to
+    # only the AA grid of current active mol"): the start view names
+    # the active molecule's objects only, so the other molecule is
+    # scene context, not initial content. Same visibility criterion as
+    # the fit assert, applied to the inactive molecule's centroid:
+    # framed (inside frustum AND clip slab) must read False.
+    _i_ok = False
+    _i_lat = _i_bound = 0.0
+    _i_tz = 0.0
+    if _inactive:
+        _ic = (sum(a['x'] for a in _inactive) / len(_inactive),
+               sum(a['y'] for a in _inactive) / len(_inactive),
+               sum(a['z'] for a in _inactive) / len(_inactive))
+        _i_ok, _i_tx, _i_ty, _i_tz, _i_bound = _T_in_frame(_ic)
+        _i_lat = max(abs(_i_tx), abs(_i_ty))
+    check('INACTIVE molecule centroid OUTSIDE the active frame',
+          bool(_inactive) and not _i_ok,
+          'inactive centroid lateral %.2f vs bound %.2f, T_z %.2f vs '
+          'slab [%.1f, %.1f] (framed reads %s -- must be False)'
+          % (_i_lat, _i_bound, _i_tz, -_rear, -_front, _i_ok))
 
     # -- 03-06 fix: multi-molecule scope notice in the panel ----------
     panel_texts = [e[1] for e in panel]

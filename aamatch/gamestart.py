@@ -58,17 +58,34 @@ from any state to a playable game:
    score / confirm / reset_to_grid) all read LIVE geometry, so nothing
    assumes the ligand sits at its grid's center.
 6. Roll the camera about its forward axis so the ACTIVE ligand (the
-   one Confirm scores) composes ABOVE the AA grid on screen (03-06
+   one Confirm scores) composes ABOVE its own AA grid on screen (03-06
    human preference). CAMERA COMPOSITION ONLY -- only R rows 0/1 are
    rewritten, so the step-5 front-offset (a pure cam-z matter) is
    invariant under it; the wizard's nudge math re-reads cmd.get_view()
-   per press so a rolled start view needs no movement-side change.
-7. Zoom the camera to frame the WHOLE game (grids + all ligands) with a
+   per press so a rolled start view needs no movement-side change. The
+   roll reads ONLY the active molecule's grid (its registry slot
+   objects) for the composition centroid, so an out-of-frame inactive
+   molecule can never tilt the start composition.
+7. Zoom the camera to frame ONLY the ACTIVE molecule -- molecule 0 in
+   the Phase-3 loop: its grid slot objects PLUS its ligand object,
+   identified by name from the materialize registry output -- with a
    small spatial margin -- LAST, after ALL composition (03-06 field
    report: PyMOL's fresh camera sat zoomed-in on the ligand and the
-   player could not see the grid; 03-07 REGRESSION LAW below). The
-   zoom selection is the game sentinel ('segi AAM') -- every game atom
-   carries it, so no long name list and no user object can ever match.
+   player could not see the grid; 03-07 REGRESSION LAW below). 03-07
+   HUMAN DECISION (2026-09-10): "why not zooming to only the AA grid
+   of current active mol to avoid confusion" -- the start view must
+   frame the active molecule's grid + ligand ONLY, so the on-screen
+   frame matches the panel's "Only molecule 1 of 2 counts and is
+   clickable" notice. The INACTIVE molecule stays in the scene,
+   untouched, out of the initial frame as context -- its clicks are
+   no-ops by design (build_slot_map scopes the loop to molecule 0;
+   pick behavior unchanged). The retired whole-scene sentinel
+   selection ('segi AAM' -- every game atom carries it, so it always
+   pulled BOTH molecules into frame) is replaced by the registry's own
+   name list, which no user object can ever match either. PHASE 5/6
+   NOTE: re-framing when the active molecule advances is a
+   start-sequence / scoring-lifecycle concern (Phases 5/6), NOT
+   gamestart's -- gamestart composes level-0 molecule-0 starts only.
    cmd.zoom is a pure dolly/re-aim: it preserves the rotation matrix
    exactly (headless probe: element delta 0.0) and therefore the roll
    composition and every relative camera-space depth established by
@@ -123,21 +140,48 @@ from .wizard import GameWizard
 _FRONT_LEAD = 5.0
 
 
+def _active_molecule_selection(registry):
+    """Selection expression naming EVERY object of the ACTIVE molecule
+    (molecule 0 in the Phase-3 loop): its ligand object plus all of its
+    grid slot objects, taken from the materialize registry output.
+
+    Used as the final zoom target (03-07 human decision 2026-09-10:
+    frame only the active molecule's grid + ligand -- module docstring
+    step 7). Name-based (``_aam_*`` reserved prefix): a user object can
+    never match, and -- unlike the retired whole-scene ``segi AAM``
+    selection -- the INACTIVE molecule's objects are not named, so they
+    stay out of the initial frame.
+    """
+    molecule = registry['molecules'][0]
+    names = [molecule['ligand'][0]]
+    names.extend(entry[0] for entry in molecule['slots'].values())
+    return ' or '.join(names)
+
+
 def _frame_ligand_above_grid(registry):
-    """Roll the camera so molecule 0's ligand sits ABOVE the AA grid.
+    """Roll the camera so molecule 0's ligand sits ABOVE its own AA
+    grid.
 
     Camera composition only (03-06 human preference) -- no game object
     moves. ``view`` per cmd.get_view(): view[0:9] = row-major world->cam
     rotation R, view[9:12] = origin, view[12:14] clip front/rear,
     view[15:] flag block; this rewrites ONLY rows 0/1 of R. Fail-soft:
     an empty/distributed scene keeps the plain zoom view.
+
+    The composition centroid is the ACTIVE molecule's grid ONLY (its
+    registry slot objects): with the start view framing just that
+    molecule (03-07 human decision), an out-of-frame inactive grid
+    must never pull the roll alignment off the framed grid.
     """
     view = list(cmd.get_view())
     atoms = geometry.extract_game_atoms()
-    lig_name = registry['molecules'][0]['ligand'][0]
+    molecule = registry['molecules'][0]
+    lig_name = molecule['ligand'][0]
     lig = [a for a in atoms
            if a['side'] == 'lig' and a['object'] == lig_name]
-    grid = [a for a in atoms if a['side'] == 'aa']
+    slot_objects = set(entry[0] for entry in molecule['slots'].values())
+    grid = [a for a in atoms
+            if a['side'] == 'aa' and a['object'] in slot_objects]
     if not lig or not grid:
         return
 
@@ -268,14 +312,16 @@ def start_game(setup=None, seed=42, candidates=None):
     # decision: geometry-side offset replaces the camera-only pitch,
     # whose pivot regressed the frame blank and which still read
     # behind; see _move_ligand_in_front) -- then the 03-06 above-grid
-    # camera roll, then ONE final framing zoom LAST (regression law:
-    # zoom-then-compose threw the whole scene out of frame; zoom-last
-    # is a pure dolly/re-aim that preserves R -- both compositions and
-    # every relative camera-space depth -- while re-deriving origin +
-    # clip slab).
+    # camera roll, then ONE final framing zoom LAST over the ACTIVE
+    # molecule's objects only (03-07 human decision 2026-09-10: frame
+    # the current molecule's grid + ligand so the view matches the
+    # "molecule 1 of 2" panel notice; regression law: zoom-then-compose
+    # threw the whole scene out of frame; zoom-last is a pure dolly/
+    # re-aim that preserves R -- both compositions and every relative
+    # camera-space depth -- while re-deriving origin + clip slab).
     _move_ligand_in_front(registry)
     _frame_ligand_above_grid(registry)
-    cmd.zoom('segi %s' % placement.SENTINEL_SEGI, buffer=5.0)
+    cmd.zoom(_active_molecule_selection(registry), buffer=5.0)
     wiz.activate(replace=(1 if isinstance(prior, GameWizard) else 0))
     slots = sum(len(mol['slots']) for mol in registry['molecules'])
     print('AA-match %s: game started -- %d molecule(s), %d amino-acid '

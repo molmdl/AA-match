@@ -22,12 +22,15 @@ PART 1  start: run_plugin_gui() returns the live GameWizard and it is
         AA representations (every slot object reads the sticks bit
         ONLY), the zoom-to-frame (view changed and the camera sits
         outside the scene bounding sphere), the 03-07 depth
-        composition (ligand in front of the grid layer, per-atom
-        non-occlusion on its own grid, and the 03-07 blank-frame
-        regression fit assert -- every game atom inside the framed
-        frustum + clip slab after the full composition), and the
-        multi-molecule scope notice in the panel (2-molecule
-        defaults).
+        composition -- GEOMETRY-side (gamestart translates the ligand
+        in WORLD space in front of its own grid layer; the retired
+        camera-only pitch is gone): ligand in front of the grid
+        centroid, per-atom non-occlusion on its own grid with a >= 5 A
+        viewer-relative lead, sentinel integrity after the translate,
+        and the 03-07 blank-frame regression fit assert -- every game
+        atom inside the framed frustum + clip slab after the full
+        composition -- and the multi-molecule scope notice in the
+        panel (2-molecule defaults).
 PART 2  restore-table spot check: a scripted pick (the 03-04 recipe:
         cmd.select('sele', '<slot object> and name CA') ->
         do_select('sele')) routes to a slot identity and recolors the
@@ -265,24 +268,48 @@ try:
            abs(_lx - _gx) <= max(1.0e-6, r_scene * 0.01),
            'cam-x delta %.4f within 1%% of scene radius %.2f'
            % (abs(_lx - _gx), r_scene))
-    # 03-07: depth composition -- the ligand is NEARER the viewer than
-    # the grid layer (eyes -> ligand -> grid, never occluded).
+    # 03-07: depth composition -- now GEOMETRY-side (gamestart moved
+    # the ligand in world space toward the camera; the camera-only
+    # pitch is retired). DEPTH SIGN, proven by the fit theorem below:
+    # the camera looks down cam-space -z and every visible atom lands
+    # in [-view[16], -view[15]], so NEARER THE VIEWER == LARGER row-2
+    # projection (the constant origin shift between this cam() frame
+    # and the T() render frame cancels out of every comparison here).
+    # The PRE-FIX asserts codified the INVERSE comparison (and used
+    # min = the FARTHEST own-grid atom) -- they passed while the
+    # ligand genuinely sat BEHIND the whole grid layer, exactly the
+    # human's "placement still behind" field report. The geometry
+    # offset moves the ligand to the larger-side of the full grid
+    # axis spread: eyes -> ligand -> grid, never occluded.
     check('active ligand sits in front of the grid centroid (depth)',
-           _lz < _gz,
-           'ligand cam-z %.3f < grid cam-z %.3f (smaller = nearer)'
+           _lz > _gz,
+           'ligand cam-z %.3f > grid cam-z %.3f (larger = nearer)'
            % (_lz, _gz))
     _slot_objects = set(e[0] for e in
                         wiz1._registry['molecules'][0]['slots'].values())
     _own_grid = [a for a in atoms
                  if a['side'] == 'aa' and a['object'] in _slot_objects]
-    _own_z = min(
+    _own_z = max(
         view_post[6] * (a['x'] - view_post[9])
         + view_post[7] * (a['y'] - view_post[10])
         + view_post[8] * (a['z'] - view_post[11]) for a in _own_grid)
-    check('active ligand clears its OWN grid layer (non-occlusion)',
-           _lz < _own_z,
-           'ligand cam-z %.3f in front of nearest own-grid atom %.3f '
-           '(lead %.3f A)' % (_lz, _own_z, _own_z - _lz))
+    _LEAD_MIN = 5.0
+    _lead = _lz - _own_z
+    check('active ligand leads its OWN grid layer by >= 5 A (geometry offset)',
+           _lead >= _LEAD_MIN - 1.0e-4,
+           'ligand cam-z %.3f vs nearest own-grid atom %.3f -> lead '
+           '%.3f A (floor %.4f, pose-tolerance 1e-4)'
+           % (_lz, _own_z, _lead, _LEAD_MIN - 1.0e-4))
+    # the world-space translate must not disturb the ligand sentinels
+    _lig_tags = []
+    cmd.iterate(_lig_name, 'stored.append((segi, b))',
+                space={'stored': _lig_tags})
+    check('ligand sentinels intact after geometry offset (segi AAM, b -999)',
+           bool(_lig_tags) and all(
+               s == placement.SENTINEL_SEGI
+               and abs(b - placement.SENTINEL_B) < 1.0e-3
+               for (s, b) in _lig_tags),
+           '%d ligand atoms, tags %s' % (len(_lig_tags), _lig_tags[:2]))
 
     # -- 03-07 REGRESSION (blank start view): the WHOLE scene must sit
     # inside the framed view after the full start composition. TRUE

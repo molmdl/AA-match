@@ -31,48 +31,67 @@ from any state to a playable game:
       beneath the game and auto-resumes after Done (stack-native
       lifecycle, 03-RESEARCH-wizard-interaction sec. 1.2/2.3). On a fresh
       PyMOL (empty stack, prior is None) this degenerates to a plain push.
-5. Roll the camera about its forward axis so the ACTIVE ligand (the
+5. Move the ACTIVE molecule's ligand to the FRONT of its own AA-grid
+   layer -- IN WORLD SPACE (03-07 human decision 2026-09-10: the human
+   explicitly rejected further camera surgery -- "move the molecule"
+   -- after the camera-only pitch regressed the start frame to blank
+   once and still read ligand-BEHIND-grid). cmd.translate along the
+   current view's scene-to-camera direction until the ligand centroid
+   leads EVERY atom of its own grid by at least _FRONT_LEAD Angstrom
+   (visible parallax, no occlusion ambiguity). CAMERA-DEPTH SIGN LAW,
+   verified against this build's own render map (smoke 08's fit
+   theorem: T(p) = R . (p - view[12:15]) + view[9:12]; the camera
+   looks down -z and every visible atom lands in
+   [-view[16], -view[15]]): NEARER THE VIEWER READS AS THE LARGER
+   cam-z. The retired camera-only pitch codified the INVERSE reading
+   (it pushed the GRID nearer on screen -- the human's "placement
+   still behind") and its pivot write-back of view[9:12] across a
+   ~180 Angstrom camera lever arm had already thrown the whole scene
+   out of frame once (both mechanisms in the regression law below).
+   A world translate is immune to all of it: no view field is ever
+   written, sentinels (segi/b) are untouched, and every later camera
+   op preserves what this step bought -- the roll rewrites R rows 0/1
+   only (cam-z invariant), the final zoom preserves R exactly. The
+   offset is GAMESTART-ONLY composition: Phase-2 materialize semantics
+   are untouched, so SMOKE-03/04 (which run materialize directly,
+   never start_game) are unaffected; engine ops (place / detect /
+   score / confirm / reset_to_grid) all read LIVE geometry, so nothing
+   assumes the ligand sits at its grid's center.
+6. Roll the camera about its forward axis so the ACTIVE ligand (the
    one Confirm scores) composes ABOVE the AA grid on screen (03-06
-   human preference). CAMERA COMPOSITION ONLY -- the game geometry is
-   generator-owned and never moved; the wizard's nudge math re-reads
-   cmd.get_view() per press so a rolled start view needs no
-   movement-side change.
-6. Pitch the camera about its screen-x axis through the ACTIVE ligand's
-   centroid so the ligand composes clearly IN FRONT of its own AA-grid
-   layer (03-07 human requirement: from the eye outward it must read
-   eyes -> ligand -> grid, never occluded). The generator places the
-   ligand floating ~5 Angstrom in front of its grid's CENTER, so a
-   face-on start view buries it inside the grid layer; the pitch tips
-   the grid layer back (its far side recedes; the ligand stays put as
-   the pivot) which creates the depth cue. The angle is chosen
-   deterministically per scene: the largest pitch (capped) that still
-   keeps every atom of the active grid at least _PITCH_MIN_GAP
-   Angstrom BEHIND the ligand centroid, or no pitch when that is
-   infeasible (fail-soft: the rolled view remains, which was already
-   centroid-in-front on all generated layouts). Camera-only as above.
+   human preference). CAMERA COMPOSITION ONLY -- only R rows 0/1 are
+   rewritten, so the step-5 front-offset (a pure cam-z matter) is
+   invariant under it; the wizard's nudge math re-reads cmd.get_view()
+   per press so a rolled start view needs no movement-side change.
 7. Zoom the camera to frame the WHOLE game (grids + all ligands) with a
-   small spatial margin -- LAST, after ALL orientation changes (03-06
-   field report: PyMOL's fresh camera sat zoomed-in on the ligand and
-   the player could not see the grid; 03-07 REGRESSION LAW below). The
+   small spatial margin -- LAST, after ALL composition (03-06 field
+   report: PyMOL's fresh camera sat zoomed-in on the ligand and the
+   player could not see the grid; 03-07 REGRESSION LAW below). The
    zoom selection is the game sentinel ('segi AAM') -- every game atom
    carries it, so no long name list and no user object can ever match.
    cmd.zoom is a pure dolly/re-aim: it preserves the rotation matrix
-   exactly (headless probe: element delta 0.0) and therefore the roll/
-   pitch compositions and every relative camera-space depth, while it
-   re-derives the origin fields and clip slab from the current R.
+   exactly (headless probe: element delta 0.0) and therefore the roll
+   composition and every relative camera-space depth established by
+   step 5, while it re-derives the origin fields and clip slab from
+   the current R.
 
    03-07 REGRESSION LAW (blank start view): an earlier build zoomed
-   FIRST (step 7 before 5/6). The pitch then rewrote view[9:12] --
-   the rotation origin RELATIVE TO THE CAMERA in camera coords
-   (pymolwiki Get_View layout: 0:9 R, 9:12 origin-in-cam, 12:15 origin
-   in world, 15/16 front/rear clip distances, 17 ortho) -- through a
-   ~180 Angstrom lever arm (the camera-to-origin offset), shifting the
-   whole scene ~76 Angstrom out of the framed frustum (probe: all 359
-   seed-42 game atoms outside; human report "1st frame is blank").
-   Zooming after composition is mandatory whenever the composition
-   writes view fields itself: zoom re-derives 9:12/12:15/15:16 from
-   the selection and the CURRENT rotation, so the pitched orientation
-   and depth order survive unchanged inside a guaranteed frame.
+   FIRST (step 7 before 5/6) and the then-current camera pitch rewrote
+   view[9:12] -- the rotation origin RELATIVE TO THE CAMERA in camera
+   coords (pymolwiki Get_View layout: 0:9 R, 9:12 origin-in-cam, 12:15
+   origin in world, 15/16 front/rear clip distances, 17 ortho) --
+   through a ~180 Angstrom lever arm (the camera-to-origin offset),
+   shifting the whole scene ~76 Angstrom out of the framed frustum
+   (probe: all 359 seed-42 game atoms outside; human report "1st frame
+   is blank"). Zooming after composition is mandatory whenever the
+   composition writes view fields itself: zoom re-derives
+   9:12/12:15/15:16 from the selection and the CURRENT rotation. The
+   geometry-side front-offset writes NO view field, but the law is
+   kept binding for all future camera composition. DECISION LAW
+   (03-07 human, 2026-09-10): scene composition prefers geometry-side
+   moves over camera-field surgery -- the camera-only pitch regressed
+   to a blank frame once and its inverted depth reading never read
+   in-front to a human eye.
 
 Engine state (payload / registry / GameState) lives module-side in
 ``aamatch.engine`` -- the wizard requires it live, which start_game
@@ -95,14 +114,13 @@ from pymol import cmd
 from . import __version__, engine, geometry, placement, setup_state
 from .wizard import GameWizard
 
-# 03-07 depth-composition design constants (see step 7 above):
-# the pitch is the largest angle up to _PITCH_MAX_DEG that keeps every
-# atom of the active molecule's grid at least _PITCH_MIN_GAP Angstrom
-# behind the ligand centroid; both were sized on the seed-42 probe
-# (ligand floats ~5.3 Angstrom in front of its grid center; theta limit
-# for a 2 Angstrom gap was 31.7 deg, so 25 deg is comfortably inside).
-_PITCH_MAX_DEG = 25.0
-_PITCH_MIN_GAP = 2.0
+# 03-07 front-composition constant (see the module docstring step 5):
+# the ligand centroid must lead EVERY atom of its own grid by at least
+# this many Angstrom along the current view's depth axis -- generous
+# (the generator floats the ligand ~5.3 Angstrom off its grid center as
+# raw material; a full 5 Angstrom of viewer-relative lead on top gives
+# unambiguous parallax with zero occlusion).
+_FRONT_LEAD = 5.0
 
 
 def _frame_ligand_above_grid(registry):
@@ -154,34 +172,42 @@ def _frame_ligand_above_grid(registry):
     cmd.set_view(view)
 
 
-def _pitch_ligand_in_front(registry):
-    """Tip the camera so the active ligand reads clearly IN FRONT of
-    its own AA-grid layer (03-07 human requirement).
+def _move_ligand_in_front(registry):
+    """Translate molecule 0's ligand toward the CAMERA in WORLD space so
+    its centroid leads every atom of its own AA grid by at least
+    _FRONT_LEAD (03-07 human decision 2026-09-10).
 
-    Rotation about the camera's screen-x axis (get_view row 0) through
-    the active ligand's centroid -- CAMERA ONLY, no game object moves;
-    the pivot keeps the ligand's own cam-space coordinates (hence the
-    03-06 above-grid roll composition and its x-alignment) untouched.
-    Screen-x is never affected by an x-axis pitch, so the roll's
-    asserts survive verbatim. The sign is picked so the grid side of
-    the ligand RECEDES (deepens); atoms on the ligand's far side then
-    approach, so the angle is the largest one (capped at
-    _PITCH_MAX_DEG) that still leaves every atom of the ACTIVE
-    molecule's grid at least _PITCH_MIN_GAP behind the ligand
-    centroid. Molecule-1's grid sits below the ligand on screen (the
-    03-06 roll stacks the two molecules vertically) and only ever
-    recedes further under this sign. Fail-soft: an empty/degenerate
-    scene or an infeasible gap keeps the rolled view (all generated
-    layouts already start centroid-in-front).
+    GEOMETRY-SIDE composition (decision law, module docstring step 5):
+    replaces the retired camera-only pitch, which regressed the start
+    frame to blank once (pivot write-back of view[9:12] across the
+    ~180 Angstrom camera lever arm) and read ligand-BEHIND-grid to the
+    human eye. DEPTH SIGN LAW on this build (verified against smoke
+    08's fit theorem -- T(p) = R . (p - view[12:15]) + view[9:12],
+    camera looking down -z, visible slab T_z in [-view[16], -view[15]]):
+    NEARER THE VIEWER == LARGER cam-z; the scene-to-camera world
+    direction is R^T . (0,0,1), which for a row-major world->camera R
+    is exactly R's ROW 2 (view[6:9]) -- the same convention
+    wizard_core.view_camera_to_world proves per nudge keypress
+    (view_camera_to_world(view, (0,0,1)) == (view[6], view[7],
+    view[8])). A translate along that unit row adds its length to the
+    cam-z of every translated point and nothing else.
 
-    NOTE (03-07 regression law, module docstring step 7): all angle/
-    gap math below is DIFFERENCE-based, so it stays exact regardless
-    of view-origin conventions; but the pivot write-back touches
-    view[9:12] -- camera-SPACE origin, lever-armed by the ~180
-    Angstrom camera distance -- which necessarily shifts the framed
-    frustum. start_game therefore runs this function BEFORE the final
-    framing zoom, which re-derives the origin/clip fields; the view
-    leaving this function is intermediate state, never rendered.
+    cmd.translate preserves atom identity and every per-atom tag --
+    the AAM/Z sentinels (segi, b=-999) are untouched -- and it is
+    viewer-relative: the needed distance is recomputed per call from
+    the LIVE view and geometry. Idempotent by construction: a ligand
+    already in front by _FRONT_LEAD is a no-op (need <= 0), and every
+    start runs it on FRESH materialize output, so restarts reproduce
+    the same composed scene. Fail-soft: an empty/second-generation
+    degenerate scene (no ligand rows or no grid rows) just keeps the
+    materialized geometry (the roll + final zoom still run).
+
+    Invariance under the later steps: the offset adds nothing to cam-x
+    or cam-y (translate along a depth row is orthogonal to both screen
+    rows), so the step-6 roll reads the same screen separation either
+    way; the roll rewrites R rows 0/1 only, so the bought cam-z lead
+    survives; the final zoom preserves R exactly. Phase-2 materialize
+    NEVER sees this offset -- it is gamestart-only composition.
     """
     view = list(cmd.get_view())
     atoms = geometry.extract_game_atoms()
@@ -195,53 +221,21 @@ def _pitch_ligand_in_front(registry):
     if not lig or not grid:
         return
 
-    def cam(p):     # cam-space coords under the CURRENT view
-        dx, dy, dz = p[0] - view[9], p[1] - view[10], p[2] - view[11]
-        return (view[0] * dx + view[1] * dy + view[2] * dz,
-                view[3] * dx + view[4] * dy + view[5] * dz,
-                view[6] * dx + view[7] * dy + view[8] * dz)
+    def cam_z(p):   # depth-axis projection; LARGER == nearer camera
+        return (view[6] * (p[0] - view[9])
+                + view[7] * (p[1] - view[10])
+                + view[8] * (p[2] - view[11]))
 
     cpt = (sum(a['x'] for a in lig) / len(lig),
            sum(a['y'] for a in lig) / len(lig),
            sum(a['z'] for a in lig) / len(lig))
-    cx, cy, cz = cam(cpt)
-
-    g_rows = [cam((a['x'], a['y'], a['z'])) for a in grid]
-    gy_cen = sum(p[1] for p in g_rows) / len(g_rows)
-    side = -1.0 if gy_cen <= cy else 1.0     # which side the grid is on
-
-    # theta limit: atoms OPPOSING the grid side approach the ligand
-    # plane under the pitch; keep them _PITCH_MIN_GAP behind.
-    limit = math.radians(_PITCH_MAX_DEG)
-    for px, py, pz in g_rows:
-        y_rel = py - cy
-        if y_rel * side >= 0.0:
-            continue            # grid side: recedes under the pitch
-        depth = pz - cz
-        if depth <= _PITCH_MIN_GAP:
-            return              # cannot guarantee the gap: keep roll
-        limit = min(limit, math.atan2(depth - _PITCH_MIN_GAP,
-                                      abs(y_rel)))
-    if limit < math.radians(0.5):
-        return                  # effect below visual noise
-
-    alpha = side * limit        # sin(alpha) matches the grid side
-    c, s = math.cos(alpha), math.sin(alpha)
-    r1 = list(view[3:6])
-    r2 = list(view[6:9])
-    for i in range(3):
-        view[3 + i] = c * r1[i] - s * r2[i]
-        view[6 + i] = s * r1[i] + c * r2[i]
-    # re-anchor the view origin so the ligand pivot is invariant:
-    # o' = o + R_old^T . (c_cam - Rx^T . c_cam), Rx the cam-space
-    # rotation (r1/r2 still hold the OLD rows -- row 0 is pitch-invariant)
-    rx_c = (cx, c * cy + s * cz, -s * cy + c * cz)
-    delta = (cx - rx_c[0], cy - rx_c[1], cz - rx_c[2])
-    for i in range(3):
-        view[9 + i] += (view[0 + i] * delta[0]
-                        + r1[i] * delta[1]
-                        + r2[i] * delta[2])
-    cmd.set_view(view)
+    nearest_grid = max(cam_z((a['x'], a['y'], a['z'])) for a in grid)
+    need = nearest_grid + _FRONT_LEAD - cam_z(cpt)
+    if need <= 0.0:
+        return                  # already in front: idempotent no-op
+    # scene-to-camera world direction = R row 2 (unit, R orthonormal)
+    cmd.translate([need * view[6], need * view[7], need * view[8]],
+                  lig_name, state=1, camera=0)
 
 
 def start_game(setup=None, seed=42, candidates=None):
@@ -268,15 +262,21 @@ def start_game(setup=None, seed=42, candidates=None):
     registry = engine.materialize(payload, 0)
     prior = cmd.get_wizard()
     wiz = GameWizard(payload, registry, 0, 0)
-    wiz.activate(replace=(1 if isinstance(prior, GameWizard) else 0))
-    # ALL orientation changes FIRST (roll then pitch), ONE final
-    # framing zoom LAST -- see the module docstring's 03-07 regression
-    # law: zoom-then-compose threw the scene out of the frame (blank
-    # start view); zoom-last keeps R (hence both compositions and all
-    # relative camera-space depths) and re-derives origin + clip slab.
+    # Compose BEFORE activate (failure must never leave a live wizard
+    # over a half-composed scene): GEOMETRY first -- move the active
+    # ligand in FRONT of its own grid in world space (03-07 human
+    # decision: geometry-side offset replaces the camera-only pitch,
+    # whose pivot regressed the frame blank and which still read
+    # behind; see _move_ligand_in_front) -- then the 03-06 above-grid
+    # camera roll, then ONE final framing zoom LAST (regression law:
+    # zoom-then-compose threw the whole scene out of frame; zoom-last
+    # is a pure dolly/re-aim that preserves R -- both compositions and
+    # every relative camera-space depth -- while re-deriving origin +
+    # clip slab).
+    _move_ligand_in_front(registry)
     _frame_ligand_above_grid(registry)
-    _pitch_ligand_in_front(registry)
     cmd.zoom('segi %s' % placement.SENTINEL_SEGI, buffer=5.0)
+    wiz.activate(replace=(1 if isinstance(prior, GameWizard) else 0))
     slots = sum(len(mol['slots']) for mol in registry['molecules'])
     print('AA-match %s: game started -- %d molecule(s), %d amino-acid '
           'slot(s), seed %d (cleaned %d prior game object(s)).'

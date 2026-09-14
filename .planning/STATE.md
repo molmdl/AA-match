@@ -5,21 +5,21 @@
 See: .planning/PROJECT.md (updated 2026-09-05)
 
 **Core value:** The player can place amino acids onto a small molecule in the PyMOL 3D viewer and the game correctly detects and scores the interactions they form — turning unguided 3D manipulation practice into a scored game.
-**Current focus:** Phase 3 — Wizard Gameplay Loop (plans 03-01…03-06 complete; 03-07 human checkpoint is next, then the phase verifier)
+**Current focus:** Phase 3 — Wizard Gameplay Loop (ALL 7 plans EXECUTED 03-07 APPROVED; phase verifier is next)
 
 ## Current Position
 
-Phase: 3 of 9 (Wizard Gameplay Loop) — IN PROGRESS
-Plan: 6 of 7 complete (03-06 gameplay-loop human checkpoint — **APPROVED** 2026-09-10 both sessions; fix-batch re-test approved 2026-09-11, all 9 items)
-Status: In progress — 614 WSL tests green; SMOKE-03/04/07/08 PASS (SMOKE-07 78 checks incl. PART F, SMOKE-08 31 checks incl. fix + composition asserts); 03-06-SUMMARY.md written
-Last activity: 2026-09-11 — 03-06 FINALIZED: human re-test approved all 9 fix-batch items; ligand-above-grid start framing implemented (camera-only roll, commit 1d48d71); SUMMARY + STATE updated
+Phase: 3 of 9 (Wizard Gameplay Loop) — ALL PLANS EXECUTED (verifier pending)
+Plan: 7 of 7 complete (03-07 restoration + no-helper-visuals + drag diagnostics checkpoint — **APPROVED** 2026-09-15; PLAY-04 [HUMAN+GATE] closed)
+Status: Phase 3 all plans executed — 614 WSL tests green; SMOKE-03/04/07/08 PASS (SMOKE-07 78 checks incl. PART F, SMOKE-08 31 checks incl. fix + composition asserts); 03-07-SUMMARY.md written; ready for the phase verifier
+Last activity: 2026-09-15 — 03-07 FINALIZED: checkpoint APPROVED (no helper visuals; full restoration incl. prior-wizard resume; drag = matrix path PROVEN with detector-visibility probe verdict MATRIX PATH VISIBLE); drag steps 3/4 skipped by human decision; SUMMARY + STATE updated
 
-Progress: [████████░░] 86% of Phase 3 (6/7) · [██░░░░░░░░] 22% of project (2/9 phases — phase 3 six plans done)
+Progress: [██████████] 100% of Phase 3 (7/7 executed) · [██░░░░░░░░] 22% of project (2/9 phases done; phase 3 executed, verifier pending)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 28 (Phase 1: 01-01…01-09; Phase 2: 02-01…02-15; Phase 3: 03-01, 03-02, 03-03, 03-04, 03-05, 03-06)
+- Total plans completed: 29 (Phase 1: 01-01…01-09; Phase 2: 02-01…02-15; Phase 3: 03-01, 03-02, 03-03, 03-04, 03-05, 03-06, 03-07)
 - Average duration: ~11 min (02-03); 6 min (02-04); ~29 min (02-05); 23 min (02-06); 4 min (02-09); 11 min (02-07); 17 min (02-08); ~20 min (02-13); ~27 min (02-11); 16 min (02-14); 29 min (02-15); ~15 min (03-01); ~55 min (03-02); ~14 min (03-03); ~27 min (03-04); ~14 min (03-05)
 - Total execution time: —
 
@@ -29,7 +29,7 @@ Progress: [████████░░] 86% of Phase 3 (6/7) · [██░░
 |-------|-------|-------|----------|
 | 1 | 9/9 ✓ | — | — |
 | 2 | 16/16 ✓ | ~8 min (02-02) + ~25 min (02-01 cont.) + 11 min (02-03) + 6 min (02-04) + 29 min (02-05) + 23 min (02-06) + 4 min (02-09) + 11 min (02-07) + 17 min (02-08) + 45 min (02-12) + ~20 min (02-13) + 16 min (02-14) + 29 min (02-15) | — |
-| 3 | 6/7 | ~15 min (03-01) + ~55 min (03-02) + ~14 min (03-03) + ~27 min (03-04) + ~14 min (03-05) + 2d checkpoint incl. debug detour + fix batch (03-06) | — |
+| 3 | 7/7 ✓ | ~15 min (03-01) + ~55 min (03-02) + ~14 min (03-03) + ~27 min (03-04) + ~14 min (03-05) + 2d checkpoint incl. debug detour + fix batch (03-06) + 4d checkpoint incl. framing chain (03-07) | — |
 
 **Recent Trend:**
 - Last 5 plans: —
@@ -134,6 +134,9 @@ Decisions are logged in PROJECT.md Key Decisions table. Seeded from PROJECT.md a
 - (03-05, restart-identity pattern) Object NAMES are not instance identity across restarts: same-seed same-shape restarts REBUILD the same _aam_* names after cleanup frees them — generation-gone asserts must stamp INSTANCES (b-factor marker band; sentinel b=-999.0 sits outside), never compare name sets.
 - (03-05, Rule-1 deviation record) The Phase-1 placeholder-print skeleton test was replaced by the AST seam contract (test_package_skeleton.py); the smoke-check design fix (instance marker) replaced the plan's name-based "old objects gone" expectation. gamestart.py itself needed ZERO fixes.
 - (03-06, checkpoint APPROVED + recorded laws) Keyboard map for Phase 5: LEFT/RIGHT + ',' '.' + q/w/e/d delivered, UP/DOWN dead by design. msm law: pre 1 / during 0 / post-Done 1 (field-verified). editor_scheme N/A in this build (get_editor_scheme()=1) — 03-07 needs no scheme restore. Display-rebuild LAW: any AA recolor/restore must rebuild the object's display lists (cmd.alter staleness vs cmd.color redraw; headless data equality ≠ on-screen). Cross-molecule scoring guard: Confirm is molecule-scoped. Start composition: zoom-to-frame THEN camera-only roll so the active ligand composes above the grid (generator-owned geometry never moved; wizard nudge re-reads get_view per press so roll needs no movement-side change). Spec gap candidate: menu item should open a setup popup per spec.md 12-21 (gap-closure; Qt window = Phase 4, bioCHEMeleon borrow). PLAY-02 standing scoring check = the H-bond test (plan's generic pi_stacking step-9 was a checklist defect). Debug memory: .planning/debug/phase3-gui-checkpoint-failures.md (6 verdicts, no detector bug).
+- (03-07, checkpoint APPROVED 2026-09-15 — PLAY-04 [HUMAN+GATE] CLOSED) No helper visuals in ANY session (recolor + panel/prompt only); Done-restoration table fully field-verified incl. prior `wizard measurement` auto-resume (stack-native push/pop), msm 1→0 (by design)→1, no pk1/sele/_drag strays, recolors restored, _aam_* objects survive Done. Movement-model verdict CLOSED: gameplay movement = panel buttons + keyboard, baked world-frame coordinates (FROZEN, human 2026-09-15 — native drag NOT needed for gameplay); native whole-object drag = object-MATRIX path PROVEN ('Dragging whole object' echo + genuine rotation matrix on get_object_matrix, checker run 2 IDENTITY-OK False; run 1 ALL-IDENTITY recorded non-conclusive).
+- (03-07, probe verdict) matrix-visibility probe (tmp/, headless, engine seam, seed 42): matrix path VISIBLE — cmd.transform_object(name, [R|t], homogenous=1) BAKES coordinates (iterate_state matrix-applied vs raw: dev 1e-6 Å vs 11.12 Å; detector-view centroid matches R·pose+t exactly; control cmd.translate sanity exact 8 Å shift). Native-drag-style object-matrix moves land in the detector pipeline input → detector-compatible, SAFE — the pre-planned Phase 5/6 guard candidates (pre-Confirm matrix sweep → auto-bake / refuse) NOT opened.
+- (03-07, human decisions) Drag diagnostics steps 3/4 (populated-_drag session; transform_object render-doubling) SKIPPED by explicit human decision (movement already decided; low marginal value; SMOKE-07/08 cover the game-path model). Nudge left/right SCREEN-RELATIVE BY DESIGN — Phase 5/9 help text must say "keys move in your current view direction". Start framing final laws: geometry-side ligand front-offset + frame ONLY the active molecule's grid+ligand + zoom-LAST + camera-field-surgery-avoided (blank start-view regression fixed by re-framing after composition, never clip-plane edits). Framing chain 1d48d71 → 0c13184 → d8e8f7d → 0041e74 → 2a182d7.
 
 ### Pending Todos
 
@@ -153,25 +156,35 @@ Decisions are logged in PROJECT.md Key Decisions table. Seeded from PROJECT.md a
 - **Ligand-above-grid preference RESOLVED**: human preferred the small molecule ABOVE the AA grid at start — implemented as a camera-only roll after zoom-to-frame (gamestart._frame_ligand_above_grid, commit 1d48d71; objects never moved; deterministic SMOKE-08 view-matrix asserts).
 - **Spec correction recorded by the human**: Plugins → AA-match must ultimately open a SETUP POPUP per spec.md lines 12-21 — Phase-3 gap-closure candidate; the full Qt setup window is Phase 4 (UI code borrowable from bioCHEMeleon).
 
+### 03-07 Checkpoint Verdicts (FINAL — human, 2026-09-15)
+
+- **03-07 checkpoint: APPROVED.** Full table in .planning/phases/03-wizard-gameplay-loop/03-07-SUMMARY.md.
+- **PLAY-04 [HUMAN] halves: PASS** — no helper visuals in ANY session (recolor + panel/prompt text only); Done restoration table fully field-verified: prior `wizard measurement` auto-resumes (stack-native push/pop), msm 1 (pre) → 0 (during, by design) → 1 (post), no pk1/sele/_drag strays, recolors restored, `_aam_*` objects survive Done.
+- **PLAY-04 [GATE] half: CLOSED** — spike verdict (RESEARCH-B, commit 3143555) + interactive-drag verdict recorded: native whole-object drag = object-MATRIX path PROVEN (panel echo 'Dragging whole object "_aam_aa06".' + checker run 2 `IDENTITY-OK False` with genuine rotation matrix [0.685537, -0.503814, -0.525557, 7.300527, ...]; run 1 ALL-IDENTITY non-conclusive). Drag steps 3 (populated-_drag) & 4 (transform_object doubling) SKIPPED by explicit human decision (movement already decided; low marginal value; SMOKE-07/08 coverage).
+- **Movement-model verdict (FROZEN, human)**: gameplay movement = panel buttons + keyboard, baked world-frame coordinates; native drag NOT needed for gameplay. Nudge left/right screen-relative BY DESIGN → Phase 5/9 help text: "keys move in your current view direction".
+- **Headless probe verdict: MATRIX PATH VISIBLE** — `cmd.transform_object(name, [R|t], homogenous=1)` bakes coordinates (dev_vs_applied 1e-6 Å vs dev_vs_raw 11.12 Å; detector-view centroid matches R·pose+t exactly at float32 level; control cmd.translate sanity exact) → native drag is detector-compatible, SAFE, no Phase 5/6 guard candidate opened.
+- **Framing saga (5 commits, final form approved)**: 1d48d71 (camera-only roll) → 0c13184 (ligand-in-front depth framing) → d8e8f7d (blank start-view regression fix) → 0041e74 (geometry-side ligand front-offset) → 2a182d7 (active-molecule-only framing). Laws: geometry-side ligand front-offset; active-molecule-only frame; zoom-LAST; camera-field-surgery avoided.
+- CTSH-V + 'parser: no matching files.' console lines: ignorable (prior 03-06 verdicts unchanged).
+
 ### Blockers/Concerns Carried Forward
 
 - **Phase 2 gate DETECT-03: RESOLVED (approved 2026-09-06, provisional pending Phase-8 dataset revisit)** — plans 02-05..02-08 transcribe constants from docs/DETECTION_THRESHOLDS.md row-by-row; the units/atom-typing check passed at approval.
-- ~~Phase 3 spike: movement model~~ — RESOLVED by 03-RESEARCH-movement-spike.md (SMOKE-06): baked-transform movement model frozen + 03-03 implemented it; only the interactive-drag HUMAN checks (spike §6) remain open.
+- ~~Phase 3 spike: movement model~~ — FULLY CLOSED (03-07): spike verdict (RESEARCH-B, commit 3143555) + interactive-drag HUMAN verdict (drag = matrix path, proven) + detector-visibility probe (MATRIX PATH VISIBLE). Gameplay movement frozen on baked-coordinate buttons/keyboard; native drag not a gameplay input.
 - Phase 7 gate: `.pse` matrix round-trip smoke before committing checkpoint design
+- **Phase 5/6 gap candidates: NONE from 03-07.** The native-drag detector-visibility guard was pre-planned only IF the probe returned INVISIBLE; it returned VISIBLE (transform_object bakes coordinates) — guard not opened. q/e camera-z-sign feel = by-design screen-relative movement (help text owned by Phase 5/9).
 
 ## Session Continuity
 
-Last session: 2026-09-11 (03-06 FINALIZED — human re-test approved all 9 fix-batch items; ligand-above-grid framing added; 03-06-SUMMARY.md written)
-Stopped at: 03-06 COMPLETE (6/7). Next: 03-07 human checkpoint, then the phase verifier.
+Last session: 2026-09-15 (03-07 FINALIZED — checkpoint APPROVED: no helper visuals, full Done-restoration incl. prior-wizard resume, drag = matrix path PROVEN + probe VISIBLE; drag steps 3/4 skipped by human decision; SUMMARY written)
+Stopped at: 03-07 COMPLETE (7/7) — Phase 3 ALL PLANS EXECUTED. Next: the phase verifier.
 Resume file: None
 
 ## Next Actions
 
-- **03-07 human checkpoint:** restoration + no-helper-visuals + drag diagnostics — the Plugins → AA-match menu item STARTS A REAL GAME now (defaulted: molecules 2, D 3, unset, seed 42; ligand composes above the grid at start; Phase 4 adds the Qt setup window over the same start_game seam); restart hygiene human-verifiable both ways (Done → menu = replace=0; menu mid-game = replace=1); a user wizard beneath the game auto-resumes after Done (replace=0 push by construction). NO editor_scheme restore needed (N/A in this build).
-- **Phase 3 verifier after 03-07:** 03-06-SUMMARY.md provides the ROADMAP [HUMAN] half of Phase-3 criteria 1-3; arrow-key delivery verdict recorded (LEFT/RIGHT + ',' '.' + q/w/e/d).
+- **Phase 3 verifier (next):** 03-06-SUMMARY.md provides the ROADMAP [HUMAN] half of Phase-3 criteria 1-3; 03-07-SUMMARY.md provides criterion 4's [HUMAN + GATE] half (no helper visuals + restoration table + drag-matrix verdict + probe verdict). Arrow-key delivery verdict recorded (LEFT/RIGHT + ',' '.' + q/w/e/d; UP/DOWN dead by design).
 - **Gap-closure planning:** spec.md lines 12-21 setup popup from the Plugins → AA-match menu item is a recorded Phase-3 gap candidate (full Qt setup window = Phase 4; UI code borrowable from bioCHEMeleon).
-- **Real-mouse delivery remaining open (03-07):** drag feel, q/e camera-z-sign feel, hybrid-drag diagnostics; recolor review CLOSED (03-06); arrow-key verdict recorded; the whole entry path + wizard loop is headlessly proven (SMOKE-07 78 checks + SMOKE-08 31 checks)
-- **Phase 3 spawn notes:** Confirm handler = engine.confirm(...) wrapper; pose scripting/hints must include the explicit baked ring-alignment step (02-14 decision: fragments have no guaranteed orientation; SMOKE-05 is the seed-agnostic reference); Reset = engine.reset_to_grid(); max-grid games are bake-safe (02-15 float32 pose-tolerance fix)
+- **Phase 5/9 help-text note:** nudges are SCREEN-RELATIVE BY DESIGN — help text must state "keys move in your current view direction" (03-07 human verdict).
+- **Phase 4 (Qt setup window) entry seam unchanged:** Plugins → AA-match calls gamestart.start_game (molecules 2, D 3, unset, seed 42; active-molecule-only start view with ligand in front of its grid); the Qt window wires over the SAME one-call seam.
 - **Phase 3/4 heads-up:** tests/test_code_audit.py's PROSE_PIN will demand a deliberate update if any docstring adds/removes a banned-token mention (Gate-C: human re-review by construction)
 - Fixture geometry (benzamide xy-plane pose, acetate tetrahedral methyl) is stable for E2E poses; pose asserts use the 02-15 float32-realizable tolerance (1e-6 floor + per-axis ulp slack); metric-drift asserts use the SMOKE-04 float32 budget (5e-6 A / 3e-4 deg, printed)
 - SMOKE-03 reconciler result: materialized chempy fragments classify 100% against capability atom naming (unclassified_aa_atoms == 0) — _KNOWN_NON_SIDE_CHAIN untouched; the pre-authorized detector.py escape hatch stayed UNUSED

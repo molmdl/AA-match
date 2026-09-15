@@ -6,13 +6,13 @@ Verdict is carried by the printed marker (exit codes cannot carry
 verdicts through the cmd.exe wrapper): grep '=== SMOKE-08 PASS ==='.
 
 Proves the one-call game entry seam (aamatch/gamestart.py:start_game,
-reached through aamatch.run_plugin_gui -- the Plugins-menu function
-called DIRECTLY, which is legal headless: it is a plain function now,
-the addmenuitemqt registration is irrelevant here) end-to-end in REAL
-headless PyMOL, on the frozen Phase-1 DEFAULTS (molecules 2, D 3, mode
-'unset', seed 42):
+called DIRECTLY) end-to-end in REAL headless PyMOL, on the frozen
+Phase-1 DEFAULTS (molecules 2, D 3, mode 'unset', seed 42). 04-05
+re-point: run_plugin_gui now opens the Phase-4 Qt setup window (the
+menu path is SMOKE-11's), so this smoke drives the SEAM directly --
+the window's Start button delegates to the very same function:
 
-PART 1  start: run_plugin_gui() returns the live GameWizard and it is
+PART 1  start: start_game() returns the live GameWizard and it is
         top-of-stack; msm is 0 during play (post-push snapshot kept);
         panel is non-empty with all 3-element entries; the prompt
         carries the click instruction; the scene grew by exactly
@@ -43,7 +43,7 @@ PART 2  restore-table spot check: a scripted pick (the 03-04 recipe:
         pre-smoke snapshot, restores the recolored slot's colors, and
         NEVER deletes the game objects.
 PART 3  restart from an EMPTY wizard stack (the replace=0 path -- PART
-        2's Done emptied the stack): run_plugin_gui() again cleans the
+        2's Done emptied the stack): start_game() again cleans the
         old generation's objects FIRST, leaves exactly one fresh game
         in the scene (count matches the new registry), and the new
         wizard instance is top-of-stack. OLD-GENERATION GONE is proven
@@ -53,7 +53,7 @@ PART 3  restart from an EMPTY wizard stack (the replace=0 path -- PART
         and the marker must read ZERO afterwards.
 PART 4  mid-game restart WITHOUT Done (the replace=1 path, previously
         uncovered -- the restart-hygiene branch): with PART 3's wizard
-        STILL top-of-stack, run_plugin_gui() again pops it (conditional
+        STILL top-of-stack, start_game() again pops it (conditional
         replace=1 inside start_game), so cmd.get_wizard() is the NEWEST
         instance, exactly one generation exists in the scene (same
         instance-marker proof), and msm
@@ -114,7 +114,7 @@ if _ROOT not in sys.path:
 from pymol import cmd  # noqa: E402
 
 import aamatch  # noqa: E402
-from aamatch import geometry, placement, wizard_core  # noqa: E402
+from aamatch import gamestart, geometry, placement, wizard_core  # noqa: E402
 from aamatch.wizard import GameWizard  # noqa: E402
 
 print('SMOKE-ENV pymol: %s' % (cmd.get_version()[0],), flush=True)
@@ -186,11 +186,11 @@ wiz1 = wiz2 = wiz3 = None
 gen1_expected = gen2_expected = gen3_expected = None
 
 # ============================================================
-# PART 1: menu-path start (run_plugin_gui called directly)
+# PART 1: direct-seam start (gamestart.start_game called directly)
 # ============================================================
 try:
-    wiz1 = aamatch.run_plugin_gui()
-    check('run_plugin_gui returns a GameWizard',
+    wiz1 = aamatch.gamestart.start_game()
+    check('start_game returns a GameWizard',
           isinstance(wiz1, GameWizard), 'type=%r' % (type(wiz1),))
     check('wizard is top-of-stack', cmd.get_wizard() is wiz1,
           'get_wizard()=%r' % (cmd.get_wizard(),))
@@ -482,7 +482,7 @@ try:
     gen1_names = _game_objects()
     _stamp(gen1_names)
     stamped3 = _marked_atoms()
-    wiz2 = aamatch.run_plugin_gui()
+    wiz2 = aamatch.gamestart.start_game()
     check('restart (empty stack) activates the NEW wizard',
           cmd.get_wizard() is wiz2 and wiz2 is not wiz1,
           'get_wizard()=%r' % (cmd.get_wizard(),))
@@ -527,7 +527,7 @@ try:
     # hygiene: the old game wizard is popped + cleaned).
     _stamp(gen2_names)
     stamped4 = _marked_atoms()
-    wiz3 = aamatch.run_plugin_gui()
+    wiz3 = aamatch.gamestart.start_game()
     check('replace=1 pops the old GameWizard, newest on top',
           cmd.get_wizard() is wiz3
           and wiz3 is not wiz2 and wiz3 is not wiz1,

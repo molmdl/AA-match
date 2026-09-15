@@ -13,9 +13,13 @@ These tests replicate the PyMOL 2.5.0 plugin-loader contract against
    lets every pure-layer test run with no stubs — PITFALLS.md Pitfall 1,
    research R8.5).
 4. Entry points: ``__init_plugin__``, ``run_plugin_gui``, ``__version__``.
-5. Phase-3 menu launch (plan 03-05): run_plugin_gui lazily imports
-   gamestart and returns start_game()'s live wizard — an AST source
-   contract (executing it needs pymol; SMOKE-08 covers that headlessly).
+5. Phase-4 menu launch (plan 04-05): run_plugin_gui lazily imports
+   setup_window and returns open_window()'s dialog — an AST source
+   contract (executing it needs pymol+Qt; SMOKE-11 covers that
+   headlessly). The 04-05 rewire DELIBERATELY REPLACED the 03-05
+   gamestart-seam contract (03-05-SUMMARY.md:103-109 precedent: the
+   seam MOVED into the window's Start button, the test follows the
+   seam).
 
 Run either way from the repo root:
     python3.6 -m unittest tests.test_package_skeleton -v
@@ -107,15 +111,19 @@ class TestPackageSkeleton(unittest.TestCase):
         self.assertTrue(callable(aamatch.run_plugin_gui))
         self.assertEqual(aamatch.__version__, '0.1.0')
 
-    def test_run_plugin_gui_launches_gamestart_lazily(self):
-        """Phase 3 (plan 03-05): run_plugin_gui's body is exactly the
-        gamestart seam — a RELATIVE import of gamestart INSIDE the
-        function (Gate A2: zero module-level imports) followed by a
+    def test_run_plugin_gui_opens_setup_window_lazily(self):
+        """Phase 4 (plan 04-05): run_plugin_gui's body is exactly the
+        setup-window seam — a RELATIVE import of setup_window INSIDE
+        the function (Gate A2: zero module-level imports) followed by a
         call whose value is RETURNED (smokes assert on the returned
-        live GameWizard). No Qt, no leftover Phase-1 placeholder print.
-        Source-level by design: aamatch/gamestart.py is cmd tier and
-        needs pymol to execute (SMOKE-08 runs this path headlessly);
-        the WSL purity rule is preserved (no sys.modules stubs)."""
+        SetupWindow dialog). No Qt at module level, no leftover Phase-1
+        placeholder print. This is a DELIBERATE contract replacement
+        (03-05-SUMMARY.md:103-109 precedent): the gamestart seam MOVED
+        into the window's Start button, the test follows the seam —
+        it must NOT be worked around. Source-level by design:
+        aamatch/setup_window.py is Qt tier and needs pymol+Qt to
+        execute (SMOKE-11 runs this path headlessly); the WSL purity
+        rule is preserved (no sys.modules stubs)."""
         tree = ast.parse(self.src)
         funcs = [node for node in tree.body
                  if isinstance(node, ast.FunctionDef)
@@ -124,26 +132,26 @@ class TestPackageSkeleton(unittest.TestCase):
         func = funcs[0]
         lazy = [n for n in ast.walk(func)
                 if isinstance(n, ast.ImportFrom) and n.module is None
-                and any(alias.name == 'gamestart' for alias in n.names)]
+                and any(alias.name == 'setup_window' for alias in n.names)]
         self.assertTrue(
             lazy,
-            'run_plugin_gui must carry `from . import gamestart` INSIDE '
-            'its body (lazy import — Gate A2 keeps zero module-level '
-            'imports in aamatch/__init__.py)')
+            'run_plugin_gui must carry `from . import setup_window` '
+            'INSIDE its body (lazy import — Gate A2 keeps zero '
+            'module-level imports in aamatch/__init__.py)')
         returned_calls = [n.value for n in ast.walk(func)
                           if isinstance(n, ast.Return)
                           and n.value is not None
                           and isinstance(n.value, ast.Call)]
         seam = [c for c in returned_calls
                 if isinstance(c.func, ast.Attribute)
-                and c.func.attr == 'start_game'
+                and c.func.attr == 'open_window'
                 and isinstance(c.func.value, ast.Name)
-                and c.func.value.id == 'gamestart']
+                and c.func.value.id == 'setup_window']
         self.assertTrue(
             seam,
-            'run_plugin_gui must `return gamestart.start_game()` — the '
-            'returned GameWizard is the headless caller\'s assertion '
-            'handle (SMOKE-08 checks 1/5)')
+            'run_plugin_gui must `return setup_window.open_window()` '
+            '— the returned SetupWindow dialog is the headless '
+            'caller\'s assertion handle (SMOKE-11 PART B)')
         placeholder = [n for n in ast.walk(func)
                        if isinstance(n, ast.Call)
                        and isinstance(n.func, ast.Name)

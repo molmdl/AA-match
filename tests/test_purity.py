@@ -84,10 +84,12 @@ if REPO_ROOT not in sys.path:
 #                   color bookkeeping; ZERO imports of any kind).
 # Phase 3 (03-02): wizard_text (pure panel/prompt/result text builders;
 #                   imports only .wizard_core movement constants).
+# Phase 4 (04-02): setup_form (pure form-glue: fatal pre-checks, randomize
+#                   fix-up, dropdown rows; imports only .setup_state).
 PURE_MODULES = ['setup_state', 'level_spec', 'persistence', 'backup',
                 'paths', 'vec3', 'spatial', 'manifest', 'capability',
                 'thresholds', 'detector', 'generator', 'game_state',
-                'wizard_core', 'wizard_text']
+                'wizard_core', 'wizard_text', 'setup_form']
 
 # Roots that must NEVER appear in any import of a pure module, in ANY
 # scope (module level or function body -- B7). dataclasses is 3.7+.

@@ -5,22 +5,22 @@
 See: .planning/PROJECT.md (updated 2026-09-05)
 
 **Core value:** The player can place amino acids onto a small molecule in the PyMOL 3D viewer and the game correctly detects and scores the interactions they form — turning unguided 3D manipulation practice into a scored game.
-**Current focus:** Phase 4 — Qt Setup Window (executing; 04-01 done, offscreen T1b tier unlocked)
+**Current focus:** Phase 4 — Qt Setup Window (executing; wave 1: 04-01 + 04-02 done, offscreen T1b tier unlocked)
 
 ## Current Position
 
 Phase: 4 of 9 (Qt Setup Window) — **IN PROGRESS**
-Plan: 1 of 15 complete — 04-01 (offscreen-Qt probe) DONE: research Q1 CLOSED, **Probe verdict: PASS (platform=offscreen)**
-Status: Executing Phase 4 — 614 WSL tests green, SMOKE-01..09 all PASS; T1b headless-widget tier AVAILABLE for plans 04-05..04-13
-Last activity: 2026-09-15 — 04-01 probe: QT_QPA_PLATFORM=offscreen QApplication + QDialog construction + QSpinBox/QCheckBox round-trips PROVEN headless in the conda env (PyQt5 5.12.3 / Qt 5.12.9); first-attempt pass, no fallback
+Plan: 2 of 15 complete — 04-01 (offscreen-Qt probe) + 04-02 (setup_form pure helpers, TDD) DONE
+Status: Executing Phase 4 — 632 WSL tests green (614 baseline + 18 new), SMOKE-01..09 all PASS; T1b headless-widget tier AVAILABLE for plans 04-05..04-13
+Last activity: 2026-09-15 — 04-01 probe: QT_QPA_PLATFORM=offscreen QApplication + QDialog construction + QSpinBox/QCheckBox round-trips PROVEN headless (first-attempt PASS, no fallback); 04-02: setup_form (build_state fatal pre-checks BEFORE scene cleanup, usable_randomized_state trap-kill, manifest_sets; PURE_MODULES = 16)
 
-Progress: [█░░░░░░░░░] 1/15 of Phase 4 · [███░░░░░░░] 33% of project (3/9 phases done; 30/~29+ plans)
+Progress: [█░░░░░░░░░] 2/15 of Phase 4 · [███░░░░░░░] 33% of project (3/9 phases done)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 30 (Phase 1: 01-01…01-09; Phase 2: 02-01…02-15; Phase 3: 03-01…03-07; Phase 4: 04-01)
-- Average duration: ~11 min (02-03); 6 min (02-04); ~29 min (02-05); 23 min (02-06); 4 min (02-09); 11 min (02-07); 17 min (02-08); ~20 min (02-13); ~27 min (02-11); 16 min (02-14); 29 min (02-15); ~15 min (03-01); ~55 min (03-02); ~14 min (03-03); ~27 min (03-04); ~14 min (03-05); ~10 min (04-01)
+- Total plans completed: 31 (Phase 1: 01-01…01-09; Phase 2: 02-01…02-15; Phase 3: 03-01…03-07; Phase 4: 04-01, 04-02)
+- Average duration: ~11 min (02-03); 6 min (02-04); ~29 min (02-05); 23 min (02-06); 4 min (02-09); 11 min (02-07); 17 min (02-08); ~20 min (02-13); ~27 min (02-11); 16 min (02-14); 29 min (02-15); ~15 min (03-01); ~55 min (03-02); ~14 min (03-03); ~27 min (03-04); ~14 min (03-05); ~10 min (04-01); ~8 min (04-02)
 - Total execution time: —
 
 **By Phase:**
@@ -30,7 +30,7 @@ Progress: [█░░░░░░░░░] 1/15 of Phase 4 · [███░░�
 | 1 | 9/9 ✓ | — | — |
 | 2 | 16/16 ✓ | ~8 min (02-02) + ~25 min (02-01 cont.) + 11 min (02-03) + 6 min (02-04) + 29 min (02-05) + 23 min (02-06) + 4 min (02-09) + 11 min (02-07) + 17 min (02-08) + 45 min (02-12) + ~20 min (02-13) + 16 min (02-14) + 29 min (02-15) | — |
 | 3 | 7/7 ✓ | ~15 min (03-01) + ~55 min (03-02) + ~14 min (03-03) + ~27 min (03-04) + ~14 min (03-05) + 2d checkpoint incl. debug detour + fix batch (03-06) + 4d checkpoint incl. framing chain (03-07) | — |
-| 4 | 1/15 | ~10 min (04-01) | — |
+| 4 | 2/15 | ~10 min (04-01) + ~8 min (04-02) | — |
 
 **Recent Trend:**
 - Last 5 plans: —
@@ -135,6 +135,7 @@ Decisions are logged in PROJECT.md Key Decisions table. Seeded from PROJECT.md a
 - (03-05, restart-identity pattern) Object NAMES are not instance identity across restarts: same-seed same-shape restarts REBUILD the same _aam_* names after cleanup frees them — generation-gone asserts must stamp INSTANCES (b-factor marker band; sentinel b=-999.0 sits outside), never compare name sets.
 - (03-05, Rule-1 deviation record) The Phase-1 placeholder-print skeleton test was replaced by the AST seam contract (test_package_skeleton.py); the smoke-check design fix (instance marker) replaced the plan's name-based "old objects gone" expectation. gamestart.py itself needed ZERO fixes.
 - (03-06, checkpoint APPROVED + recorded laws) Keyboard map for Phase 5: LEFT/RIGHT + ',' '.' + q/w/e/d delivered, UP/DOWN dead by design. msm law: pre 1 / during 0 / post-Done 1 (field-verified). editor_scheme N/A in this build (get_editor_scheme()=1) — 03-07 needs no scheme restore. Display-rebuild LAW: any AA recolor/restore must rebuild the object's display lists (cmd.alter staleness vs cmd.color redraw; headless data equality ≠ on-screen). Cross-molecule scoring guard: Confirm is molecule-scoped. Start composition: zoom-to-frame THEN camera-only roll so the active ligand composes above the grid (generator-owned geometry never moved; wizard nudge re-reads get_view per press so roll needs no movement-side change). Spec gap candidate: menu item should open a setup popup per spec.md 12-21 (gap-closure; Qt window = Phase 4, bioCHEMeleon borrow). PLAY-02 standing scoring check = the H-bond test (plan's generic pi_stacking step-9 was a checklist defect). Debug memory: .planning/debug/phase3-gui-checkpoint-failures.md (6 verdicts, no detector bug).
+- (04-02) setup_form.py = the PURE form-glue every Phase-4 Qt button handler calls (PURE_MODULES = 16): build_state adds THREE fatal user-facing refusals (upload-without-ingested-content names Browse; unknown demo_set_id names the id; empty allowed in exclusive/block_exclusive uses the generator's own wording) that fire BEFORE start_game's cleanup-first ordering — the pre-checks live in the PURE layer specifically so a doomed Start can never delete prior game objects. validate_state stays the single validation authority (form layer adds refusals ONLY, never re-validation); the upload_ready non-schema flag is consumed and never passed through (validate_state input = NEW 7-key dict, input non-mutation preserved); empty-allowed check runs on the NORMALIZED state. usable_randomized_state kills the 'demo-%04x' Randomize trap (seeds 0..19 pinned); manifest_sets takes the parsed payload as plain data (no manifest import, no I/O). Refusal messages pinned VERBATIM by tests.
 - (03-07, checkpoint APPROVED 2026-09-15 — PLAY-04 [HUMAN+GATE] CLOSED) No helper visuals in ANY session (recolor + panel/prompt only); Done-restoration table fully field-verified incl. prior `wizard measurement` auto-resume (stack-native push/pop), msm 1→0 (by design)→1, no pk1/sele/_drag strays, recolors restored, _aam_* objects survive Done. Movement-model verdict CLOSED: gameplay movement = panel buttons + keyboard, baked world-frame coordinates (FROZEN, human 2026-09-15 — native drag NOT needed for gameplay); native whole-object drag = object-MATRIX path PROVEN ('Dragging whole object' echo + genuine rotation matrix on get_object_matrix, checker run 2 IDENTITY-OK False; run 1 ALL-IDENTITY recorded non-conclusive).
 - (03-07, probe verdict) matrix-visibility probe (tmp/, headless, engine seam, seed 42): matrix path VISIBLE — cmd.transform_object(name, [R|t], homogenous=1) BAKES coordinates (iterate_state matrix-applied vs raw: dev 1e-6 Å vs 11.12 Å; detector-view centroid matches R·pose+t exactly; control cmd.translate sanity exact 8 Å shift). Native-drag-style object-matrix moves land in the detector pipeline input → detector-compatible, SAFE — the pre-planned Phase 5/6 guard candidates (pre-Confirm matrix sweep → auto-bake / refuse) NOT opened.
 - (04-01, probe verdict) **Research Q1 CLOSED — offscreen-Qt widget construction WORKS headless**: QT_QPA_PLATFORM=offscreen set before the `pymol.Qt` import → QApplication reuse-or-create → QDialog + layout/label/button → show/processEvents → isVisible True → QSpinBox(1..10)=7 read-back + QCheckBox toggle all PASS on the FIRST attempt (no default-platform fallback needed). Evidence: smoke_09_qt_probe.py run in the conda env (PyQt5 5.12.3 / Qt 5.12.9), `=== PROBE PASS (platform=offscreen) ===` + `=== SMOKE-09 PASS ===`. **Consequence for 04-05..04-13: T1b verify tier AVAILABLE** (headless dialog construction, collect/apply round-trips, btn.click() drive-through); T2 [HUMAN] stays for look/feel/modals. Later T1b authors: ZERO modals headless (PITFALL P5); probe verdict line lived in 04-01-SUMMARY.md.
@@ -177,8 +178,8 @@ Decisions are logged in PROJECT.md Key Decisions table. Seeded from PROJECT.md a
 
 ## Session Continuity
 
-Last session: 2026-09-15 (04-01 executed — offscreen-Qt probe PASS, T1b tier unlocked for Phase 4)
-Stopped at: **04-01 COMPLETE (1/15 of Phase 4)** — next: 04-02 (worktree exec/04-02) or the wave-1 merge
+Last session: 2026-09-15 (wave 1 executed: 04-01 offscreen-Qt probe PASS — T1b tier unlocked; 04-02 setup_form pure helpers TDD, 632/632 green)
+Stopped at: **04-01 + 04-02 COMPLETE (2/15 of Phase 4), wave-1 merge** — next: wave 2 (04-03 game_file core, 04-05 Qt window shell)
 Resume file: None
 
 ## Next Actions

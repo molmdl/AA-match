@@ -10,17 +10,17 @@ See: .planning/PROJECT.md (updated 2026-09-05)
 ## Current Position
 
 Phase: 4 of 9 (Qt Setup Window) — **IN PROGRESS**
-Plan: 3 of 15 complete — 04-01 (offscreen-Qt probe) + 04-02 (setup_form pure helpers, TDD) + 04-04 (ligand_content upload pipe) DONE
-Status: Executing Phase 4 — 632 WSL tests green (614 baseline + 18 new), SMOKE-01..10 all PASS; T1b headless-widget tier AVAILABLE for plans 04-05..04-13
-Last activity: 2026-09-15 — 04-01 probe: QT_QPA_PLATFORM=offscreen widget construction PROVEN headless (first-attempt PASS, no fallback); 04-02: setup_form (build_state fatal pre-checks BEFORE scene cleanup, usable_randomized_state trap-kill, manifest_sets; PURE_MODULES = 16); 04-04: ligand_content threaded through engine/placement/gamestart, SMOKE-10 PASS (19 checks), 4 documented deviations incl. the cmd.read_mol2str api-export gap
+Plan: 4 of 15 complete — 04-01 (offscreen-Qt probe) + 04-02 (setup_form pure helpers, TDD) + 04-04 (ligand_content upload pipe) + 04-03 (game_file core, TDD) DONE
+Status: Executing Phase 4 — 654 WSL tests green (632 + 22 new), SMOKE-01..10 all PASS; T1b headless-widget tier AVAILABLE for plans 04-05..04-13
+Last activity: 2026-09-16 — 04-03: game_file.py PURE shareable-game container (GAME_VERSION refuse-newer gate, make/parse 5-gate import chain incl. exact-match detector_version inheritance, ligand sha256/upload-demo cross-checks, base64 codec; PURE_MODULES = 17, base64 whitelisted); 04-01 probe: QT_QPA_PLATFORM=offscreen widget construction PROVEN headless; 04-02: setup_form; 04-04: ligand_content threaded, SMOKE-10 PASS
 
-Progress: [█░░░░░░░░░] 3/15 of Phase 4 · [███░░░░░░░] 33% of project (3/9 phases done)
+Progress: [██░░░░░░░░] 4/15 of Phase 4 · [███░░░░░░░] 33% of project (3/9 phases done)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 32 (Phase 1: 01-01…01-09; Phase 2: 02-01…02-15; Phase 3: 03-01…03-07; Phase 4: 04-01, 04-02, 04-04)
-- Average duration: ~11 min (02-03); 6 min (02-04); ~29 min (02-05); 23 min (02-06); 4 min (02-09); 11 min (02-07); 17 min (02-08); ~20 min (02-13); ~27 min (02-11); 16 min (02-14); 29 min (02-15); ~15 min (03-01); ~55 min (03-02); ~14 min (03-03); ~27 min (03-04); ~14 min (03-05); ~10 min (04-01); ~8 min (04-02); 16 min (04-04)
+- Total plans completed: 33 (Phase 1: 01-01…01-09; Phase 2: 02-01…02-15; Phase 3: 03-01…03-07; Phase 4: 04-01, 04-02, 04-04, 04-03)
+- Average duration: ~11 min (02-03); 6 min (02-04); ~29 min (02-05); 23 min (02-06); 4 min (02-09); 11 min (02-07); 17 min (02-08); ~20 min (02-13); ~27 min (02-11); 16 min (02-14); 29 min (02-15); ~15 min (03-01); ~55 min (03-02); ~14 min (03-03); ~27 min (03-04); ~14 min (03-05); ~10 min (04-01); ~8 min (04-02); 16 min (04-04); ~9 min (04-03)
 - Total execution time: —
 
 **By Phase:**
@@ -30,7 +30,7 @@ Progress: [█░░░░░░░░░] 3/15 of Phase 4 · [███░░�
 | 1 | 9/9 ✓ | — | — |
 | 2 | 16/16 ✓ | ~8 min (02-02) + ~25 min (02-01 cont.) + 11 min (02-03) + 6 min (02-04) + 29 min (02-05) + 23 min (02-06) + 4 min (02-09) + 11 min (02-07) + 17 min (02-08) + 45 min (02-12) + ~20 min (02-13) + 16 min (02-14) + 29 min (02-15) | — |
 | 3 | 7/7 ✓ | ~15 min (03-01) + ~55 min (03-02) + ~14 min (03-03) + ~27 min (03-04) + ~14 min (03-05) + 2d checkpoint incl. debug detour + fix batch (03-06) + 4d checkpoint incl. framing chain (03-07) | — |
-| 4 | 3/15 | ~10 min (04-01) + ~8 min (04-02) + 16 min (04-04) | — |
+| 4 | 4/15 | ~10 min (04-01) + ~8 min (04-02) + 16 min (04-04) + ~9 min (04-03) | — |
 
 **Recent Trend:**
 - Last 5 plans: —
@@ -144,6 +144,9 @@ Decisions are logged in PROJECT.md Key Decisions table. Seeded from PROJECT.md a
 - (04-04) Reader derivation law (04-DECISIONS #18, now codified): engine routes by the manifest-shaped row's `format` key; placement routes by the synthetic key's EXTENSION (payload ligand blocks carry NO 'format' key — generator.py:851-861); anything but sdf/mol2 fail-closes with the house error; `count_states == 1` asserted after every read_*str. The atom_count cross-check stays ACTIVE on the string path.
 - (04-04, recorded 2.5.0-build findings) **(a)** `cmd.read_mol2str` is MISSING from this build's cmd namespace: installed importing.py:1038 defines it but api.py's re-export block omits it — `hasattr(cmd,'read_mol2str')` is False; both mol2 branches guard with hasattr and fail closed naming the missing reader. **Forward concern for 04-06/04-08:** mol2 uploads need an alternative route (e.g. `cmd.load_raw('mol2', ...)`) or a vendored call; SMOKE-10's record-only probe is the canary. **(b)** `cmd.load` of a MISSING sdf package fixture raises `pymol.CmdException` (internal.py _load2str file_read path), OUTSIDE the gamestart/wizard-guarded ValueError family — engine._ligand_data_for now wraps package-load failures into EngineError naming the ligand; placement's package path deliberately left unwrapped (deviation minimalism; mirror it in Phase 7 if import replay hits that class).
 - (04-04, smoke-design reconciliation) Single-candidate uploaded games must set `molecules_per_level=1` — the generator's distinct-pick contract refuses 1 candidate against DEFAULTS' 2 molecules (SMOKE-04 precedent). SMOKE-10 also documents that `ligand['source']` echoes setup source_mode ('demo'|'upload' only) — 'uploaded' appears as the ligand block's `set_id`, never `source`.
+- (04-03) game_file.py = the PURE shareable-game container (PURE_MODULES = 17, base64 whitelisted): exact 7-key data shape {game_format_version, created_at, generator, setup (validate_state re-validated), seed (convenience duplicate of level_spec['seed'] — the spec's is authoritative), level_spec (payload VERBATIM as truth — embed-don't-regenerate), ligand_files or {}}. GAME_VERSION=1 refuse-newer/accept-older; detector_version NEVER mirrored at the game layer (absence pinned by test; single home inside the embedded spec — drift pitfall 11.3).
+- (04-03) parse_game_data 5-gate chain, refusals pinned verbatim: check_container('game') -> game_format_version gate ("missing or has an invalid 'game_format_version'" / "unsupported game file version %d (expected <= 1). Please update AA-match.") -> missing-setup/level-spec refusals -> parse_level_spec_dict(make_level_spec_container) inheriting the exact-match detector gate with ZERO new code -> ligand integrity (upload REQUIRES embedded content; demo FORBIDS it; sha256 over decoded RECORD TEXT names file + both hashes on mismatch; unused entries refused). binascii.Error + UnicodeDecodeError subclass ValueError — the bad-base64 refusal is one family, no binascii whitelist needed. Two-sha256 rule documented: row/ligand_files hashes over RECORD TEXT; setup upload['sha256'] over the FILE (04-06).
+- (04-03) Phase-7 import seam finalized in code: load_container(path,'game') -> parse_game_data -> {'setup','payload','ligand_texts'}; ligand_texts feed the 04-04 ligand_content seams directly. 04-12 export assembles make_game_data + save_container('game', ...).
 
 ### Pending Todos
 
@@ -182,13 +185,13 @@ Decisions are logged in PROJECT.md Key Decisions table. Seeded from PROJECT.md a
 
 ## Session Continuity
 
-Last session: 2026-09-15 (wave 1 executed in 3 parallel worktrees: 04-01 offscreen-Qt probe PASS — T1b tier unlocked; 04-02 setup_form pure helpers TDD, 632/632 green; 04-04 ligand_content upload pipe, SMOKE-10 PASS)
-Stopped at: **Wave 1 COMPLETE + merged (3/15 of Phase 4)** — next: wave 2 (04-03 game_file core, 04-05 Qt window shell)
+Last session: 2026-09-16 (wave 2 executing: 04-03 game_file core TDD complete in worktree exec/04-03 — 654/654 WSL green, 3 atomic commits RED/GREEN/REGISTER, zero deviations; 04-05 Qt window shell in a sibling worktree)
+Stopped at: **04-03 COMPLETE on branch exec/04-03** — 4/15 of Phase 4; orchestrator merges per the worktree protocol; remaining wave 2: 04-05
 Resume file: None
 
 ## Next Actions
 
-- **Phase 4 in progress:** 04-04 (ligand_content pipe) complete on branch exec/04-04 — merge per the worktree protocol in wave/dependency order; SMOKE-10 is the regression canary for the seam. **Watch:** this 2.5.0 build lacks the `cmd.read_mol2str` export — 04-06/04-08 must pick a mol2 route (e.g. `cmd.load_raw`) before relying on mol2 uploads (see 04-04-SUMMARY.md Deviations #3 + Next Phase Readiness).
+- **Phase 4 in progress:** 04-03 (game_file core) complete on branch exec/04-03 — merge per the worktree protocol in wave/dependency order; **Watch:** this 2.5.0 build lacks the `cmd.read_mol2str` export — 04-06/04-08 must pick a mol2 route (e.g. `cmd.load_raw`) before relying on mol2 uploads (see 04-04-SUMMARY.md Deviations #3 + Next Phase Readiness).
 - **Phase 3 verifier: PASSED (2026-09-15)** — 03-VERIFICATION.md 27/27; ROADMAP criteria 1-4 all satisfied; zero gaps. Phase 3 closed.
 - **04-01 probe verdict (citable line):** `Probe verdict: PASS (platform=offscreen) first attempt succeeded` — plans 04-05..04-13 may use the T1b headless-widget tier; cite the exact line in .planning/phases/04-qt-setup-window/04-01-SUMMARY.md.
 - **Gap-closure planning:** spec.md lines 12-21 setup popup from the Plugins → AA-match menu item is a recorded Phase-3 gap candidate (full Qt setup window = Phase 4; UI code borrowable from bioCHEMeleon).

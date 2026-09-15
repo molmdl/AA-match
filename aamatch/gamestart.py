@@ -282,7 +282,7 @@ def _move_ligand_in_front(registry):
                   lig_name, state=1, camera=0)
 
 
-def start_game(setup=None, seed=42, candidates=None):
+def start_game(setup=None, seed=42, candidates=None, ligand_content=None):
     """One call: fresh/cleaned scene -> materialized game -> active
     GameWizard. Returns the LIVE wizard instance (smokes assert on its
     registry/payload via the return value).
@@ -295,6 +295,12 @@ def start_game(setup=None, seed=42, candidates=None):
     ``candidates``  optional manifest-row override (deterministic smoke
                candidate restriction, engine.new_game's documented
                path); None parses the bundled MANIFEST.json.
+    ``ligand_content``  dict of synthetic file key to molecule text for
+               uploaded games (04-04, additive); None = the bundled-
+               manifest flow (byte-identical -- every existing call
+               site unchanged). Passed through to BOTH engine.new_game
+               and engine.materialize so the one-call seam stays
+               complete for uploaded payloads.
 
     Fail-closed: engine.GenerationError / EngineError / WizardError
     (the ValueError family) propagate -- the menu handler surfaces the
@@ -302,8 +308,10 @@ def start_game(setup=None, seed=42, candidates=None):
     """
     cleaned = placement.cleanup_game_objects()
     spec = dict(setup_state.DEFAULTS if setup is None else setup)
-    payload, rows = engine.new_game(spec, seed, candidates=candidates)
-    registry = engine.materialize(payload, 0)
+    payload, rows = engine.new_game(spec, seed, candidates=candidates,
+                                    ligand_content=ligand_content)
+    registry = engine.materialize(payload, 0,
+                                  ligand_content=ligand_content)
     prior = cmd.get_wizard()
     wiz = GameWizard(payload, registry, 0, 0)
     # Compose BEFORE activate (failure must never leave a live wizard

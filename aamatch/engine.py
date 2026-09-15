@@ -276,13 +276,20 @@ def new_game(setup, seed, candidates=None, ligand_content=None):
     return payload, rows
 
 
-def materialize(payload, level_index=0):
+def materialize(payload, level_index=0, ligand_content=None):
     """Op 2: payload -> registry (placement.materialize delegate).
 
     The payload + registry are kept module-side, so place_aa /
     reset_to_grid / detect need no plumbing from callers.
+
+    ``ligand_content`` (04-04, additive; default None): dict of
+    synthetic file key to molecule record text for uploaded payloads;
+    None = the package-resolved flow (byte-identical -- every existing
+    call site unchanged). Passed straight through to
+    ``placement.materialize``.
     """
-    registry = placement.materialize(payload, level_index=level_index)
+    registry = placement.materialize(payload, level_index=level_index,
+                                     ligand_content=ligand_content)
     global _payload, _registry
     _payload = payload
     _registry = registry

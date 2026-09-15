@@ -119,9 +119,9 @@ Plans:
 Plans:
 - [x] 04-01-PLAN.md — offscreen-Qt headless probe (research Q1): settles the T1b widget-construction tier for every later plan
 - [x] 04-02-PLAN.md — pure setup_form helpers: build_state fatal pre-checks, usable_randomized_state fix-up, manifest_sets (TDD)
-- [ ] 04-03-PLAN.md — pure game_file core: GAME_VERSION gate, make/parse container, ligand_files base64 codec (TDD)
+- [x] 04-03-PLAN.md — pure game_file core: GAME_VERSION gate, make/parse container, ligand_files base64 codec (TDD)
 - [x] 04-04-PLAN.md — ligand_content threading (engine/placement/gamestart) + SMOKE-10 uploaded-flow plumbing proof
-- [ ] 04-05-PLAN.md — setup_window Qt-tier shell (modeless singleton, open_window) + menu rewire + deliberate test evolution (skeleton contract, SCANNED_MODULES, SMOKE-08 re-point)
+- [x] 04-05-PLAN.md — setup_window Qt-tier shell (modeless singleton, open_window) + menu rewire + deliberate test evolution (skeleton contract, SCANNED_MODULES, SMOKE-08 re-point)
 - [ ] 04-06-PLAN.md — pure game_file upload helpers: split/supply-cap/read/row-build/validate (TDD)
 - [ ] 04-07-PLAN.md — window form: source selector, dropdown, spinboxes, mode group, 7 checkboxes, collect/apply round-trip
 - [ ] 04-08-PLAN.md — cmd-tier upload.py extraction pipeline + SMOKE-12 (parity + multi-record SDF + MOL2 probe)
@@ -238,7 +238,7 @@ Lifted from PITFALLS.md "Pitfall-to-Phase Mapping" (topic names → this roadmap
 | 1. Bootstrap & Pure Foundation | 9/9 | Complete | 2026-09-06 |
 | 2. Headless Game Engine | 16/16 | Complete (verified 2026-09-07 — 02-VERIFICATION.md passed 5/5) | 2026-09-07 |
 | 3. Wizard Gameplay Loop | 7/7 | Complete (verified 2026-09-15 — 03-VERIFICATION.md passed 27/27) | 2026-09-15 |
-| 4. Qt Setup Window | 3/15 | In progress (wave 1 complete) | - |
+| 4. Qt Setup Window | 5/15 | In progress (waves 1-2 complete) | - |
 | 5. Game Status Tab & Start Sequence | 0/TBD | Not started | - |
 | 6. Scoring Lifecycle & Endgame | 0/TBD | Not started | - |
 | 7. Checkpoint & Game-File Persistence | 0/TBD | Not started | - |

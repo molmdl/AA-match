@@ -27,13 +27,13 @@ def __init_plugin__(app=None):
 
 
 def run_plugin_gui():
-    """Launch the Phase-3 playable wizard loop (Plugins -> AA-match).
+    """Open the Phase-4 modeless Qt setup window (Plugins -> AA-match).
 
-    Returns the live GameWizard (headless callers assert on it). The
-    import is lazy (Gate A2: zero module-level imports here). Phase 4
-    replaces this with the Qt setup window calling the SAME gamestart
-    seam (gamestart.start_game) with the user's validated setup.
-    EngineError/WizardError propagate fail-closed -- PyMOL's menu
-    handler surfaces the traceback."""
-    from . import gamestart
-    return gamestart.start_game()
+    Returns the SetupWindow dialog (assertion handle, 03-05 pattern).
+    The import is lazy (Gate A2: zero module-level imports here). The
+    window delegates Start to gamestart.start_game -- the SAME seam
+    this function used in Phase 3. ValueError-family refusals are
+    caught per button by the window's _guard; unexpected exceptions
+    propagate fail-closed."""
+    from . import setup_window
+    return setup_window.open_window()

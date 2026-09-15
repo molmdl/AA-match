@@ -171,7 +171,14 @@ def _ligand_data_for(row, names_before, ligand_content=None):
             text = ligand_content[row['file']]
             fmt = row.get('format')
             if fmt == 'mol2':
-                cmd.read_mol2str(text, tmp_name)
+                if hasattr(cmd, 'read_mol2str'):
+                    cmd.read_mol2str(text, tmp_name)
+                else:
+                    raise EngineError(
+                        'new_game: uploaded ligand %r needs '
+                        'cmd.read_mol2str, which THIS PyMOL build does '
+                        'not export (2.5.0 api.py omits it) -- mol2 '
+                        'uploads are unavailable here' % (identity,))
             elif fmt == 'sdf':
                 cmd.read_sdfstr(text, tmp_name)
             else:
@@ -186,7 +193,15 @@ def _ligand_data_for(row, names_before, ligand_content=None):
         else:
             winpath = to_windows_path(
                 package_data_path('data', row['file']))
-            cmd.load(winpath, tmp_name)
+            try:
+                cmd.load(winpath, tmp_name)
+            except Exception as exc:
+                raise EngineError(
+                    'new_game: ligand %r failed to load from the '
+                    'package data dir (%s: %s) -- the bundled fixture '
+                    'may be missing/corrupt, or the row names a '
+                    'synthetic key WITHOUT ligand_content'
+                    % (identity, type(exc).__name__, exc))
         n_atoms = cmd.count_atoms(tmp_name)
         want = row.get('atom_count')
         if want is not None and n_atoms != int(want):

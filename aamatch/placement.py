@@ -318,7 +318,15 @@ def materialize(payload, level_index=0, ligand_content=None):
             text = ligand_content[ligand['file']]
             ext = os.path.splitext(str(ligand['file']))[1].lstrip('.').lower()
             if ext == 'mol2':
-                cmd.read_mol2str(text, lig_name)
+                if hasattr(cmd, 'read_mol2str'):
+                    cmd.read_mol2str(text, lig_name)
+                else:
+                    raise PlacementError(
+                        'materialize: molecule %r ligand file %r needs '
+                        'cmd.read_mol2str, which THIS PyMOL build does '
+                        'not export (2.5.0 api.py omits it) -- mol2 '
+                        'uploads are unavailable here'
+                        % (molecule_id, ligand['file']))
             elif ext == 'sdf':
                 cmd.read_sdfstr(text, lig_name)
             else:

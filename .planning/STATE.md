@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-09-05)
 
 **Core value:** The player can place amino acids onto a small molecule in the PyMOL 3D viewer and the game correctly detects and scores the interactions they form — turning unguided 3D manipulation practice into a scored game.
-**Current focus:** Phase 3 — Wizard Gameplay Loop (ALL 7 plans EXECUTED 03-07 APPROVED; phase verifier is next)
+**Current focus:** Phase 4 — Qt Setup Window (next up)
 
 ## Current Position
 
-Phase: 3 of 9 (Wizard Gameplay Loop) — ALL PLANS EXECUTED (verifier pending)
-Plan: 7 of 7 complete (03-07 restoration + no-helper-visuals + drag diagnostics checkpoint — **APPROVED** 2026-09-15; PLAY-04 [HUMAN+GATE] closed)
-Status: Phase 3 all plans executed — 614 WSL tests green; SMOKE-03/04/07/08 PASS (SMOKE-07 78 checks incl. PART F, SMOKE-08 31 checks incl. fix + composition asserts); 03-07-SUMMARY.md written; ready for the phase verifier
-Last activity: 2026-09-15 — 03-07 FINALIZED: checkpoint APPROVED (no helper visuals; full restoration incl. prior-wizard resume; drag = matrix path PROVEN with detector-visibility probe verdict MATRIX PATH VISIBLE); drag steps 3/4 skipped by human decision; SUMMARY + STATE updated
+Phase: 3 of 9 (Wizard Gameplay Loop) — **COMPLETE ✓ (verified 2026-09-15)**
+Plan: 7 of 7 complete — PHASE 3 ALL PLANS EXECUTED (waves 1-7; 03-07 APPROVED 2026-09-15); 03-VERIFICATION.md PASSED 27/27 must-haves
+Status: Verified — 614 WSL tests green, SMOKE-01..08 all PASS (SMOKE-07 78 checks, SMOKE-08 33 checks); requirements PLAY-01..04 Complete; ready to plan Phase 4
+Last activity: 2026-09-15 — verifier PASSED (gates re-run live: 614/614, SMOKE-07/08 PASS; zero gaps; drag matrix-path probe = detector-VISIBLE, no guard needed)
 
-Progress: [██████████] 100% of Phase 3 (7/7 executed) · [██░░░░░░░░] 22% of project (2/9 phases done; phase 3 executed, verifier pending)
+Progress: [██████████] 100% of Phase 3 · [███░░░░░░░] 33% of project (3/9 phases)
 
 ## Performance Metrics
 
@@ -175,13 +175,13 @@ Decisions are logged in PROJECT.md Key Decisions table. Seeded from PROJECT.md a
 
 ## Session Continuity
 
-Last session: 2026-09-15 (03-07 FINALIZED — checkpoint APPROVED: no helper visuals, full Done-restoration incl. prior-wizard resume, drag = matrix path PROVEN + probe VISIBLE; drag steps 3/4 skipped by human decision; SUMMARY written)
-Stopped at: 03-07 COMPLETE (7/7) — Phase 3 ALL PLANS EXECUTED. Next: the phase verifier.
+Last session: 2026-09-15 (phase verifier PASSED — 27/27 must-haves, 0 gaps; PLAY-01..04 marked Complete; Phase 3 closed)
+Stopped at: **Phase 3 COMPLETE (7/7, verified)** — next: plan Phase 4
 Resume file: None
 
 ## Next Actions
 
-- **Phase 3 verifier (next):** 03-06-SUMMARY.md provides the ROADMAP [HUMAN] half of Phase-3 criteria 1-3; 03-07-SUMMARY.md provides criterion 4's [HUMAN + GATE] half (no helper visuals + restoration table + drag-matrix verdict + probe verdict). Arrow-key delivery verdict recorded (LEFT/RIGHT + ',' '.' + q/w/e/d; UP/DOWN dead by design).
+- **Phase 3 verifier: PASSED (2026-09-15)** — 03-VERIFICATION.md 27/27; ROADMAP criteria 1-4 all satisfied; zero gaps. Phase 3 closed.
 - **Gap-closure planning:** spec.md lines 12-21 setup popup from the Plugins → AA-match menu item is a recorded Phase-3 gap candidate (full Qt setup window = Phase 4; UI code borrowable from bioCHEMeleon).
 - **Phase 5/9 help-text note:** nudges are SCREEN-RELATIVE BY DESIGN — help text must state "keys move in your current view direction" (03-07 human verdict).
 - **Phase 4 (Qt setup window) entry seam unchanged:** Plugins → AA-match calls gamestart.start_game (molecules 2, D 3, unset, seed 42; active-molecule-only start view with ligand in front of its grid); the Qt window wires over the SAME one-call seam.

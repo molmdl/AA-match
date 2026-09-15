@@ -36,10 +36,10 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Viewer Gameplay
 
-- [ ] **PLAY-01**: Player can click an amino acid in the OpenGL viewer to select it (color change + selected status)
-- [ ] **PLAY-02**: Player can move/rotate/adjust the selected amino acid onto the small molecule
-- [ ] **PLAY-03**: Player can switch to another amino acid by clicking it, or click Confirm to finish the molecule
-- [ ] **PLAY-04**: No helper lines/dots are displayed during gameplay
+- [x] **PLAY-01**: Player can click an amino acid in the OpenGL viewer to select it (color change + selected status)
+- [x] **PLAY-02**: Player can move/rotate/adjust the selected amino acid onto the small molecule
+- [x] **PLAY-03**: Player can switch to another amino acid by clicking it, or click Confirm to finish the molecule
+- [x] **PLAY-04**: No helper lines/dots are displayed during gameplay
 - [ ] **PLAY-05**: Hint button recolors carbon atoms of amino acids that could form one of the required interactions (recolor only)
 
 ### Interaction Detection
@@ -133,10 +133,10 @@ Which phases cover which requirements. Updated during roadmap creation (2026-09-
 | GEN-04 | Phase 2 | Complete |
 | GEN-05 | Phase 2 | Complete |
 | GEN-06 | Phase 8 | Pending |
-| PLAY-01 | Phase 3 | Pending |
-| PLAY-02 | Phase 3 | Pending |
-| PLAY-03 | Phase 3 | Pending |
-| PLAY-04 | Phase 3 | Pending |
+| PLAY-01 | Phase 3 | Complete |
+| PLAY-02 | Phase 3 | Complete |
+| PLAY-03 | Phase 3 | Complete |
+| PLAY-04 | Phase 3 | Complete |
 | PLAY-05 | Phase 5 | Pending |
 | DETECT-01 | Phase 2 | Complete |
 | DETECT-02 | Phase 2 | Complete |

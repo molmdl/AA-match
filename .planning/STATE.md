@@ -9,17 +9,17 @@ See: .planning/PROJECT.md (updated 2026-09-05)
 
 ## Current Position
 
-Phase: 3 of 9 (Wizard Gameplay Loop) — **COMPLETE ✓ (verified 2026-09-15)**
-Plan: 7 of 7 complete — PHASE 3 ALL PLANS EXECUTED (waves 1-7; 03-07 APPROVED 2026-09-15); 03-VERIFICATION.md PASSED 27/27 must-haves
-Status: Verified — 614 WSL tests green, SMOKE-01..08 all PASS (SMOKE-07 78 checks, SMOKE-08 33 checks); requirements PLAY-01..04 Complete; ready to plan Phase 4
-Last activity: 2026-09-15 — verifier PASSED (gates re-run live: 614/614, SMOKE-07/08 PASS; zero gaps; drag matrix-path probe = detector-VISIBLE, no guard needed)
+Phase: 4 of 9 (Qt Setup Window) — **IN PROGRESS** (Phase 3 complete ✓ verified 2026-09-15)
+Plan: 04-04 of 15 complete (this worktree's assignment) — ligand_content upload pipe; branch exec/04-04, awaiting orchestrator wave-1 merge (sibling plans per wave schedule)
+Status: 04-04 SUMMARY done — 614 WSL tests green (purity + code-audit PROSE_PIN intact), SMOKE-10 PASS (19 checks) + SMOKE-04/08 regression PASS
+Last activity: 2026-09-15 — Completed 04-04-PLAN.md (ligand_content threaded through engine/placement/gamestart; build findings recorded)
 
-Progress: [██████████] 100% of Phase 3 · [███░░░░░░░] 33% of project (3/9 phases)
+Progress: [██████████] 100% of Phase 3 · [█░░░░░░░░░] 7% of Phase 4 (1/15 plans in this worktree) · [███░░░░░░░] ~34% of project
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 29 (Phase 1: 01-01…01-09; Phase 2: 02-01…02-15; Phase 3: 03-01, 03-02, 03-03, 03-04, 03-05, 03-06, 03-07)
+- Total plans completed: 30 (Phase 1: 01-01…01-09; Phase 2: 02-01…02-15; Phase 3: 03-01…03-07; Phase 4: 04-04 — 16 min)
 - Average duration: ~11 min (02-03); 6 min (02-04); ~29 min (02-05); 23 min (02-06); 4 min (02-09); 11 min (02-07); 17 min (02-08); ~20 min (02-13); ~27 min (02-11); 16 min (02-14); 29 min (02-15); ~15 min (03-01); ~55 min (03-02); ~14 min (03-03); ~27 min (03-04); ~14 min (03-05)
 - Total execution time: —
 
@@ -137,6 +137,10 @@ Decisions are logged in PROJECT.md Key Decisions table. Seeded from PROJECT.md a
 - (03-07, checkpoint APPROVED 2026-09-15 — PLAY-04 [HUMAN+GATE] CLOSED) No helper visuals in ANY session (recolor + panel/prompt only); Done-restoration table fully field-verified incl. prior `wizard measurement` auto-resume (stack-native push/pop), msm 1→0 (by design)→1, no pk1/sele/_drag strays, recolors restored, _aam_* objects survive Done. Movement-model verdict CLOSED: gameplay movement = panel buttons + keyboard, baked world-frame coordinates (FROZEN, human 2026-09-15 — native drag NOT needed for gameplay); native whole-object drag = object-MATRIX path PROVEN ('Dragging whole object' echo + genuine rotation matrix on get_object_matrix, checker run 2 IDENTITY-OK False; run 1 ALL-IDENTITY recorded non-conclusive).
 - (03-07, probe verdict) matrix-visibility probe (tmp/, headless, engine seam, seed 42): matrix path VISIBLE — cmd.transform_object(name, [R|t], homogenous=1) BAKES coordinates (iterate_state matrix-applied vs raw: dev 1e-6 Å vs 11.12 Å; detector-view centroid matches R·pose+t exactly; control cmd.translate sanity exact 8 Å shift). Native-drag-style object-matrix moves land in the detector pipeline input → detector-compatible, SAFE — the pre-planned Phase 5/6 guard candidates (pre-Confirm matrix sweep → auto-bake / refuse) NOT opened.
 - (03-07, human decisions) Drag diagnostics steps 3/4 (populated-_drag session; transform_object render-doubling) SKIPPED by explicit human decision (movement already decided; low marginal value; SMOKE-07/08 cover the game-path model). Nudge left/right SCREEN-RELATIVE BY DESIGN — Phase 5/9 help text must say "keys move in your current view direction". Start framing final laws: geometry-side ligand front-offset + frame ONLY the active molecule's grid+ligand + zoom-LAST + camera-field-surgery-avoided (blank start-view regression fixed by re-framing after composition, never clip-plane edits). Framing chain 1d48d71 → 0c13184 → d8e8f7d → 0041e74 → 2a182d7.
+- (04-04) `ligand_content=None` threaded additively through ALL cmd-tier game seams: `engine._ligand_data_for`, `engine.new_game`, `engine.materialize` (delegate), `placement.materialize`, `gamestart.start_game` — five signatures (plan's grep metric said four; the delegate is structurally required by the direct `engine.materialize(..., ligand_content=...)` call). None default provably byte-identical (SMOKE-04/08 regression PASS unchanged, 614 WSL tests green). start_game passes it to BOTH new_game and materialize so the one-call seam stays complete for uploaded payloads.
+- (04-04) Reader derivation law (04-DECISIONS #18, now codified): engine routes by the manifest-shaped row's `format` key; placement routes by the synthetic key's EXTENSION (payload ligand blocks carry NO 'format' key — generator.py:851-861); anything but sdf/mol2 fail-closes with the house error; `count_states == 1` asserted after every read_*str. The atom_count cross-check stays ACTIVE on the string path.
+- (04-04, recorded 2.5.0-build findings) **(a)** `cmd.read_mol2str` is MISSING from this build's cmd namespace: installed importing.py:1038 defines it but api.py's re-export block omits it — `hasattr(cmd,'read_mol2str')` is False; both mol2 branches guard with hasattr and fail closed naming the missing reader. **Forward concern for 04-06/04-08:** mol2 uploads need an alternative route (e.g. `cmd.load_raw('mol2', ...)`) or a vendored call; SMOKE-10's record-only probe is the canary. **(b)** `cmd.load` of a MISSING sdf package fixture raises `pymol.CmdException` (internal.py _load2str file_read path), OUTSIDE the gamestart/wizard-guarded ValueError family — engine._ligand_data_for now wraps package-load failures into EngineError naming the ligand; placement's package path deliberately left unwrapped (deviation minimalism; mirror it in Phase 7 if import replay hits that class).
+- (04-04, smoke-design reconciliation) Single-candidate uploaded games must set `molecules_per_level=1` — the generator's distinct-pick contract refuses 1 candidate against DEFAULTS' 2 molecules (SMOKE-04 precedent). SMOKE-10 also documents that `ligand['source']` echoes setup source_mode ('demo'|'upload' only) — 'uploaded' appears as the ligand block's `set_id`, never `source`.
 
 ### Pending Todos
 
@@ -175,12 +179,13 @@ Decisions are logged in PROJECT.md Key Decisions table. Seeded from PROJECT.md a
 
 ## Session Continuity
 
-Last session: 2026-09-15 (phase verifier PASSED — 27/27 must-haves, 0 gaps; PLAY-01..04 marked Complete; Phase 3 closed)
-Stopped at: **Phase 3 COMPLETE (7/7, verified)** — next: plan Phase 4
+Last session: 2026-09-15 (04-04 ligand_content upload pipe executed — SUMMARY committed on branch exec/04-04, tmp/exec-04-04 worktree)
+Stopped at: Completed 04-04-PLAN.md (wave 1, awaiting orchestrator merge of exec/04-04 + sibling branches)
 Resume file: None
 
 ## Next Actions
 
+- **Phase 4 in progress:** 04-04 (ligand_content pipe) complete on branch exec/04-04 — merge per the worktree protocol in wave/dependency order; SMOKE-10 is the regression canary for the seam. **Watch:** this 2.5.0 build lacks the `cmd.read_mol2str` export — 04-06/04-08 must pick a mol2 route (e.g. `cmd.load_raw`) before relying on mol2 uploads (see 04-04-SUMMARY.md Deviations #3 + Next Phase Readiness).
 - **Phase 3 verifier: PASSED (2026-09-15)** — 03-VERIFICATION.md 27/27; ROADMAP criteria 1-4 all satisfied; zero gaps. Phase 3 closed.
 - **Gap-closure planning:** spec.md lines 12-21 setup popup from the Plugins → AA-match menu item is a recorded Phase-3 gap candidate (full Qt setup window = Phase 4; UI code borrowable from bioCHEMeleon).
 - **Phase 5/9 help-text note:** nudges are SCREEN-RELATIVE BY DESIGN — help text must state "keys move in your current view direction" (03-07 human verdict).

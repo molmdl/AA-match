@@ -5,22 +5,22 @@
 See: .planning/PROJECT.md (updated 2026-09-05)
 
 **Core value:** The player can place amino acids onto a small molecule in the PyMOL 3D viewer and the game correctly detects and scores the interactions they form — turning unguided 3D manipulation practice into a scored game.
-**Current focus:** Phase 4 — Qt Setup Window (executing; waves 1-2 done: 04-01, 04-02, 04-04, 04-03, 04-05; offscreen T1b tier unlocked, modeless window shell live)
+**Current focus:** Phase 4 — Qt Setup Window (executing; waves 1-2 done + merged; wave 3 in worktrees: 04-07 window form DONE on exec/04-07 — 654 WSL green, SMOKE-11 PASS with collect/apply round-trip + mutation drive)
 
 ## Current Position
 
 Phase: 4 of 9 (Qt Setup Window) — **IN PROGRESS**
-Plan: 5 of 15 complete — 04-01 (offscreen-Qt probe) + 04-02 (setup_form pure helpers, TDD) + 04-04 (ligand_content upload pipe) + 04-03 (game_file core, TDD) + 04-05 (Qt window shell + menu rewire) DONE
-Status: Executing Phase 4 — 654 WSL tests green (632 + 22 new), SMOKE-01..11 all PASS (SMOKE-11 incl. PART B construct/reuse/close-reopen under the offscreen verdict); Plugins → AA-match now opens the modeless SetupWindow
-Last activity: 2026-09-16 — 04-03: game_file.py PURE shareable-game container (GAME_VERSION gate, 5-gate parse chain, ligand sha256/upload-demo cross-checks, base64 codec; PURE_MODULES = 17); 04-05: setup_window.py shell (modeless singleton, 7-button spec-order row unconnected, no closeEvent), run_plugin_gui lazily rewired (Gate A2 green, metadata byte-identical), skeleton AST contract deliberately replaced, SCANNED_MODULES += setup_window.py, SMOKE-08 re-pointed (31 checks PASS)
+Plan: 6 of 15 — 04-01 (offscreen-Qt probe) + 04-02 (setup_form pure helpers, TDD) + 04-04 (ligand_content upload pipe) + 04-03 (game_file core, TDD) + 04-05 (Qt window shell + menu rewire) + 04-07 (7-field window form + collect/apply round-trip) DONE
+Status: Executing Phase 4 — 654 WSL tests green, SMOKE-01..11 all PASS (SMOKE-11 extended: T1b now includes apply(DEFAULTS)->collect validate_state identity + widget mutation drive under the offscreen verdict); the SetupWindow carries the full form (source selector, frozen-constant spinboxes, mode group + context label, 7 canonical checkboxes)
+Last activity: 2026-09-15 — 04-07: full 7-field form in setup_window.py (2-page source selector with manifest-fed demo dropdown + FormatError degrade path, spinbox ranges == frozen clamp constants, 3-way mode radio + live context label, 7 enabled-in-all-modes checkboxes, tooltips throughout), collect_state/apply_state lossless round-trip with _loading guard, session-only _uploaded slot; SMOKE-11 PART B extension PASS (15 checks)
 
-Progress: [██░░░░░░░░] 5/15 of Phase 4 · [███░░░░░░░] 33% of project (3/9 phases done)
+Progress: [███░░░░░░░] 6/15 of Phase 4 · [███░░░░░░░] 33% of project (3/9 phases done)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 34 (Phase 1: 01-01…01-09; Phase 2: 02-01…02-15; Phase 3: 03-01…03-07; Phase 4: 04-01, 04-02, 04-04, 04-03, 04-05)
-- Average duration: ~11 min (02-03); 6 min (02-04); ~29 min (02-05); 23 min (02-06); 4 min (02-09); 11 min (02-07); 17 min (02-08); ~20 min (02-13); ~27 min (02-11); 16 min (02-14); 29 min (02-15); ~15 min (03-01); ~55 min (03-02); ~14 min (03-03); ~27 min (03-04); ~14 min (03-05); ~10 min (04-01); ~8 min (04-02); 16 min (04-04); ~9 min (04-03); 17 min (04-05)
+- Total plans completed: 35 (Phase 1: 01-01…01-09; Phase 2: 02-01…02-15; Phase 3: 03-01…03-07; Phase 4: 04-01, 04-02, 04-04, 04-03, 04-05, 04-07)
+- Average duration: ~11 min (02-03); 6 min (02-04); ~29 min (02-05); 23 min (02-06); 4 min (02-09); 11 min (02-07); 17 min (02-08); ~20 min (02-13); ~27 min (02-11); 16 min (02-14); 29 min (02-15); ~15 min (03-01); ~55 min (03-02); ~14 min (03-03); ~27 min (03-04); ~14 min (03-05); ~10 min (04-01); ~8 min (04-02); 16 min (04-04); ~9 min (04-03); 17 min (04-05); 16 min (04-07)
 - Total execution time: —
 
 **By Phase:**
@@ -30,7 +30,7 @@ Progress: [██░░░░░░░░] 5/15 of Phase 4 · [███░░�
 | 1 | 9/9 ✓ | — | — |
 | 2 | 16/16 ✓ | ~8 min (02-02) + ~25 min (02-01 cont.) + 11 min (02-03) + 6 min (02-04) + 29 min (02-05) + 23 min (02-06) + 4 min (02-09) + 11 min (02-07) + 17 min (02-08) + 45 min (02-12) + ~20 min (02-13) + 16 min (02-14) + 29 min (02-15) | — |
 | 3 | 7/7 ✓ | ~15 min (03-01) + ~55 min (03-02) + ~14 min (03-03) + ~27 min (03-04) + ~14 min (03-05) + 2d checkpoint incl. debug detour + fix batch (03-06) + 4d checkpoint incl. framing chain (03-07) | — |
-| 4 | 5/15 | ~10 min (04-01) + ~8 min (04-02) + 16 min (04-04) + ~9 min (04-03) + 17 min (04-05) | — |
+| 4 | 6/15 | ~10 min (04-01) + ~8 min (04-02) + 16 min (04-04) + ~9 min (04-03) + 17 min (04-05) + 16 min (04-07) | — |
 
 **Recent Trend:**
 - Last 5 plans: —
@@ -150,6 +150,8 @@ Decisions are logged in PROJECT.md Key Decisions table. Seeded from PROJECT.md a
 - (04-05) aamatch/setup_window.py = the Qt-tier modeless shell (NEVER PURE_MODULES, never WSL-imported): module-level `from pymol.Qt import QtWidgets, QtCore, QtGui` (legal+required there); module-scope `_window` singleton + `open_window()` create-if-None show/raise_/activateWindow returning the dialog; SetupWindow(QDialog) no-parent, min-width 420, form-area placeholder + 7 buttons IN SPEC ORDER (`btn_reset`..`btn_start`, exact spec labels/tooltips) created UNCONNECTED — each handler plan (04-09..04-13) connects its own; module-level `from pymol import cmd` is 04-11's addition (Decision 17). NO closeEvent by construction — default close hides, singleton survives, re-open = reuse-and-raise; SMOKE-11's close()+re-open-same-instance check gives SETUP-01 mechanical teeth.
 - (04-05) Plugins → AA-match rewire + three DELIBERATE test evolutions (research P9/P10, 03-05 precedent): run_plugin_gui = lazy `from . import setup_window` + `return setup_window.open_window()` (Gate A2 green, metadata block byte-identical, `__version__` 0.1.0); test_run_plugin_gui_opens_setup_window_lazily REPLACES the 03-05 gamestart-seam AST contract; SCANNED_MODULES += 'setup_window.py' per the growth protocol; SMOKE-08 re-pointed to `aamatch.gamestart.start_game()` directly — all 31 checks preserved, PASS. The game-entry seam and the window surface now have TWO distinct headless assertion handles (wizard from start_game, dialog from open_window).
 - (04-05) T1b smoke recipe for Qt-tier modules, now proven twice: `QT_QPA_PLATFORM='offscreen'` at script top BEFORE any pymol.Qt import → repo-root anchor → import the Qt module → `QApplication.instance() or QApplication([...])` → construct/assert + processEvents → ZERO modals (PITFALL P5). Benign offscreen noise (font-dir warnings, `raise()` unsupported) recorded, ignorable.
+- (04-07) SetupWindow carries the full 7-field form: stacked-pages source selector (radio toggled(bool) must reach stack.setCurrentIndex through a lambda — raw bool→int maps pages BACKWARDS); demo dropdown rows from setup_form.manifest_sets (userData=set_id; empty demo_set_id '' is encoded as combo index -1 = empty selection, keeping apply(DEFAULTS)->collect an identity through validate_state — no synthetic 'all sets' item invented); spinbox setRange/setValue reference frozen setup_state constants ONLY (range == clamp range makes collect->validate lossless; grep-verified zero numeric literals); mode radios auto-exclusive in the group parent (no QButtonGroup) + live context label with the 3 exact research strings; 7 checkboxes built from canonical INTERACTION_TYPES, ENABLED in all modes (unset mode treats the allowed list as sampling vocabulary — disabling would silently discard the user's restriction).
+- (04-07) collect_state/apply_state contract for every handler plan (04-09..04-13): collect emits EXACTLY the 7 validate_state schema keys, zero widget-side validation (pure layer is the single authority); apply is missing-key tolerant (.get + frozen defaults), `_loading` guard set first in try/finally (future valueChanged hooks early-return), combo findData->setCurrentIndex with fallback index 0 + source_note warning on non-empty unfound ids, upload label shows the SAVED path but the session-only `_uploaded` slot is NEVER restored from files. SMOKE-11 proves the round-trip + a full widget mutation drive headlessly (15 checks PASS).
 
 ### Pending Todos
 
@@ -188,8 +190,8 @@ Decisions are logged in PROJECT.md Key Decisions table. Seeded from PROJECT.md a
 
 ## Session Continuity
 
-Last session: 2026-09-16 (wave 2 executed in 2 parallel worktrees + merged: 04-03 game_file core TDD — 654/654 WSL green, zero deviations; 04-05 Qt window shell + menu rewire — SMOKE-08 re-point PASS, SMOKE-11 PASS incl. T1b PART B, zero deviations)
-Stopped at: **Waves 1-2 COMPLETE + merged (5/15 of Phase 4)** — next: wave 3 (04-06 upload helpers, 04-07 window form)
+Last session: 2026-09-15 (wave 3 worktree exec/04-07: 04-07 window form DONE — full 7-field form + collect/apply round-trip, 654/654 WSL green, SMOKE-11 PASS extended with round-trip + mutation drive; commits 15cc00b/115af6e/6b8011e on branch exec/04-07 awaiting orchestrator merge)
+Stopped at: **04-07 COMPLETE on exec/04-07 (6/15 of Phase 4)** — next: orchestrator merge of exec/04-07 (+ sibling 04-06), then wave 4 (handler plans 04-09..04-13 read/write the form via collect_state/apply_state)
 Resume file: None
 
 ## Next Actions

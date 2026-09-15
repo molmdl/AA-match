@@ -86,10 +86,13 @@ if REPO_ROOT not in sys.path:
 #                   imports only .wizard_core movement constants).
 # Phase 4 (04-02): setup_form (pure form-glue: fatal pre-checks, randomize
 #                   fix-up, dropdown rows; imports only .setup_state).
+# Phase 4 (04-03): game_file (shareable game container: GAME_VERSION gate,
+#                   payload embedding, ligand_files base64 codec; stdlib +
+#                   persistence/level_spec/setup_state).
 PURE_MODULES = ['setup_state', 'level_spec', 'persistence', 'backup',
                 'paths', 'vec3', 'spatial', 'manifest', 'capability',
                 'thresholds', 'detector', 'generator', 'game_state',
-                'wizard_core', 'wizard_text', 'setup_form']
+                'wizard_core', 'wizard_text', 'setup_form', 'game_file']
 
 # Roots that must NEVER appear in any import of a pure module, in ANY
 # scope (module level or function body -- B7). dataclasses is 3.7+.
@@ -97,10 +100,12 @@ FORBIDDEN = {'pymol', 'numpy', 'dataclasses', 'PyQt5', 'PySide2',
              'tkinter', 'Pmw', 'pmg_tk'}
 
 # The ONLY stdlib roots a pure module may import (research A2 + sys).
+# 04-03: ligand_files embed uploaded molecule records (research
+# 04-RESEARCH-export-upload.md pure_layer_opportunities)
 ALLOWED_STDLIB = {'json', 'os', 'sys', 'tempfile', 'time', 'hashlib',
                   'random', 'copy', 'math', 'io', 're', 'collections',
                   'errno', 'ast', 'zipfile', 'shutil', 'unittest',
-                  'datetime'}
+                  'datetime', 'base64'}
 
 # Synthetic source for the negative control: two REAL forbidden imports
 # plus a docstring repeating the same tokens as PROSE. A token grep would

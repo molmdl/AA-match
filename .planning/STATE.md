@@ -5,22 +5,22 @@
 See: .planning/PROJECT.md (updated 2026-09-05)
 
 **Core value:** The player can place amino acids onto a small molecule in the PyMOL 3D viewer and the game correctly detects and scores the interactions they form — turning unguided 3D manipulation practice into a scored game.
-**Current focus:** Phase 4 — Qt Setup Window (executing; waves 1-2 done: 04-01, 04-02, 04-04, 04-03, 04-05; offscreen T1b tier unlocked, modeless window shell live)
+**Current focus:** Phase 4 — Qt Setup Window (executing; waves 1-2 done: 04-01, 04-02, 04-04, 04-03, 04-05; wave 3 in progress: 04-06 DONE; offscreen T1b tier unlocked, modeless window shell live, upload pure surface complete)
 
 ## Current Position
 
 Phase: 4 of 9 (Qt Setup Window) — **IN PROGRESS**
-Plan: 5 of 15 complete — 04-01 (offscreen-Qt probe) + 04-02 (setup_form pure helpers, TDD) + 04-04 (ligand_content upload pipe) + 04-03 (game_file core, TDD) + 04-05 (Qt window shell + menu rewire) DONE
-Status: Executing Phase 4 — 654 WSL tests green (632 + 22 new), SMOKE-01..11 all PASS (SMOKE-11 incl. PART B construct/reuse/close-reopen under the offscreen verdict); Plugins → AA-match now opens the modeless SetupWindow
-Last activity: 2026-09-16 — 04-03: game_file.py PURE shareable-game container (GAME_VERSION gate, 5-gate parse chain, ligand sha256/upload-demo cross-checks, base64 codec; PURE_MODULES = 17); 04-05: setup_window.py shell (modeless singleton, 7-button spec-order row unconnected, no closeEvent), run_plugin_gui lazily rewired (Gate A2 green, metadata byte-identical), skeleton AST contract deliberately replaced, SCANNED_MODULES += setup_window.py, SMOKE-08 re-pointed (31 checks PASS)
+Plan: 6 of 15 complete — 04-01 (offscreen-Qt probe) + 04-02 (setup_form pure helpers, TDD) + 04-04 (ligand_content upload pipe) + 04-03 (game_file core, TDD) + 04-05 (Qt window shell + menu rewire) + 04-06 (game_file upload helpers, TDD) DONE
+Status: Executing Phase 4 — 688 WSL tests green (654 + 34 new), SMOKE-01..11 all PASS (SMOKE-11 incl. PART B construct/reuse/close-reopen under the offscreen verdict); Plugins → AA-match now opens the modeless SetupWindow; upload pure surface (split/supply/read/row/validate) complete in game_file.py
+Last activity: 2026-09-16 — 04-06: game_file.py upload-side PURE surface (UPLOAD_MAX_RECORDS=50 with perf rationale, CRLF-byte-stable split_sdf_records + split_mol2_segments, check_upload_supply refusals naming file+index, read_upload_source (text, FILE sha256, format) with PDB/decode refusals, build_uploaded_row manifest-shaped rows with synthetic uploads/mol-00N keys + set_id + title + record-TEXT sha256, validate_uploaded_rows delegating to manifest._check_entry; purity re-check green, NO whitelist changes)
 
-Progress: [██░░░░░░░░] 5/15 of Phase 4 · [███░░░░░░░] 33% of project (3/9 phases done)
+Progress: [███░░░░░░░] 6/15 of Phase 4 · [███░░░░░░░] 33% of project (3/9 phases done)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 34 (Phase 1: 01-01…01-09; Phase 2: 02-01…02-15; Phase 3: 03-01…03-07; Phase 4: 04-01, 04-02, 04-04, 04-03, 04-05)
-- Average duration: ~11 min (02-03); 6 min (02-04); ~29 min (02-05); 23 min (02-06); 4 min (02-09); 11 min (02-07); 17 min (02-08); ~20 min (02-13); ~27 min (02-11); 16 min (02-14); 29 min (02-15); ~15 min (03-01); ~55 min (03-02); ~14 min (03-03); ~27 min (03-04); ~14 min (03-05); ~10 min (04-01); ~8 min (04-02); 16 min (04-04); ~9 min (04-03); 17 min (04-05)
+- Total plans completed: 35 (Phase 1: 01-01…01-09; Phase 2: 02-01…02-15; Phase 3: 03-01…03-07; Phase 4: 04-01, 04-02, 04-04, 04-03, 04-05, 04-06)
+- Average duration: ~11 min (02-03); 6 min (02-04); ~29 min (02-05); 23 min (02-06); 4 min (02-09); 11 min (02-07); 17 min (02-08); ~20 min (02-13); ~27 min (02-11); 16 min (02-14); 29 min (02-15); ~15 min (03-01); ~55 min (03-02); ~14 min (03-03); ~27 min (03-04); ~14 min (03-05); ~10 min (04-01); ~8 min (04-02); 16 min (04-04); ~9 min (04-03); 17 min (04-05); ~15 min (04-06)
 - Total execution time: —
 
 **By Phase:**
@@ -30,7 +30,7 @@ Progress: [██░░░░░░░░] 5/15 of Phase 4 · [███░░�
 | 1 | 9/9 ✓ | — | — |
 | 2 | 16/16 ✓ | ~8 min (02-02) + ~25 min (02-01 cont.) + 11 min (02-03) + 6 min (02-04) + 29 min (02-05) + 23 min (02-06) + 4 min (02-09) + 11 min (02-07) + 17 min (02-08) + 45 min (02-12) + ~20 min (02-13) + 16 min (02-14) + 29 min (02-15) | — |
 | 3 | 7/7 ✓ | ~15 min (03-01) + ~55 min (03-02) + ~14 min (03-03) + ~27 min (03-04) + ~14 min (03-05) + 2d checkpoint incl. debug detour + fix batch (03-06) + 4d checkpoint incl. framing chain (03-07) | — |
-| 4 | 5/15 | ~10 min (04-01) + ~8 min (04-02) + 16 min (04-04) + ~9 min (04-03) + 17 min (04-05) | — |
+| 4 | 6/15 | ~10 min (04-01) + ~8 min (04-02) + 16 min (04-04) + ~9 min (04-03) + 17 min (04-05) + ~15 min (04-06) | — |
 
 **Recent Trend:**
 - Last 5 plans: —
@@ -150,6 +150,9 @@ Decisions are logged in PROJECT.md Key Decisions table. Seeded from PROJECT.md a
 - (04-05) aamatch/setup_window.py = the Qt-tier modeless shell (NEVER PURE_MODULES, never WSL-imported): module-level `from pymol.Qt import QtWidgets, QtCore, QtGui` (legal+required there); module-scope `_window` singleton + `open_window()` create-if-None show/raise_/activateWindow returning the dialog; SetupWindow(QDialog) no-parent, min-width 420, form-area placeholder + 7 buttons IN SPEC ORDER (`btn_reset`..`btn_start`, exact spec labels/tooltips) created UNCONNECTED — each handler plan (04-09..04-13) connects its own; module-level `from pymol import cmd` is 04-11's addition (Decision 17). NO closeEvent by construction — default close hides, singleton survives, re-open = reuse-and-raise; SMOKE-11's close()+re-open-same-instance check gives SETUP-01 mechanical teeth.
 - (04-05) Plugins → AA-match rewire + three DELIBERATE test evolutions (research P9/P10, 03-05 precedent): run_plugin_gui = lazy `from . import setup_window` + `return setup_window.open_window()` (Gate A2 green, metadata block byte-identical, `__version__` 0.1.0); test_run_plugin_gui_opens_setup_window_lazily REPLACES the 03-05 gamestart-seam AST contract; SCANNED_MODULES += 'setup_window.py' per the growth protocol; SMOKE-08 re-pointed to `aamatch.gamestart.start_game()` directly — all 31 checks preserved, PASS. The game-entry seam and the window surface now have TWO distinct headless assertion handles (wizard from start_game, dialog from open_window).
 - (04-05) T1b smoke recipe for Qt-tier modules, now proven twice: `QT_QPA_PLATFORM='offscreen'` at script top BEFORE any pymol.Qt import → repo-root anchor → import the Qt module → `QApplication.instance() or QApplication([...])` → construct/assert + processEvents → ZERO modals (PITFALL P5). Benign offscreen noise (font-dir warnings, `raise()` unsupported) recorded, ignorable.
+- (04-06) game_file.py upload-side pure surface complete (TDD RED→GREEN→adapter-pin, 688 WSL green, NO purity whitelist changes — os + pure siblings manifest/generator/capability were already legal): split_sdf_records via splitlines(True) rejoin with `rstrip('\r\n') == '$$$$'` detection (CRLF byte-stable, records carry their terminator, blank tail dropped); split_mol2_segments at column-0 @<TRIPOS>MOLECULE with leading pre-block lines attached to segment 1; check_upload_supply pins UPLOAD_MAX_RECORDS=50 (Decision 8) with the per-generate temp-load rationale VERBATIM in the cap refusal; read_upload_source returns (text, FILE sha256 over raw bytes, lowercased-ext fmt) refusing PDB + non-UTF-8 with pinned messages.
+- (04-06, contract resolution) build_uploaded_row emits 16 keys: the 14 REQUIRED_ENTRY_KEYS + 'set_id' (= UPLOAD_SET_ID) + 'title' — the plan's "14 + title" wording is read as the manifest-key core plus the candidate-row set_id, because validate_uploaded_rows' fail-closed set_id guard ("missing set_id refuses" vs "built row passes") and 04-08's direct `candidates=rows` feed into engine.new_game (generator requires non-empty set_id) both demand it. sha256 is over RECORD TEXT (Decision-19 two-hash rule; the FILE hash belongs to read_upload_source / setup upload['sha256']). size_class via generator._candidate_class (single bucket home), bond_order_counts via capability._bond_order_int tally (an unrecognized order yields key 'None' → refused by the manifest digit-string rule at validate time, fail-closed). protonation 'as-recorded' (PITFALL 14).
+- (04-06) validate_uploaded_rows DELEGATES the 14-key rules to manifest._check_entry (thin same-package adapter, never re-implements) — the absolute/backslash/drive-letter file refusals come intact with manifest set/entry context ("manifest set 'uploaded' entry N"); the adapter is pinned by a broken-bond_order_counts test asserting the manifest's OWN message text (adapter-pin test pattern). read_upload_source uses bare stdlib open(rb) — the same pure I/O persistence performs; module docstring's layer statement extended to say so (purity law = no viewer/Qt, not no-stdlib-open).
 
 ### Pending Todos
 
@@ -188,8 +191,8 @@ Decisions are logged in PROJECT.md Key Decisions table. Seeded from PROJECT.md a
 
 ## Session Continuity
 
-Last session: 2026-09-16 (wave 2 executed in 2 parallel worktrees + merged: 04-03 game_file core TDD — 654/654 WSL green, zero deviations; 04-05 Qt window shell + menu rewire — SMOKE-08 re-point PASS, SMOKE-11 PASS incl. T1b PART B, zero deviations)
-Stopped at: **Waves 1-2 COMPLETE + merged (5/15 of Phase 4)** — next: wave 3 (04-06 upload helpers, 04-07 window form)
+Last session: 2026-09-16 (04-06 game_file upload helpers TDD in exec/04-06 worktree: RED 31 tests → GREEN six helpers → adapter-pin 3 tests; 688/688 WSL green incl. purity re-check, ZERO whitelist changes, one recorded contract-resolution deviation on set_id-in-row)
+Stopped at: **04-06 COMPLETE on branch exec/04-06 (awaiting wave-3 merge)** — 6/15 of Phase 4; next: sibling 04-07 window form, then 04-08 upload pipeline (consumes exactly this pure surface)
 Resume file: None
 
 ## Next Actions

@@ -106,6 +106,11 @@ class SetupWindow(QtWidgets.QDialog):
         # stored there -- the sha256 lets Load warn when it moved).
         self._uploaded = None
 
+        # Bulk-populate guard (prior-art shape): True while apply_state
+        # runs so future valueChanged hooks (none yet) can early-return
+        # instead of cascading recompute.
+        self._loading = False
+
         # SETUP-02..06 widget side: source selector, spinboxes, mode
         # group, interaction checkboxes -- in spec order.
         self._build_source_selector()
@@ -391,6 +396,110 @@ class SetupWindow(QtWidgets.QDialog):
             vbox.addWidget(cb)
             self.interaction_checks.append((itype, cb))
         self.form_area.layout().addWidget(group)
+
+    # ---- collect/apply: the form as a view of the 7-field model ----
+
+    def collect_state(self):
+        """Snapshot the form into the plain 7-field setup dict.
+
+        Returns EXACTLY the validate_state schema keys; validation and
+        clamping stay with the pure layer (no widget-side
+        re-validation). The upload entry is read from the session-only
+        ingested slot populated by 04-10's Browse handler.
+        """
+        upload = None
+        if self._uploaded:
+            upload = {'path': self._uploaded['path'],
+                      'sha256': self._uploaded['sha256']}
+        return {
+            'source_mode': 'upload' if self.src_upload.isChecked()
+            else 'demo',
+            'demo_set_id': str(self.demo_combo.currentData() or ''),
+            'upload': upload,
+            'molecules_per_level': int(self.molecules_spin.value()),
+            'difficulty_levels': int(self.difficulty_spin.value()),
+            'interaction_mode': self._current_mode(),
+            'allowed_interactions': [
+                t for (t, cb) in self.interaction_checks
+                if cb.isChecked()],
+        }
+
+    def apply_state(self, state):
+        """Repopulate every widget from a setup dict (Reset/Load/init).
+
+        Missing-key tolerance on every field via .get with frozen
+        defaults. The _loading guard is set for the whole populate so
+        future valueChanged hooks (none yet) can early-return instead
+        of cascading recompute. The upload label shows the SAVED path
+        for context only -- the session-only _uploaded slot is NOT
+        restored here (uploads are not stored in setup files).
+        """
+        if not isinstance(state, dict):
+            state = {}
+        from . import setup_state
+        self._loading = True
+        try:
+            if state.get('source_mode', setup_state.DEFAULTS['source_mode']) \
+                    == 'upload':
+                self.src_upload.setChecked(True)
+            else:
+                self.src_demo.setChecked(True)
+
+            set_id = str(state.get('demo_set_id') or '')
+            if set_id:
+                idx = self.demo_combo.findData(set_id)
+                if idx >= 0:
+                    self.demo_combo.setCurrentIndex(idx)
+                else:
+                    # Fallback to the first row, with a visible note --
+                    # never a crash on a stale/named set id.
+                    self.demo_combo.setCurrentIndex(0)
+                    self.source_note.setText(
+                        'set %r is not in the bundled list' % set_id)
+            else:
+                # Empty id = 'no restriction': no combo item selected
+                # (the dropdown holds named sets only; -1 = empty
+                # selection, which collect maps back to '').
+                self.demo_combo.setCurrentIndex(-1)
+
+            try:
+                self.molecules_spin.setValue(int(state.get(
+                    'molecules_per_level',
+                    setup_state.DEFAULTS['molecules_per_level'])))
+            except (TypeError, ValueError):
+                self.molecules_spin.setValue(
+                    setup_state.DEFAULTS['molecules_per_level'])
+            try:
+                self.difficulty_spin.setValue(int(state.get(
+                    'difficulty_levels',
+                    setup_state.DEFAULTS['difficulty_levels'])))
+            except (TypeError, ValueError):
+                self.difficulty_spin.setValue(
+                    setup_state.DEFAULTS['difficulty_levels'])
+
+            mode = state.get('interaction_mode',
+                             setup_state.DEFAULTS['interaction_mode'])
+            if mode == 'exclusive':
+                self.mode_exclusive.setChecked(True)
+            elif mode == 'block_exclusive':
+                self.mode_block.setChecked(True)
+            else:
+                self.mode_unset.setChecked(True)
+
+            allowed = state.get('allowed_interactions') or []
+            for (t, cb) in self.interaction_checks:
+                cb.setChecked(t in allowed)
+
+            upload = state.get('upload')
+            if isinstance(upload, dict) and upload.get('path'):
+                path = str(upload['path'])
+                self.upload_path_label.setText(path)
+                self.upload_path_label.setToolTip(path)
+            else:
+                self.upload_path_label.setText('')
+                self.upload_path_label.setToolTip('')
+        finally:
+            self._loading = False
 
     # NO closeEvent OVERRIDE -- on purpose: default close hides the
     # dialog, and the module-level _window singleton keeps the object

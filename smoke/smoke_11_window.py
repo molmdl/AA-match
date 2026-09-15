@@ -26,9 +26,16 @@ PART B  (T1b -- the 04-01 probe verdict is PASS (platform=offscreen),
         open_window() is STILL dlg (default close hides; the module-level
         singleton keeps the object alive -- SETUP-01's
         survive-minimize/re-open mechanism); the 7 buttons exist with
-        the spec-order labels via text(); processEvents; finish
-        dlg.close(). ZERO modals (PITFALL P5): no .exec_(), no
-        QFileDialog, no QMessageBox anywhere in this script.
+        the spec-order labels via text(); then the 04-07 form parts:
+        apply_state(validate-normalized DEFAULTS copy) -> collect_state
+        round-trips losslessly through setup_state.validate_state,
+        and a programmatic widget mutation drive (molecules 4,
+        difficulty 2, block mode, h_bond + pi_stacking checked,
+        upload toggle and back, demo set re-selected) lands in
+        collect_state field-by-field with demo_combo carrying userData
+        'demo-dev-1'; processEvents; finish dlg.close(). ZERO modals
+        (PITFALL P5): no .exec_(), no QFileDialog, no QMessageBox
+        anywhere in this script.
 PART C  (ALWAYS, T0-in-smoke): Gate A2 shape sanity echoed inside
         PyMOL's interpreter for the record -- aamatch/__init__.py
         carries ZERO column-0 import/from statements (the lazy-import
@@ -142,6 +149,42 @@ try:
            else (attr, None) for (attr, _label) in expected]
     check('part B: 7 buttons in spec order with exact labels',
           got == expected, 'got=%r' % (got,))
+
+    # ---- 04-07 form parts: collect/apply round-trip + mutation ----
+    # setup_state is pure and importable headlessly (no Qt, no pymol).
+    from aamatch import setup_state
+    dlg.apply_state(dict(setup_state.DEFAULTS))
+    state = dlg.collect_state()
+    check('part B: apply(DEFAULTS)->collect round-trips via '
+          'validate_state',
+          setup_state.validate_state(state)
+          == setup_state.validate_state(dict(setup_state.DEFAULTS)),
+          'got=%r' % (state,))
+    # Widget mutation drive: every changed value must land in the next
+    # collect_state snapshot.
+    dlg.molecules_spin.setValue(4)
+    dlg.difficulty_spin.setValue(2)
+    dlg.mode_block.setChecked(True)
+    for (itype, cb) in dlg.interaction_checks:
+        cb.setChecked(itype in ('h_bond', 'pi_stacking'))
+    dlg.src_upload.setChecked(True)
+    dlg.src_demo.setChecked(True)
+    sel = dlg.demo_combo.findData('demo-dev-1')
+    if sel >= 0:
+        dlg.demo_combo.setCurrentIndex(sel)
+    got2 = dlg.collect_state()
+    check('part B: widget mutation drive lands in collect_state',
+          got2['molecules_per_level'] == 4
+          and got2['difficulty_levels'] == 2
+          and got2['interaction_mode'] == 'block_exclusive'
+          and got2['allowed_interactions'] == ['h_bond', 'pi_stacking']
+          and got2['source_mode'] == 'demo',
+          'got=%r' % (got2,))
+    check("part B: demo_combo carries userData 'demo-dev-1'",
+          sel >= 0
+          and dlg.demo_combo.currentData() == 'demo-dev-1',
+          'currentData=%r' % (dlg.demo_combo.currentData(),))
+
     app.processEvents()
     dlg.close()
     REC['dialog'] = '%r' % (type(dlg),)

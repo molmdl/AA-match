@@ -781,5 +781,43 @@ class TestValidateUploadedRows(unittest.TestCase):
         self.assertIn('set_id', str(ctx.exception))
 
 
+class TestValidateDelegationAdapter(unittest.TestCase):
+    """Task 3 pin: validate_uploaded_rows is a thin adapter over the
+    manifest's OWN entry rules -- a valid row passes through unchanged
+    and a broken row surfaces the manifest's own message text (never a
+    re-implemented rule)."""
+
+    def _row(self):
+        return game_file.build_uploaded_row(
+            ROW_ATOMS, ROW_BONDS, ROW_PROFILE, SDF_RECORD_1, 'sdf', 0)
+
+    def test_valid_row_passes_through_unchanged(self):
+        row = self._row()
+        before = copy.deepcopy(row)
+        self.assertIsNone(game_file.validate_uploaded_rows([row]))
+        self.assertEqual(row, before)          # never mutated (P6)
+
+    def test_broken_bond_order_counts_surfaces_manifest_message(self):
+        row = self._row()
+        row['bond_order_counts'] = {'1': 0}    # value must be > 0
+        with self.assertRaises(FormatError) as ctx:
+            game_file.validate_uploaded_rows([row])
+        message = str(ctx.exception)
+        # The manifest's OWN message shape, with its set/entry context:
+        self.assertIn(
+            "'bond_order_counts' values must be positive ints", message)
+        self.assertIn("manifest set 'uploaded' entry 0", message)
+        self.assertIn("entry_id='mol-001'", message)
+
+    def test_non_digit_bond_order_key_surfaces_manifest_message(self):
+        row = self._row()
+        row['bond_order_counts'] = {'None': 1}  # unrecognized order
+        with self.assertRaises(FormatError) as ctx:
+            game_file.validate_uploaded_rows([row])
+        self.assertIn(
+            "'bond_order_counts' keys must be digit strings",
+            str(ctx.exception))
+
+
 if __name__ == '__main__':
     unittest.main()

@@ -141,20 +141,67 @@ def _remap_ligand_bonds(records, lig_objects):
     return lig, out
 
 
-def _ligand_data_for(row, names_before):
+def _ligand_data_for(row, names_before, ligand_content=None):
     """Build the {'centroid', 'radius', 'profile'} geometry dict for ONE
     manifest candidate row (the 02-08 deviation-3 contract, proven by
     SMOKE-03): temp load -> extract (this object only) -> bounding
     sphere + capability.ligand_profile -> temp deleted in a finally.
     Temp objects never leak; the caller asserts the object list is
     unchanged at the end.
+
+    ``ligand_content`` (04-04, additive; default None): dict mapping
+    synthetic file keys such as 'uploads/mol-001.sdf' to molecule
+    record text; None = the package-resolved manifest flow. When the
+    row's 'file' IS a key of the dict, the record loads FROM THE STRING
+    via cmd.read_sdfstr/read_mol2str (same C parser as file loads,
+    importing.py:931-959/1038-1069) -- the string path NEVER touches
+    package_data_path or any filesystem path, so absolute-path keys are
+    structurally impossible (the os.path.join hazard from the 04
+    research). The reader is chosen from the row's 'format' key
+    (manifest.py's format rule) and count_states must be exactly 1
+    (records are split one molecule per content entry, fail-closed).
+    The atom_count cross-check below stays ACTIVE for the string path
+    too. Default None keeps every existing call site and test
+    byte-identical (the package cmd.load path, unchanged).
     """
     identity = (row['set_id'], row['entry_id'])
     tmp_name = cmd.get_unused_name('_aam_tmp')
     try:
-        winpath = to_windows_path(
-            package_data_path('data', row['file']))
-        cmd.load(winpath, tmp_name)
+        if ligand_content is not None and row['file'] in ligand_content:
+            text = ligand_content[row['file']]
+            fmt = row.get('format')
+            if fmt == 'mol2':
+                if hasattr(cmd, 'read_mol2str'):
+                    cmd.read_mol2str(text, tmp_name)
+                else:
+                    raise EngineError(
+                        'new_game: uploaded ligand %r needs '
+                        'cmd.read_mol2str, which THIS PyMOL build does '
+                        'not export (2.5.0 api.py omits it) -- mol2 '
+                        'uploads are unavailable here' % (identity,))
+            elif fmt == 'sdf':
+                cmd.read_sdfstr(text, tmp_name)
+            else:
+                raise EngineError(
+                    'new_game: uploaded ligand %r has unsupported format %r '
+                    '(expected sdf or mol2)' % (identity, fmt))
+            if cmd.count_states(tmp_name) != 1:
+                raise EngineError(
+                    'new_game: uploaded ligand %r decoded to %d state(s) -- '
+                    'records must be split one molecule per content entry'
+                    % (identity, cmd.count_states(tmp_name)))
+        else:
+            winpath = to_windows_path(
+                package_data_path('data', row['file']))
+            try:
+                cmd.load(winpath, tmp_name)
+            except Exception as exc:
+                raise EngineError(
+                    'new_game: ligand %r failed to load from the '
+                    'package data dir (%s: %s) -- the bundled fixture '
+                    'may be missing/corrupt, or the row names a '
+                    'synthetic key WITHOUT ligand_content'
+                    % (identity, type(exc).__name__, exc))
         n_atoms = cmd.count_atoms(tmp_name)
         want = row.get('atom_count')
         if want is not None and n_atoms != int(want):
@@ -180,7 +227,7 @@ def _ligand_data_for(row, names_before):
                 % (tmp_name, names_before, cmd.get_names('objects')))
 
 
-def new_game(setup, seed, candidates=None):
+def new_game(setup, seed, candidates=None, ligand_content=None):
     """Op 1: setup + seed -> (level-spec payload, manifest_entries).
 
     ``candidates`` is an optional override list of manifest entry rows
@@ -189,6 +236,14 @@ def new_game(setup, seed, candidates=None):
     ``demo_set_id`` (v1: single-set dev manifest). Whatever the source,
     ligand_data is built per the enrolled candidates and the scene is
     asserted unchanged across the op (temps never leak).
+
+    ``ligand_content`` (04-04, additive; default None): dict mapping
+    synthetic file keys such as 'uploads/mol-001.sdf' to molecule
+    record text for uploaded games; None = the package-resolved
+    manifest flow (byte-identical for demo sets -- every existing call
+    site and test unchanged). Passed straight through to
+    ``_ligand_data_for`` per candidate row; the string path never
+    touches ``package_data_path``.
     """
     validated = validate_state(setup)
     names_before = list(cmd.get_names('objects'))
@@ -220,7 +275,7 @@ def new_game(setup, seed, candidates=None):
     ligand_data = {}
     for row in rows:
         ligand_data[(row['set_id'], row['entry_id'])] = \
-            _ligand_data_for(row, names_before)
+            _ligand_data_for(row, names_before, ligand_content)
 
     payload = generator.generate(seed, validated, rows, ligand_data,
                                  validated['difficulty_levels'])
@@ -236,13 +291,20 @@ def new_game(setup, seed, candidates=None):
     return payload, rows
 
 
-def materialize(payload, level_index=0):
+def materialize(payload, level_index=0, ligand_content=None):
     """Op 2: payload -> registry (placement.materialize delegate).
 
     The payload + registry are kept module-side, so place_aa /
     reset_to_grid / detect need no plumbing from callers.
+
+    ``ligand_content`` (04-04, additive; default None): dict of
+    synthetic file key to molecule record text for uploaded payloads;
+    None = the package-resolved flow (byte-identical -- every existing
+    call site unchanged). Passed straight through to
+    ``placement.materialize``.
     """
-    registry = placement.materialize(payload, level_index=level_index)
+    registry = placement.materialize(payload, level_index=level_index,
+                                     ligand_content=ligand_content)
     global _payload, _registry
     _payload = payload
     _registry = registry

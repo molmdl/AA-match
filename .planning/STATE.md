@@ -10,17 +10,17 @@ See: .planning/PROJECT.md (updated 2026-09-05)
 ## Current Position
 
 Phase: 4 of 9 (Qt Setup Window) — **IN PROGRESS**
-Plan: 2 of 15 complete — 04-01 (offscreen-Qt probe) + 04-02 (setup_form pure helpers, TDD) DONE
-Status: Executing Phase 4 — 632 WSL tests green (614 baseline + 18 new), SMOKE-01..09 all PASS; T1b headless-widget tier AVAILABLE for plans 04-05..04-13
-Last activity: 2026-09-15 — 04-01 probe: QT_QPA_PLATFORM=offscreen QApplication + QDialog construction + QSpinBox/QCheckBox round-trips PROVEN headless (first-attempt PASS, no fallback); 04-02: setup_form (build_state fatal pre-checks BEFORE scene cleanup, usable_randomized_state trap-kill, manifest_sets; PURE_MODULES = 16)
+Plan: 3 of 15 complete — 04-01 (offscreen-Qt probe) + 04-02 (setup_form pure helpers, TDD) + 04-04 (ligand_content upload pipe) DONE
+Status: Executing Phase 4 — 632 WSL tests green (614 baseline + 18 new), SMOKE-01..10 all PASS; T1b headless-widget tier AVAILABLE for plans 04-05..04-13
+Last activity: 2026-09-15 — 04-01 probe: QT_QPA_PLATFORM=offscreen widget construction PROVEN headless (first-attempt PASS, no fallback); 04-02: setup_form (build_state fatal pre-checks BEFORE scene cleanup, usable_randomized_state trap-kill, manifest_sets; PURE_MODULES = 16); 04-04: ligand_content threaded through engine/placement/gamestart, SMOKE-10 PASS (19 checks), 4 documented deviations incl. the cmd.read_mol2str api-export gap
 
-Progress: [█░░░░░░░░░] 2/15 of Phase 4 · [███░░░░░░░] 33% of project (3/9 phases done)
+Progress: [█░░░░░░░░░] 3/15 of Phase 4 · [███░░░░░░░] 33% of project (3/9 phases done)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 31 (Phase 1: 01-01…01-09; Phase 2: 02-01…02-15; Phase 3: 03-01…03-07; Phase 4: 04-01, 04-02)
-- Average duration: ~11 min (02-03); 6 min (02-04); ~29 min (02-05); 23 min (02-06); 4 min (02-09); 11 min (02-07); 17 min (02-08); ~20 min (02-13); ~27 min (02-11); 16 min (02-14); 29 min (02-15); ~15 min (03-01); ~55 min (03-02); ~14 min (03-03); ~27 min (03-04); ~14 min (03-05); ~10 min (04-01); ~8 min (04-02)
+- Total plans completed: 32 (Phase 1: 01-01…01-09; Phase 2: 02-01…02-15; Phase 3: 03-01…03-07; Phase 4: 04-01, 04-02, 04-04)
+- Average duration: ~11 min (02-03); 6 min (02-04); ~29 min (02-05); 23 min (02-06); 4 min (02-09); 11 min (02-07); 17 min (02-08); ~20 min (02-13); ~27 min (02-11); 16 min (02-14); 29 min (02-15); ~15 min (03-01); ~55 min (03-02); ~14 min (03-03); ~27 min (03-04); ~14 min (03-05); ~10 min (04-01); ~8 min (04-02); 16 min (04-04)
 - Total execution time: —
 
 **By Phase:**
@@ -30,7 +30,7 @@ Progress: [█░░░░░░░░░] 2/15 of Phase 4 · [███░░�
 | 1 | 9/9 ✓ | — | — |
 | 2 | 16/16 ✓ | ~8 min (02-02) + ~25 min (02-01 cont.) + 11 min (02-03) + 6 min (02-04) + 29 min (02-05) + 23 min (02-06) + 4 min (02-09) + 11 min (02-07) + 17 min (02-08) + 45 min (02-12) + ~20 min (02-13) + 16 min (02-14) + 29 min (02-15) | — |
 | 3 | 7/7 ✓ | ~15 min (03-01) + ~55 min (03-02) + ~14 min (03-03) + ~27 min (03-04) + ~14 min (03-05) + 2d checkpoint incl. debug detour + fix batch (03-06) + 4d checkpoint incl. framing chain (03-07) | — |
-| 4 | 2/15 | ~10 min (04-01) + ~8 min (04-02) | — |
+| 4 | 3/15 | ~10 min (04-01) + ~8 min (04-02) + 16 min (04-04) | — |
 
 **Recent Trend:**
 - Last 5 plans: —
@@ -140,6 +140,10 @@ Decisions are logged in PROJECT.md Key Decisions table. Seeded from PROJECT.md a
 - (03-07, probe verdict) matrix-visibility probe (tmp/, headless, engine seam, seed 42): matrix path VISIBLE — cmd.transform_object(name, [R|t], homogenous=1) BAKES coordinates (iterate_state matrix-applied vs raw: dev 1e-6 Å vs 11.12 Å; detector-view centroid matches R·pose+t exactly; control cmd.translate sanity exact 8 Å shift). Native-drag-style object-matrix moves land in the detector pipeline input → detector-compatible, SAFE — the pre-planned Phase 5/6 guard candidates (pre-Confirm matrix sweep → auto-bake / refuse) NOT opened.
 - (04-01, probe verdict) **Research Q1 CLOSED — offscreen-Qt widget construction WORKS headless**: QT_QPA_PLATFORM=offscreen set before the `pymol.Qt` import → QApplication reuse-or-create → QDialog + layout/label/button → show/processEvents → isVisible True → QSpinBox(1..10)=7 read-back + QCheckBox toggle all PASS on the FIRST attempt (no default-platform fallback needed). Evidence: smoke_09_qt_probe.py run in the conda env (PyQt5 5.12.3 / Qt 5.12.9), `=== PROBE PASS (platform=offscreen) ===` + `=== SMOKE-09 PASS ===`. **Consequence for 04-05..04-13: T1b verify tier AVAILABLE** (headless dialog construction, collect/apply round-trips, btn.click() drive-through); T2 [HUMAN] stays for look/feel/modals. Later T1b authors: ZERO modals headless (PITFALL P5); probe verdict line lived in 04-01-SUMMARY.md.
 - (03-07, human decisions) Drag diagnostics steps 3/4 (populated-_drag session; transform_object render-doubling) SKIPPED by explicit human decision (movement already decided; low marginal value; SMOKE-07/08 cover the game-path model). Nudge left/right SCREEN-RELATIVE BY DESIGN — Phase 5/9 help text must say "keys move in your current view direction". Start framing final laws: geometry-side ligand front-offset + frame ONLY the active molecule's grid+ligand + zoom-LAST + camera-field-surgery-avoided (blank start-view regression fixed by re-framing after composition, never clip-plane edits). Framing chain 1d48d71 → 0c13184 → d8e8f7d → 0041e74 → 2a182d7.
+- (04-04) `ligand_content=None` threaded additively through ALL cmd-tier game seams: `engine._ligand_data_for`, `engine.new_game`, `engine.materialize` (delegate), `placement.materialize`, `gamestart.start_game` — five signatures (plan's grep metric said four; the delegate is structurally required by the direct `engine.materialize(..., ligand_content=...)` call). None default provably byte-identical (SMOKE-04/08 regression PASS unchanged, 614 WSL tests green). start_game passes it to BOTH new_game and materialize so the one-call seam stays complete for uploaded payloads.
+- (04-04) Reader derivation law (04-DECISIONS #18, now codified): engine routes by the manifest-shaped row's `format` key; placement routes by the synthetic key's EXTENSION (payload ligand blocks carry NO 'format' key — generator.py:851-861); anything but sdf/mol2 fail-closes with the house error; `count_states == 1` asserted after every read_*str. The atom_count cross-check stays ACTIVE on the string path.
+- (04-04, recorded 2.5.0-build findings) **(a)** `cmd.read_mol2str` is MISSING from this build's cmd namespace: installed importing.py:1038 defines it but api.py's re-export block omits it — `hasattr(cmd,'read_mol2str')` is False; both mol2 branches guard with hasattr and fail closed naming the missing reader. **Forward concern for 04-06/04-08:** mol2 uploads need an alternative route (e.g. `cmd.load_raw('mol2', ...)`) or a vendored call; SMOKE-10's record-only probe is the canary. **(b)** `cmd.load` of a MISSING sdf package fixture raises `pymol.CmdException` (internal.py _load2str file_read path), OUTSIDE the gamestart/wizard-guarded ValueError family — engine._ligand_data_for now wraps package-load failures into EngineError naming the ligand; placement's package path deliberately left unwrapped (deviation minimalism; mirror it in Phase 7 if import replay hits that class).
+- (04-04, smoke-design reconciliation) Single-candidate uploaded games must set `molecules_per_level=1` — the generator's distinct-pick contract refuses 1 candidate against DEFAULTS' 2 molecules (SMOKE-04 precedent). SMOKE-10 also documents that `ligand['source']` echoes setup source_mode ('demo'|'upload' only) — 'uploaded' appears as the ligand block's `set_id`, never `source`.
 
 ### Pending Todos
 
@@ -178,12 +182,13 @@ Decisions are logged in PROJECT.md Key Decisions table. Seeded from PROJECT.md a
 
 ## Session Continuity
 
-Last session: 2026-09-15 (wave 1 executed: 04-01 offscreen-Qt probe PASS — T1b tier unlocked; 04-02 setup_form pure helpers TDD, 632/632 green)
-Stopped at: **04-01 + 04-02 COMPLETE (2/15 of Phase 4), wave-1 merge** — next: wave 2 (04-03 game_file core, 04-05 Qt window shell)
+Last session: 2026-09-15 (wave 1 executed in 3 parallel worktrees: 04-01 offscreen-Qt probe PASS — T1b tier unlocked; 04-02 setup_form pure helpers TDD, 632/632 green; 04-04 ligand_content upload pipe, SMOKE-10 PASS)
+Stopped at: **Wave 1 COMPLETE + merged (3/15 of Phase 4)** — next: wave 2 (04-03 game_file core, 04-05 Qt window shell)
 Resume file: None
 
 ## Next Actions
 
+- **Phase 4 in progress:** 04-04 (ligand_content pipe) complete on branch exec/04-04 — merge per the worktree protocol in wave/dependency order; SMOKE-10 is the regression canary for the seam. **Watch:** this 2.5.0 build lacks the `cmd.read_mol2str` export — 04-06/04-08 must pick a mol2 route (e.g. `cmd.load_raw`) before relying on mol2 uploads (see 04-04-SUMMARY.md Deviations #3 + Next Phase Readiness).
 - **Phase 3 verifier: PASSED (2026-09-15)** — 03-VERIFICATION.md 27/27; ROADMAP criteria 1-4 all satisfied; zero gaps. Phase 3 closed.
 - **04-01 probe verdict (citable line):** `Probe verdict: PASS (platform=offscreen) first attempt succeeded` — plans 04-05..04-13 may use the T1b headless-widget tier; cite the exact line in .planning/phases/04-qt-setup-window/04-01-SUMMARY.md.
 - **Gap-closure planning:** spec.md lines 12-21 setup popup from the Plugins → AA-match menu item is a recorded Phase-3 gap candidate (full Qt setup window = Phase 4; UI code borrowable from bioCHEMeleon).

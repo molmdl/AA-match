@@ -69,6 +69,8 @@ Python floor: PyMOL's Windows Python 3.9 at runtime, written 3.6-safe
 (Gate D compiles every aamatch/*.py under python3.6).
 """
 
+import os
+
 from pymol import cmd
 
 from . import capability, geometry
@@ -229,7 +231,7 @@ def transform_baked(object_name, m16):
     cmd.transform_object(object_name, matrix, homogenous=1)
 
 
-def materialize(payload, level_index=0):
+def materialize(payload, level_index=0, ligand_content=None):
     """Payload -> real PyMOL objects for ONE level of the game.
 
     Per molecule of ``payload['levels'][level_index]``:
@@ -240,6 +242,17 @@ def materialize(payload, level_index=0):
        an existing name appends a state, probe-proven). Count-asserted
        (>= 1 atom); sentinel-tagged; translated by
        ``placement['offset']`` (camera=0).
+       ``ligand_content`` (04-04, additive; default None): dict mapping
+       synthetic file keys such as 'uploads/mol-001.sdf' to molecule
+       record text for uploaded payloads; None = the package-resolved
+       flow (byte-identical for demo sets -- every existing call site
+       and test unchanged). When ``ligand['file']`` IS a key of the
+       dict, the record loads FROM THE STRING via
+       cmd.read_sdfstr/read_mol2str -- never a package or filesystem
+       path. The reader is derived from the synthetic key's EXTENSION
+       (payload ligand blocks carry no 'format' key; 04-DECISIONS.md
+       #18): anything but sdf/mol2 fail-closes with PlacementError,
+       and count_states must be exactly 1.
     2. PER SLOT: ``cmd.get_unused_name('_aam_aa')`` ->
        ``cmd.fragment(AA_TOKENS[token]['fragment'], name, zoom=0)`` ->
        sentinel-tag -> ``cmd.sort`` -> centroid-delta
@@ -301,9 +314,34 @@ def materialize(payload, level_index=0):
         # Unique name ALWAYS (cmd.load appends states into existing
         # names -- probe §1.1 hazard).
         lig_name = cmd.get_unused_name('_aam_lig')
-        winpath = to_windows_path(
-            package_data_path('data', ligand['file']))
-        cmd.load(winpath, lig_name)
+        if ligand_content is not None and ligand['file'] in ligand_content:
+            text = ligand_content[ligand['file']]
+            ext = os.path.splitext(str(ligand['file']))[1].lstrip('.').lower()
+            if ext == 'mol2':
+                if hasattr(cmd, 'read_mol2str'):
+                    cmd.read_mol2str(text, lig_name)
+                else:
+                    raise PlacementError(
+                        'materialize: molecule %r ligand file %r needs '
+                        'cmd.read_mol2str, which THIS PyMOL build does '
+                        'not export (2.5.0 api.py omits it) -- mol2 '
+                        'uploads are unavailable here'
+                        % (molecule_id, ligand['file']))
+            elif ext == 'sdf':
+                cmd.read_sdfstr(text, lig_name)
+            else:
+                raise PlacementError(
+                    'materialize: molecule %r ligand file %r has unsupported '
+                    'extension %r (expected sdf or mol2)'
+                    % (molecule_id, ligand['file'], ext))
+            if cmd.count_states(lig_name) != 1:
+                raise PlacementError(
+                    'materialize: molecule %r ligand decoded to %d state(s)'
+                    % (molecule_id, cmd.count_states(lig_name)))
+        else:
+            winpath = to_windows_path(
+                package_data_path('data', ligand['file']))
+            cmd.load(winpath, lig_name)
         n_lig = _assert_count(lig_name, 1,
                               'materialize ligand %s' % molecule_id)
         _sentinel_tag(lig_name)

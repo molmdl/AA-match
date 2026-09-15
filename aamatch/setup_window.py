@@ -70,12 +70,19 @@ def open_window():
 
 
 class SetupWindow(QtWidgets.QDialog):
-    """The modeless setup window shell (SETUP-01).
+    """The modeless setup window (SETUP-01) with the 7-field form.
 
-    04-05 scope: window lifecycle + an empty form-area placeholder +
-    the 7-button row created IN SPEC ORDER with tooltips and NOT
-    connected (each handler plan connects its own button; no dead stub
-    handlers). The form fields land in 04-07.
+    Window lifecycle (04-05) + the full form (04-07, SETUP-02..06
+    widget side): a 2-page molecule-source selector (demo dropdown /
+    upload browse+path label), molecules + difficulty spinboxes whose
+    ranges mirror the frozen setup_state clamp constants exactly
+    (collect -> validate is lossless), a 3-way interaction-mode radio
+    group with a context label, and 7 checkboxes in canonical
+    INTERACTION_TYPES order -- every widget tooltipped. The 7-button
+    row sits below the form, created IN SPEC ORDER and NOT connected
+    (each handler plan connects its own button; no dead stub
+    handlers). collect_state/apply_state round-trip a
+    validate_state-normalized dict losslessly.
     """
 
     def __init__(self):
@@ -87,11 +94,20 @@ class SetupWindow(QtWidgets.QDialog):
 
         top = QtWidgets.QVBoxLayout(self)
 
-        # (a) form-area placeholder -- the 7-field form lands here in
-        # 04-07; the placeholder widget keeps the layout slot stable.
+        # (a) form area -- the 7-field form packs vertically into this
+        # stable layout slot (button row stays pinned below).
         self.form_area = QtWidgets.QWidget(self)
         self.form_area.setLayout(QtWidgets.QVBoxLayout())
         top.addWidget(self.form_area)
+
+        # Session-only ingested-upload slot: the Browse handler (04-10)
+        # populates it with {'path': ..., 'sha256': ...}; collect_state
+        # reads it. Never restored from setup files (uploads are not
+        # stored there -- the sha256 lets Load warn when it moved).
+        self._uploaded = None
+
+        # SETUP-02/03 widget side: the molecule-source selector.
+        self._build_source_selector()
 
         # (b) stretch -- keeps the button row pinned to the bottom.
         top.addStretch(1)
@@ -128,6 +144,101 @@ class SetupWindow(QtWidgets.QDialog):
                     self.btn_start):
             row.addWidget(btn)
         top.addLayout(row)
+
+    # ---- the 7-field form (SETUP-02..06 widget side, 04-07) ----
+
+    def _build_source_selector(self):
+        """Molecule-source group: 2 radios + a 2-page QStackedWidget.
+
+        Mirrors the prior-art stacked-pages pattern: the non-active
+        page's values stay INTACT underneath (source_mode, demo_set_id
+        and upload are three coexisting state fields).
+        """
+        group = QtWidgets.QGroupBox('Molecule source', self)
+        vbox = QtWidgets.QVBoxLayout(group)
+
+        radios = QtWidgets.QHBoxLayout()
+        self.src_demo = QtWidgets.QRadioButton('Bundled demo set', group)
+        self.src_demo.setToolTip(
+            'Generate from a demo set bundled with AA-match.')
+        self.src_upload = QtWidgets.QRadioButton(
+            'Upload my molecules...', group)
+        self.src_upload.setToolTip(
+            'Generate from your own SDF or MOL2 file (one file; '
+            'multi-record files give several molecules).')
+        radios.addWidget(self.src_demo)
+        radios.addWidget(self.src_upload)
+        vbox.addLayout(radios)
+
+        self.source_stack = QtWidgets.QStackedWidget(group)
+
+        # Page 0 -- demo page: dropdown of bundled sets + a note label
+        # for placeholder/warning text (initially empty).
+        demo_page = QtWidgets.QWidget(self.source_stack)
+        demo_layout = QtWidgets.QVBoxLayout(demo_page)
+        self.demo_combo = QtWidgets.QComboBox(demo_page)
+        self.demo_combo.setToolTip(
+            'Which bundled demo set to generate from.')
+        demo_layout.addWidget(self.demo_combo)
+        self.source_note = QtWidgets.QLabel('', demo_page)
+        self.source_note.setWordWrap(True)
+        demo_layout.addWidget(self.source_note)
+        self.source_stack.addWidget(demo_page)
+
+        # Page 1 -- upload page: Browse button + read-only path label.
+        # btn_browse is created here but NOT connected (04-10 connects
+        # it to its QFileDialog/ingest handler).
+        upload_page = QtWidgets.QWidget(self.source_stack)
+        upload_layout = QtWidgets.QHBoxLayout(upload_page)
+        self.btn_browse = QtWidgets.QPushButton('Browse...', upload_page)
+        self.btn_browse.setToolTip(
+            'Pick an SDF or MOL2 molecule file (single file; a '
+            'multi-record file provides several molecules).')
+        upload_layout.addWidget(self.btn_browse)
+        self.upload_path_label = QtWidgets.QLabel('', upload_page)
+        upload_layout.addWidget(self.upload_path_label, 1)
+        self.source_stack.addWidget(upload_page)
+        vbox.addWidget(self.source_stack)
+
+        # Radio toggles switch the stack page (demo checked -> page 0,
+        # upload checked -> page 1). toggled(bool) would map True -> 1
+        # directly, i.e. BACKWARDS -- hence the explicit lambda.
+        self.src_demo.toggled.connect(
+            lambda checked: self.source_stack.setCurrentIndex(
+                0 if checked else 1))
+        self.src_demo.setChecked(True)
+
+        self._populate_demo_sets()
+        self.form_area.layout().addWidget(group)
+
+    def _populate_demo_sets(self):
+        """Fill the demo dropdown from the bundled MANIFEST.json.
+
+        Reads exactly the way the engine's manifest flow reads
+        (read_json_file over paths.package_data_path, then
+        parse_manifest_dict); dropdown rows come from the pure
+        setup_form.manifest_sets helper (set_id as userData, title as
+        label, tier suffix). A failure to parse (e.g. a newer manifest
+        version) degrades to a placeholder item plus a visible note --
+        the window must never crash the menu action.
+        """
+        try:
+            from . import manifest, paths
+            from .persistence import read_json_file
+            from . import setup_form
+            payload = manifest.parse_manifest_dict(read_json_file(
+                paths.package_data_path('data', 'MANIFEST.json')))
+            for (set_id, title, tier) in setup_form.manifest_sets(payload):
+                label = title or set_id
+                if tier:
+                    label = '%s (%s)' % (label, tier)
+                self.demo_combo.addItem(label, set_id)
+            self.demo_combo.setCurrentIndex(0)
+        except Exception as e:
+            self.demo_combo.clear()
+            self.demo_combo.addItem('(no bundled sets)', '')
+            self.source_note.setText(
+                'Could not read the bundled demo list: %s' % e)
 
     # NO closeEvent OVERRIDE -- on purpose: default close hides the
     # dialog, and the module-level _window singleton keeps the object

@@ -10,16 +10,16 @@ See: .planning/PROJECT.md (updated 2026-09-05)
 ## Current Position
 
 Phase: 4 of 9 (Qt Setup Window) — **IN PROGRESS**
-Plan: 3 of 15 complete — 04-01 (offscreen-Qt probe) + 04-02 (setup_form pure helpers, TDD) + 04-04 (ligand_content upload pipe) DONE
-Status: Executing Phase 4 — 632 WSL tests green (614 baseline + 18 new), SMOKE-01..10 all PASS; T1b headless-widget tier AVAILABLE for plans 04-05..04-13
-Last activity: 2026-09-15 — 04-01 probe: QT_QPA_PLATFORM=offscreen widget construction PROVEN headless (first-attempt PASS, no fallback); 04-02: setup_form (build_state fatal pre-checks BEFORE scene cleanup, usable_randomized_state trap-kill, manifest_sets; PURE_MODULES = 16); 04-04: ligand_content threaded through engine/placement/gamestart, SMOKE-10 PASS (19 checks), 4 documented deviations incl. the cmd.read_mol2str api-export gap
+Plan: 4 of 15 complete — 04-01 (offscreen-Qt probe) + 04-02 (setup_form pure helpers, TDD) + 04-04 (ligand_content upload pipe) + 04-05 (Qt setup window shell + menu rewire) DONE
+Status: Executing Phase 4 — 632 WSL tests green, SMOKE-01..11 all PASS (SMOKE-11 incl. PART B construct/reuse/close-reopen under the offscreen verdict); Plugins → AA-match now opens the modeless SetupWindow
+Last activity: 2026-09-15 — 04-05: aamatch/setup_window.py shell (modeless singleton + open_window trio + 7-button spec-order row, unconnected, no closeEvent); run_plugin_gui lazily rewired (Gate A2 green, metadata byte-identical); skeleton AST contract deliberately replaced (03-05 precedent); SCANNED_MODULES += setup_window.py; SMOKE-08 re-pointed to the direct seam (31 checks, PASS); === SMOKE-11 PASS === (T1a import-proof + T1b PART B + Gate A2 echo)
 
-Progress: [█░░░░░░░░░] 3/15 of Phase 4 · [███░░░░░░░] 33% of project (3/9 phases done)
+Progress: [█░░░░░░░░░] 4/15 of Phase 4 · [███░░░░░░░] 33% of project (3/9 phases done)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 32 (Phase 1: 01-01…01-09; Phase 2: 02-01…02-15; Phase 3: 03-01…03-07; Phase 4: 04-01, 04-02, 04-04)
+- Total plans completed: 33 (Phase 1: 01-01…01-09; Phase 2: 02-01…02-15; Phase 3: 03-01…03-07; Phase 4: 04-01, 04-02, 04-04, 04-05)
 - Average duration: ~11 min (02-03); 6 min (02-04); ~29 min (02-05); 23 min (02-06); 4 min (02-09); 11 min (02-07); 17 min (02-08); ~20 min (02-13); ~27 min (02-11); 16 min (02-14); 29 min (02-15); ~15 min (03-01); ~55 min (03-02); ~14 min (03-03); ~27 min (03-04); ~14 min (03-05); ~10 min (04-01); ~8 min (04-02); 16 min (04-04)
 - Total execution time: —
 
@@ -30,7 +30,7 @@ Progress: [█░░░░░░░░░] 3/15 of Phase 4 · [███░░�
 | 1 | 9/9 ✓ | — | — |
 | 2 | 16/16 ✓ | ~8 min (02-02) + ~25 min (02-01 cont.) + 11 min (02-03) + 6 min (02-04) + 29 min (02-05) + 23 min (02-06) + 4 min (02-09) + 11 min (02-07) + 17 min (02-08) + 45 min (02-12) + ~20 min (02-13) + 16 min (02-14) + 29 min (02-15) | — |
 | 3 | 7/7 ✓ | ~15 min (03-01) + ~55 min (03-02) + ~14 min (03-03) + ~27 min (03-04) + ~14 min (03-05) + 2d checkpoint incl. debug detour + fix batch (03-06) + 4d checkpoint incl. framing chain (03-07) | — |
-| 4 | 3/15 | ~10 min (04-01) + ~8 min (04-02) + 16 min (04-04) | — |
+| 4 | 4/15 | ~10 min (04-01) + ~8 min (04-02) + 16 min (04-04) + 17 min (04-05) | — |
 
 **Recent Trend:**
 - Last 5 plans: —
@@ -144,6 +144,9 @@ Decisions are logged in PROJECT.md Key Decisions table. Seeded from PROJECT.md a
 - (04-04) Reader derivation law (04-DECISIONS #18, now codified): engine routes by the manifest-shaped row's `format` key; placement routes by the synthetic key's EXTENSION (payload ligand blocks carry NO 'format' key — generator.py:851-861); anything but sdf/mol2 fail-closes with the house error; `count_states == 1` asserted after every read_*str. The atom_count cross-check stays ACTIVE on the string path.
 - (04-04, recorded 2.5.0-build findings) **(a)** `cmd.read_mol2str` is MISSING from this build's cmd namespace: installed importing.py:1038 defines it but api.py's re-export block omits it — `hasattr(cmd,'read_mol2str')` is False; both mol2 branches guard with hasattr and fail closed naming the missing reader. **Forward concern for 04-06/04-08:** mol2 uploads need an alternative route (e.g. `cmd.load_raw('mol2', ...)`) or a vendored call; SMOKE-10's record-only probe is the canary. **(b)** `cmd.load` of a MISSING sdf package fixture raises `pymol.CmdException` (internal.py _load2str file_read path), OUTSIDE the gamestart/wizard-guarded ValueError family — engine._ligand_data_for now wraps package-load failures into EngineError naming the ligand; placement's package path deliberately left unwrapped (deviation minimalism; mirror it in Phase 7 if import replay hits that class).
 - (04-04, smoke-design reconciliation) Single-candidate uploaded games must set `molecules_per_level=1` — the generator's distinct-pick contract refuses 1 candidate against DEFAULTS' 2 molecules (SMOKE-04 precedent). SMOKE-10 also documents that `ligand['source']` echoes setup source_mode ('demo'|'upload' only) — 'uploaded' appears as the ligand block's `set_id`, never `source`.
+- (04-05) aamatch/setup_window.py = the Qt-tier modeless shell (NEVER PURE_MODULES, never WSL-imported): module-level `from pymol.Qt import QtWidgets, QtCore, QtGui` (legal+required there); module-scope `_window` singleton + `open_window()` create-if-None show/raise_/activateWindow returning the dialog; SetupWindow(QDialog) no-parent, min-width 420, form-area placeholder + 7 buttons IN SPEC ORDER (`btn_reset`..`btn_start`, exact spec labels/tooltips) created UNCONNECTED — each handler plan (04-09..04-13) connects its own; module-level `from pymol import cmd` is 04-11's addition (Decision 17). NO closeEvent by construction — default close hides, singleton survives, re-open = reuse-and-raise; SMOKE-11's close()+re-open-same-instance check gives SETUP-01 mechanical teeth.
+- (04-05) Plugins → AA-match rewire + three DELIBERATE test evolutions (research P9/P10, 03-05 precedent): run_plugin_gui = lazy `from . import setup_window` + `return setup_window.open_window()` (Gate A2 green, metadata block byte-identical, `__version__` 0.1.0); test_run_plugin_gui_opens_setup_window_lazily REPLACES the 03-05 gamestart-seam AST contract; SCANNED_MODULES += 'setup_window.py' per the growth protocol; SMOKE-08 re-pointed to `aamatch.gamestart.start_game()` directly — all 31 checks preserved, PASS. The game-entry seam and the window surface now have TWO distinct headless assertion handles (wizard from start_game, dialog from open_window).
+- (04-05) T1b smoke recipe for Qt-tier modules, now proven twice: `QT_QPA_PLATFORM='offscreen'` at script top BEFORE any pymol.Qt import → repo-root anchor → import the Qt module → `QApplication.instance() or QApplication([...])` → construct/assert + processEvents → ZERO modals (PITFALL P5). Benign offscreen noise (font-dir warnings, `raise()` unsupported) recorded, ignorable.
 
 ### Pending Todos
 
@@ -182,8 +185,8 @@ Decisions are logged in PROJECT.md Key Decisions table. Seeded from PROJECT.md a
 
 ## Session Continuity
 
-Last session: 2026-09-15 (wave 1 executed in 3 parallel worktrees: 04-01 offscreen-Qt probe PASS — T1b tier unlocked; 04-02 setup_form pure helpers TDD, 632/632 green; 04-04 ligand_content upload pipe, SMOKE-10 PASS)
-Stopped at: **Wave 1 COMPLETE + merged (3/15 of Phase 4)** — next: wave 2 (04-03 game_file core, 04-05 Qt window shell)
+Last session: 2026-09-15 (04-05 executed on branch exec/04-05 in worktree tmp/exec-04-05: Qt setup window shell + menu rewire + three deliberate contract evolutions; SMOKE-08 re-point PASS, SMOKE-11 PASS incl. PART B)
+Stopped at: **04-05 COMPLETE on exec/04-05 (4/15 of Phase 4 pending merge)** — next: wave 2 sibling 04-03 (game_file core), then 04-06+; orchestrator merges exec/04-05 per the worktree protocol
 Resume file: None
 
 ## Next Actions
@@ -193,7 +196,7 @@ Resume file: None
 - **04-01 probe verdict (citable line):** `Probe verdict: PASS (platform=offscreen) first attempt succeeded` — plans 04-05..04-13 may use the T1b headless-widget tier; cite the exact line in .planning/phases/04-qt-setup-window/04-01-SUMMARY.md.
 - **Gap-closure planning:** spec.md lines 12-21 setup popup from the Plugins → AA-match menu item is a recorded Phase-3 gap candidate (full Qt setup window = Phase 4; UI code borrowable from bioCHEMeleon).
 - **Phase 5/9 help-text note:** nudges are SCREEN-RELATIVE BY DESIGN — help text must state "keys move in your current view direction" (03-07 human verdict).
-- **Phase 4 (Qt setup window) entry seam unchanged:** Plugins → AA-match calls gamestart.start_game (molecules 2, D 3, unset, seed 42; active-molecule-only start view with ligand in front of its grid); the Qt window wires over the SAME one-call seam.
+- **Phase 4 (Qt setup window) entry wired (04-05 DONE):** Plugins → AA-match now opens the modeless SetupWindow (run_plugin_gui → setup_window.open_window(); returns the dialog); the game-entry seam is unchanged underneath — the window's Start button (04-13) delegates to gamestart.start_game, the SAME one-call seam SMOKE-08 proves.
 - **Phase 3/4 heads-up:** tests/test_code_audit.py's PROSE_PIN will demand a deliberate update if any docstring adds/removes a banned-token mention (Gate-C: human re-review by construction)
 - Fixture geometry (benzamide xy-plane pose, acetate tetrahedral methyl) is stable for E2E poses; pose asserts use the 02-15 float32-realizable tolerance (1e-6 floor + per-axis ulp slack); metric-drift asserts use the SMOKE-04 float32 budget (5e-6 A / 3e-4 deg, printed)
 - SMOKE-03 reconciler result: materialized chempy fragments classify 100% against capability atom naming (unclassified_aa_atoms == 0) — _KNOWN_NON_SIDE_CHAIN untouched; the pre-authorized detector.py escape hatch stayed UNUSED

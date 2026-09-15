@@ -5,22 +5,22 @@
 See: .planning/PROJECT.md (updated 2026-09-05)
 
 **Core value:** The player can place amino acids onto a small molecule in the PyMOL 3D viewer and the game correctly detects and scores the interactions they form — turning unguided 3D manipulation practice into a scored game.
-**Current focus:** Phase 4 — Qt Setup Window (next up)
+**Current focus:** Phase 4 — Qt Setup Window (executing; 04-01 done, offscreen T1b tier unlocked)
 
 ## Current Position
 
-Phase: 3 of 9 (Wizard Gameplay Loop) — **COMPLETE ✓ (verified 2026-09-15)**
-Plan: 7 of 7 complete — PHASE 3 ALL PLANS EXECUTED (waves 1-7; 03-07 APPROVED 2026-09-15); 03-VERIFICATION.md PASSED 27/27 must-haves
-Status: Verified — 614 WSL tests green, SMOKE-01..08 all PASS (SMOKE-07 78 checks, SMOKE-08 33 checks); requirements PLAY-01..04 Complete; ready to plan Phase 4
-Last activity: 2026-09-15 — verifier PASSED (gates re-run live: 614/614, SMOKE-07/08 PASS; zero gaps; drag matrix-path probe = detector-VISIBLE, no guard needed)
+Phase: 4 of 9 (Qt Setup Window) — **IN PROGRESS**
+Plan: 1 of 15 complete — 04-01 (offscreen-Qt probe) DONE: research Q1 CLOSED, **Probe verdict: PASS (platform=offscreen)**
+Status: Executing Phase 4 — 614 WSL tests green, SMOKE-01..09 all PASS; T1b headless-widget tier AVAILABLE for plans 04-05..04-13
+Last activity: 2026-09-15 — 04-01 probe: QT_QPA_PLATFORM=offscreen QApplication + QDialog construction + QSpinBox/QCheckBox round-trips PROVEN headless in the conda env (PyQt5 5.12.3 / Qt 5.12.9); first-attempt pass, no fallback
 
-Progress: [██████████] 100% of Phase 3 · [███░░░░░░░] 33% of project (3/9 phases)
+Progress: [█░░░░░░░░░] 1/15 of Phase 4 · [███░░░░░░░] 33% of project (3/9 phases done; 30/~29+ plans)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 29 (Phase 1: 01-01…01-09; Phase 2: 02-01…02-15; Phase 3: 03-01, 03-02, 03-03, 03-04, 03-05, 03-06, 03-07)
-- Average duration: ~11 min (02-03); 6 min (02-04); ~29 min (02-05); 23 min (02-06); 4 min (02-09); 11 min (02-07); 17 min (02-08); ~20 min (02-13); ~27 min (02-11); 16 min (02-14); 29 min (02-15); ~15 min (03-01); ~55 min (03-02); ~14 min (03-03); ~27 min (03-04); ~14 min (03-05)
+- Total plans completed: 30 (Phase 1: 01-01…01-09; Phase 2: 02-01…02-15; Phase 3: 03-01…03-07; Phase 4: 04-01)
+- Average duration: ~11 min (02-03); 6 min (02-04); ~29 min (02-05); 23 min (02-06); 4 min (02-09); 11 min (02-07); 17 min (02-08); ~20 min (02-13); ~27 min (02-11); 16 min (02-14); 29 min (02-15); ~15 min (03-01); ~55 min (03-02); ~14 min (03-03); ~27 min (03-04); ~14 min (03-05); ~10 min (04-01)
 - Total execution time: —
 
 **By Phase:**
@@ -30,6 +30,7 @@ Progress: [██████████] 100% of Phase 3 · [███░░�
 | 1 | 9/9 ✓ | — | — |
 | 2 | 16/16 ✓ | ~8 min (02-02) + ~25 min (02-01 cont.) + 11 min (02-03) + 6 min (02-04) + 29 min (02-05) + 23 min (02-06) + 4 min (02-09) + 11 min (02-07) + 17 min (02-08) + 45 min (02-12) + ~20 min (02-13) + 16 min (02-14) + 29 min (02-15) | — |
 | 3 | 7/7 ✓ | ~15 min (03-01) + ~55 min (03-02) + ~14 min (03-03) + ~27 min (03-04) + ~14 min (03-05) + 2d checkpoint incl. debug detour + fix batch (03-06) + 4d checkpoint incl. framing chain (03-07) | — |
+| 4 | 1/15 | ~10 min (04-01) | — |
 
 **Recent Trend:**
 - Last 5 plans: —
@@ -136,6 +137,7 @@ Decisions are logged in PROJECT.md Key Decisions table. Seeded from PROJECT.md a
 - (03-06, checkpoint APPROVED + recorded laws) Keyboard map for Phase 5: LEFT/RIGHT + ',' '.' + q/w/e/d delivered, UP/DOWN dead by design. msm law: pre 1 / during 0 / post-Done 1 (field-verified). editor_scheme N/A in this build (get_editor_scheme()=1) — 03-07 needs no scheme restore. Display-rebuild LAW: any AA recolor/restore must rebuild the object's display lists (cmd.alter staleness vs cmd.color redraw; headless data equality ≠ on-screen). Cross-molecule scoring guard: Confirm is molecule-scoped. Start composition: zoom-to-frame THEN camera-only roll so the active ligand composes above the grid (generator-owned geometry never moved; wizard nudge re-reads get_view per press so roll needs no movement-side change). Spec gap candidate: menu item should open a setup popup per spec.md 12-21 (gap-closure; Qt window = Phase 4, bioCHEMeleon borrow). PLAY-02 standing scoring check = the H-bond test (plan's generic pi_stacking step-9 was a checklist defect). Debug memory: .planning/debug/phase3-gui-checkpoint-failures.md (6 verdicts, no detector bug).
 - (03-07, checkpoint APPROVED 2026-09-15 — PLAY-04 [HUMAN+GATE] CLOSED) No helper visuals in ANY session (recolor + panel/prompt only); Done-restoration table fully field-verified incl. prior `wizard measurement` auto-resume (stack-native push/pop), msm 1→0 (by design)→1, no pk1/sele/_drag strays, recolors restored, _aam_* objects survive Done. Movement-model verdict CLOSED: gameplay movement = panel buttons + keyboard, baked world-frame coordinates (FROZEN, human 2026-09-15 — native drag NOT needed for gameplay); native whole-object drag = object-MATRIX path PROVEN ('Dragging whole object' echo + genuine rotation matrix on get_object_matrix, checker run 2 IDENTITY-OK False; run 1 ALL-IDENTITY recorded non-conclusive).
 - (03-07, probe verdict) matrix-visibility probe (tmp/, headless, engine seam, seed 42): matrix path VISIBLE — cmd.transform_object(name, [R|t], homogenous=1) BAKES coordinates (iterate_state matrix-applied vs raw: dev 1e-6 Å vs 11.12 Å; detector-view centroid matches R·pose+t exactly; control cmd.translate sanity exact 8 Å shift). Native-drag-style object-matrix moves land in the detector pipeline input → detector-compatible, SAFE — the pre-planned Phase 5/6 guard candidates (pre-Confirm matrix sweep → auto-bake / refuse) NOT opened.
+- (04-01, probe verdict) **Research Q1 CLOSED — offscreen-Qt widget construction WORKS headless**: QT_QPA_PLATFORM=offscreen set before the `pymol.Qt` import → QApplication reuse-or-create → QDialog + layout/label/button → show/processEvents → isVisible True → QSpinBox(1..10)=7 read-back + QCheckBox toggle all PASS on the FIRST attempt (no default-platform fallback needed). Evidence: smoke_09_qt_probe.py run in the conda env (PyQt5 5.12.3 / Qt 5.12.9), `=== PROBE PASS (platform=offscreen) ===` + `=== SMOKE-09 PASS ===`. **Consequence for 04-05..04-13: T1b verify tier AVAILABLE** (headless dialog construction, collect/apply round-trips, btn.click() drive-through); T2 [HUMAN] stays for look/feel/modals. Later T1b authors: ZERO modals headless (PITFALL P5); probe verdict line lived in 04-01-SUMMARY.md.
 - (03-07, human decisions) Drag diagnostics steps 3/4 (populated-_drag session; transform_object render-doubling) SKIPPED by explicit human decision (movement already decided; low marginal value; SMOKE-07/08 cover the game-path model). Nudge left/right SCREEN-RELATIVE BY DESIGN — Phase 5/9 help text must say "keys move in your current view direction". Start framing final laws: geometry-side ligand front-offset + frame ONLY the active molecule's grid+ligand + zoom-LAST + camera-field-surgery-avoided (blank start-view regression fixed by re-framing after composition, never clip-plane edits). Framing chain 1d48d71 → 0c13184 → d8e8f7d → 0041e74 → 2a182d7.
 
 ### Pending Todos
@@ -175,13 +177,14 @@ Decisions are logged in PROJECT.md Key Decisions table. Seeded from PROJECT.md a
 
 ## Session Continuity
 
-Last session: 2026-09-15 (phase verifier PASSED — 27/27 must-haves, 0 gaps; PLAY-01..04 marked Complete; Phase 3 closed)
-Stopped at: **Phase 3 COMPLETE (7/7, verified)** — next: plan Phase 4
+Last session: 2026-09-15 (04-01 executed — offscreen-Qt probe PASS, T1b tier unlocked for Phase 4)
+Stopped at: **04-01 COMPLETE (1/15 of Phase 4)** — next: 04-02 (worktree exec/04-02) or the wave-1 merge
 Resume file: None
 
 ## Next Actions
 
 - **Phase 3 verifier: PASSED (2026-09-15)** — 03-VERIFICATION.md 27/27; ROADMAP criteria 1-4 all satisfied; zero gaps. Phase 3 closed.
+- **04-01 probe verdict (citable line):** `Probe verdict: PASS (platform=offscreen) first attempt succeeded` — plans 04-05..04-13 may use the T1b headless-widget tier; cite the exact line in .planning/phases/04-qt-setup-window/04-01-SUMMARY.md.
 - **Gap-closure planning:** spec.md lines 12-21 setup popup from the Plugins → AA-match menu item is a recorded Phase-3 gap candidate (full Qt setup window = Phase 4; UI code borrowable from bioCHEMeleon).
 - **Phase 5/9 help-text note:** nudges are SCREEN-RELATIVE BY DESIGN — help text must state "keys move in your current view direction" (03-07 human verdict).
 - **Phase 4 (Qt setup window) entry seam unchanged:** Plugins → AA-match calls gamestart.start_game (molecules 2, D 3, unset, seed 42; active-molecule-only start view with ligand in front of its grid); the Qt window wires over the SAME one-call seam.

@@ -106,8 +106,12 @@ class SetupWindow(QtWidgets.QDialog):
         # stored there -- the sha256 lets Load warn when it moved).
         self._uploaded = None
 
-        # SETUP-02/03 widget side: the molecule-source selector.
+        # SETUP-02..06 widget side: source selector, spinboxes, mode
+        # group, interaction checkboxes -- in spec order.
         self._build_source_selector()
+        self._build_spinboxes()
+        self._build_mode_group()
+        self._build_interactions()
 
         # (b) stretch -- keeps the button row pinned to the bottom.
         top.addStretch(1)
@@ -239,6 +243,154 @@ class SetupWindow(QtWidgets.QDialog):
             self.demo_combo.addItem('(no bundled sets)', '')
             self.source_note.setText(
                 'Could not read the bundled demo list: %s' % e)
+
+    # UI-only display labels for the canonical interaction enum strings
+    # (the stored values stay the enum strings from
+    # setup_state.INTERACTION_TYPES; iteration order is frozen there).
+    _INTERACTION_LABELS = {
+        'h_bond': 'Hydrogen bond',
+        'salt_bridge': 'Salt bridge',
+        'pi_stacking': 'Pi-stacking',
+        'cation_pi': 'Cation-pi',
+        'hydrophobic': 'Hydrophobic',
+        'halogen': 'Halogen bond',
+        'metal': 'Metal coordination',
+    }
+    # Per-type tooltips in game terms (spec UI standard: clear but
+    # sufficient in-game explanation).
+    _INTERACTION_TIPS = {
+        'h_bond': 'Hydrogen bond: a donor hydrogen (-OH or -NH) '
+                  'facing an acceptor oxygen or nitrogen on the other '
+                  'molecule.',
+        'salt_bridge': 'Salt bridge: an opposite-charge pair held '
+                       'together (a positive group on one molecule, a '
+                       'negative group on the other).',
+        'pi_stacking': 'Pi-stacking: two aromatic rings stacked '
+                       'face-on or edge-on.',
+        'cation_pi': 'Cation-pi: a positively charged group resting '
+                     'on the face of an aromatic ring.',
+        'hydrophobic': 'Hydrophobic: non-polar carbons of both '
+                       'molecules clustered into the same greasy '
+                       'patch.',
+        'halogen': 'Halogen bond: a Cl/Br/I on the molecule accepting '
+                   'from a donor on the amino acid.',
+        'metal': 'Metal coordination: a metal ion bound by two or '
+                 'more donor atoms.',
+    }
+    # Context-label strings restating the current interaction mode's
+    # meaning under the radios (research mode_widget_design).
+    _MODE_CONTEXT = {
+        'exclusive': 'The game accepts ANY of the checked interactions',
+        'block_exclusive': 'The player must form EXACTLY the checked '
+                           'interactions',
+        'unset': 'The game randomizes the required set from the '
+                 'checked types (hydrophobic excluded from random '
+                 'picks).',
+    }
+
+    def _build_spinboxes(self):
+        """SETUP-04/05 spinboxes with ranges from the frozen constants.
+
+        The ranges are imported from setup_state (never numeric
+        literals): locking the spinbox range to the pure layer's clamp
+        range is what makes collect -> validate_state lossless for
+        these fields (form_field_specs ruling).
+        """
+        from . import setup_state
+        group = QtWidgets.QGroupBox('Game size', self)
+        form = QtWidgets.QFormLayout(group)
+
+        self.molecules_spin = QtWidgets.QSpinBox(group)
+        self.molecules_spin.setRange(setup_state.MOLECULES_MIN,
+                                     setup_state.MOLECULES_CAP)
+        self.molecules_spin.setValue(setup_state.MOLECULES_DEFAULT)
+        self.molecules_spin.setToolTip(
+            'How many small molecules each level contains (default 2; '
+            'range mirrors the frozen 1..10 bounds).')
+        form.addRow('Small molecules per level', self.molecules_spin)
+
+        self.difficulty_spin = QtWidgets.QSpinBox(group)
+        self.difficulty_spin.setRange(setup_state.DIFFICULTY_MIN,
+                                      setup_state.DIFFICULTY_CAP)
+        self.difficulty_spin.setValue(setup_state.DIFFICULTY_DEFAULT)
+        self.difficulty_spin.setToolTip(
+            'How many difficulty levels per game (each level is '
+            'harder: bigger grid, more required interactions).')
+        form.addRow('Difficulty levels', self.difficulty_spin)
+
+        self.form_area.layout().addWidget(group)
+
+    def _build_mode_group(self):
+        """SETUP-06 mode group: 3 radios + a context label.
+
+        Radio exclusivity is automatic within the group parent (no
+        QButtonGroup needed). The context label restates the current
+        mode's meaning and updates on every toggle. Default = the
+        frozen DEFAULTS interaction_mode ('unset').
+        """
+        group = QtWidgets.QGroupBox('Required interactions', self)
+        vbox = QtWidgets.QVBoxLayout(group)
+
+        self.mode_exclusive = QtWidgets.QRadioButton(
+            'Exclusive (any allowed)', group)
+        self.mode_exclusive.setToolTip(
+            'The game accepts ANY of the checked interactions.')
+        self.mode_block = QtWidgets.QRadioButton(
+            'Block-exclusive (checked set)', group)
+        self.mode_block.setToolTip(
+            'The player must form EXACTLY the checked interactions.')
+        self.mode_unset = QtWidgets.QRadioButton(
+            'Unset (random)', group)
+        self.mode_unset.setToolTip(
+            'The game randomizes the required set from the checked '
+            'types (hydrophobic is excluded from random picks).')
+        for radio in (self.mode_exclusive, self.mode_block,
+                      self.mode_unset):
+            radio.toggled.connect(self._on_mode_toggled)
+            vbox.addWidget(radio)
+
+        self.mode_context_label = QtWidgets.QLabel('', group)
+        self.mode_context_label.setWordWrap(True)
+        vbox.addWidget(self.mode_context_label)
+
+        # Default: the frozen DEFAULTS interaction_mode 'unset'.
+        self.mode_unset.setChecked(True)
+        self._on_mode_toggled()   # set the initial context text
+        self.form_area.layout().addWidget(group)
+
+    def _current_mode(self):
+        """The enum string of the checked mode radio."""
+        if self.mode_exclusive.isChecked():
+            return 'exclusive'
+        if self.mode_block.isChecked():
+            return 'block_exclusive'
+        return 'unset'
+
+    def _on_mode_toggled(self, *args):
+        """Restate the current mode's meaning under the radios."""
+        self.mode_context_label.setText(
+            self._MODE_CONTEXT[self._current_mode()])
+
+    def _build_interactions(self):
+        """SETUP-06 checkboxes: 7 in canonical INTERACTION_TYPES order.
+
+        Checkboxes are ENABLED in every mode on purpose: in unset
+        mode a non-empty allowed list narrows the sampling vocabulary,
+        so disabling them would silently discard the user's
+        restriction at collect time. Iterating the frozen canonical
+        list keeps collect order == validate_state order.
+        """
+        from .setup_state import INTERACTION_TYPES
+        group = QtWidgets.QGroupBox('Allowed interactions', self)
+        vbox = QtWidgets.QVBoxLayout(group)
+        self.interaction_checks = []
+        for itype in INTERACTION_TYPES:
+            cb = QtWidgets.QCheckBox(
+                self._INTERACTION_LABELS[itype], group)
+            cb.setToolTip(self._INTERACTION_TIPS[itype])
+            vbox.addWidget(cb)
+            self.interaction_checks.append((itype, cb))
+        self.form_area.layout().addWidget(group)
 
     # NO closeEvent OVERRIDE -- on purpose: default close hides the
     # dialog, and the module-level _window singleton keeps the object

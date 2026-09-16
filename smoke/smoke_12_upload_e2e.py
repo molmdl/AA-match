@@ -36,16 +36,21 @@ PART 3  timing datum (Decision 8 evidence for UPLOAD_MAX_RECORDS):
         time.time() deltas; the printed line
         'upload extraction: %d records in %.3f s (per-record %.4f s)'
         is the recorded datum copied verbatim into 04-08-SUMMARY.md.
-PART 4  MOL2 2-segment probe (Decision 14, research open_questions
-        probe 1). A minimal 2-segment MOL2 string (leading comment
-        line, two @<TRIPOS>MOLECULE segments of 2 atoms / 1 bond
-        each) splits via game_file.split_mol2_segments, then
-        prepare_uploaded_set(segments, 'mol2') is probed. SUCCESS
-        path: 2 rows with .mol2 keys, a level materializes from them,
-        'MOL2-MULTI OK (2-segment split+load verified)'. FAILURE
-        path: 'MOL2-MULTI UNVERIFIED (<reason>) -- activating
-        fallback' -- the Decision-14 mechanical fallback then applies
-        (see 04-08-PLAN.md Task 2 / PART 4).
+PART 4  MOL2 2-segment probe + Decision-14 fallback verdict
+        (research open_questions probe 1). A minimal 2-segment MOL2
+        string (leading comment line, two @<TRIPOS>MOLECULE segments
+        of 2 atoms / 1 bond each) splits via
+        game_file.split_mol2_segments -> 2 segments; the probe call
+        prepare_uploaded_set(segments, 'mol2') took the FAILURE path
+        on this build (read_mol2str is defined in importing.py:1038
+        but omitted from api.py's cmd re-export -- the 04-04 build
+        finding), so the Decision-14 mechanical fallback is ENFORCED
+        in upload.py and PINNED here: the refusal is caught as the
+        ValueError family and asserted EQUAL to the verbatim
+        FormatError text (test file name + record count 2
+        substituted), then 'MOL2-MULTI REFUSED (fallback pinned)' is
+        printed. A catch-and-print 'UNVERIFIED' without this assert
+        is a failing smoke by design.
 
 Conventions (frozen Phase 1, kept): anchor repo root via sys.argv
 first / cwd fallback (never __file__); import aamatch directly (module
@@ -362,42 +367,50 @@ check('mol2 probe splits into 2 segments', len(segments) == 2,
       'segments=%d (leading comment attaches to segment 1)'
       % len(segments))
 
+mol2_refusal = None
 mol2_rows = None
-mol2_content = None
+MOL2_PROBE_FILE = 'smoke12-2seg-probe.mol2'
 try:
-    mol2_rows, mol2_content = upload.prepare_uploaded_set(segments,
-                                                          'mol2')
-    check('mol2 2-segment prepare builds 2 rows',
-          len(mol2_rows) == 2
-          and sorted(mol2_content) == ['uploads/mol-001.mol2',
-                                       'uploads/mol-002.mol2'],
-          'rows=%d keys=%s' % (len(mol2_rows), sorted(mol2_content)))
+    mol2_rows, _ = upload.prepare_uploaded_set(
+        segments, 'mol2', source_name=MOL2_PROBE_FILE)
 except Exception as exc:
-    print('MOL2-MULTI UNVERIFIED (%s: %s) -- activating fallback'
-          % (type(exc).__name__, str(exc)), flush=True)
-    check('MOL2-MULTI verdict definite', False,
-          'unverified: %s: %s' % (type(exc).__name__, str(exc)[:60]))
+    mol2_refusal = exc
 
-if mol2_rows is not None:
-    try:
-        payload4, _ = engine.new_game(
-            setup_state.validate_state(
-                dict(setup_state.DEFAULTS, demo_set_id='uploaded')),
-            555, candidates=mol2_rows, ligand_content=mol2_content)
-        engine.materialize(payload4, 0, ligand_content=mol2_content)
-        print('MOL2-MULTI OK (2-segment split+load verified)',
-              flush=True)
-        check('mol2 materialize leaves game objects', True,
-              'registry level 0 materialized')
-        placement.cleanup_game_objects()
-        check('mol2 probe cleanup restores baseline',
-              cmd.get_names('objects') == pre_names,
-              'post names: %s' % list(cmd.get_names('objects')))
-    except Exception:
-        traceback.print_exc()
-        check('mol2 materialize flow', False,
-              'raised (see traceback above)')
-        placement.cleanup_game_objects()
+# Decision-14 verdict (recorded): the probe call above raised
+#   ValueError: upload record 1 needs cmd.read_mol2str, which THIS
+#   PyMOL build does not export (2.5.0 api.py omits it) -- mol2
+#   uploads are unavailable here
+# i.e. this build cannot string-load ANY mol2 record, so the fallback
+# refusing multi-segment MOL2 is enforced in upload.py and the
+# verbatim FormatError text is PINNED here (SUCCESS-path rows would
+# be checked below instead -- unreachable on this build).
+MOL2_REFUSAL_TEXT = (
+    'upload %r carries %d MOL2 molecules -- this build accepts '
+    'single-molecule MOL2 files only' % (MOL2_PROBE_FILE, 2))
+if mol2_rows is None:
+    check('MOL2-MULTI refusal is the ValueError family',
+          isinstance(mol2_refusal, ValueError),
+          'raised: %s' % type(mol2_refusal).__name__)
+    refusal_text = str(mol2_refusal) if mol2_refusal is not None \
+        else '<nothing raised>'
+    check('MOL2-MULTI refusal pinned verbatim',
+          mol2_refusal is not None
+          and refusal_text == MOL2_REFUSAL_TEXT,
+          'found: %s' % refusal_text)
+    if (mol2_refusal is not None
+            and refusal_text == MOL2_REFUSAL_TEXT):
+        print('MOL2-MULTI REFUSED (fallback pinned)', flush=True)
+    check('mol2 probe refusal leaves scene at baseline',
+          cmd.get_names('objects') == pre_names,
+          'post names: %s' % list(cmd.get_names('objects')))
+else:
+    # Unreachable while the fallback is enforced; kept so a future
+    # build that exports cmd.read_mol2str surfaces as a hard verdict
+    # change here rather than silently re-enabling multi-segment MOL2.
+    check('MOL2-MULTI verdict definite', False,
+          'prepare SUCCEEDED for 2 mol2 segments despite the '
+          'enforced fallback -- revisit Decision 14 as a deliberate '
+          'policy change, never silently')
 
 # --- Verdict marker (the SOLE verdict carrier) --------------------------
 print('=== SMOKE-12 %s ==='

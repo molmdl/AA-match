@@ -52,8 +52,15 @@ loads are refused with a clear message instead of an AttributeError.
 Single-molecule MOL2 upload availability is therefore a per-build
 capability, never assumed.
 
-Build note: multi-segment MOL2 policy is Decision 14 of the 04-08
-plan (probe-gated; SMOKE-12 PART 4 records the verdict).
+Multi-segment MOL2 policy (Decision 14, VERDICT RECORDED): SMOKE-12
+PART 4 probed a 2-segment MOL2 with a leading comment on this build
+and the probe took the FAILURE path (read_mol2str unexported), so the
+documented fail-closed fallback is ENFORCED here: ``fmt == 'mol2'``
+with more than one segment is refused with a FormatError naming the
+file + record count before any loading is attempted, and SMOKE-12
+PART 4 pins that refusal verbatim. Single-molecule MOL2 uploads reach
+the per-record reader guard instead (refused on this build, loadable
+on builds that do export read_mol2str).
 
 Python floor: runs inside PyMOL's Windows Python (3.9); written
 3.6-safe (Gate D compiles every aamatch/*.py under python3.6).
@@ -62,13 +69,16 @@ Python floor: runs inside PyMOL's Windows Python (3.9); written
 from pymol import cmd
 
 
-def prepare_uploaded_set(records, fmt):
+def prepare_uploaded_set(records, fmt, source_name='<upload>'):
     """Split record strings -> (rows, ligand_content) for new_game.
 
     ``records`` is the per-record string list from
     game_file.split_sdf_records / split_mol2_segments (already
     supply-checked); ``fmt`` is 'sdf' or 'mol2' (anything else fails
-    closed). Returns the pair the 04-04 ligand_content seams accept:
+    closed). ``source_name`` is the user file name used in refusal
+    messages (same convention as game_file.check_upload_supply); the
+    placeholder default keeps internal callers readable. Returns the
+    pair the 04-04 ligand_content seams accept:
 
     - rows: manifest-shaped upload rows from
       game_file.build_uploaded_row (synthetic 'mol-%03d' entry ids,
@@ -91,11 +101,21 @@ def prepare_uploaded_set(records, fmt):
     # discipline, uniform): module-identity-safe both as aamatch and
     # as pmg_tk.startup.aamatch.
     from . import geometry, capability, engine, game_file
+    from .persistence import FormatError
 
     if fmt not in ('sdf', 'mol2'):
         raise ValueError(
             'upload: unsupported format %r (expected sdf or mol2)'
             % (fmt,))
+    # Decision-14 fail-closed fallback (SMOKE-12 PART 4 verdict:
+    # read_mol2str unexported on this build, probe failed): refuse
+    # multi-segment MOL2 naming the file + record count, before any
+    # loading is attempted.
+    if fmt == 'mol2' and len(records) > 1:
+        raise FormatError(
+            'upload %r carries %d MOL2 molecules -- this build '
+            'accepts single-molecule MOL2 files only'
+            % (source_name, len(records)))
 
     rows = []
     ligand_content = {}

@@ -5,22 +5,22 @@
 See: .planning/PROJECT.md (updated 2026-09-05)
 
 **Core value:** The player can place amino acids onto a small molecule in the PyMOL 3D viewer and the game correctly detects and scores the interactions they form — turning unguided 3D manipulation practice into a scored game.
-**Current focus:** Phase 4 — Qt Setup Window (executing; waves 1-3 done: 04-01, 04-02, 04-04, 04-03, 04-05, 04-06, 04-07; offscreen T1b tier unlocked, window shell + full form live, upload pure surface complete)
+**Current focus:** Phase 4 — Qt Setup Window (executing; waves 1-3 done: 04-01, 04-02, 04-04, 04-03, 04-05, 04-06, 04-07; wave 4 in flight: 04-08 upload bridge + SMOKE-12 PASS — offscreen T1b tier unlocked, window shell + full form live, upload pure surface + cmd-tier bridge complete)
 
 ## Current Position
 
 Phase: 4 of 9 (Qt Setup Window) — **IN PROGRESS**
-Plan: 7 of 15 complete — 04-01 (offscreen-Qt probe) + 04-02 (setup_form pure helpers, TDD) + 04-04 (ligand_content upload pipe) + 04-03 (game_file core, TDD) + 04-05 (Qt window shell + menu rewire) + 04-06 (game_file upload helpers, TDD) + 04-07 (7-field window form + collect/apply round-trip) DONE
-Status: Executing Phase 4 — 688 WSL tests green (654 + 34 new), SMOKE-01..11 all PASS (SMOKE-11 extended: T1b collect/apply round-trip + widget mutation drive under the offscreen verdict); Plugins → AA-match opens the modeless SetupWindow carrying the full form; upload pure surface (split/supply/read/row/validate) complete in game_file.py
-Last activity: 2026-09-16 — 04-06: game_file.py upload-side PURE surface (UPLOAD_MAX_RECORDS=50 with perf rationale, CRLF-stable splits, supply refusals naming file+index, read_upload_source (text, FILE sha256, format), build_uploaded_row 16-key manifest-shaped rows with synthetic uploads/mol-00N keys + record-TEXT sha256, validate_uploaded_rows delegating to manifest._check_entry; purity green, NO whitelist changes); 04-07: full 7-field form (2-page source selector + manifest-fed dropdown with degrade path, frozen-constant spinboxes, mode radios + context label, 7 canonical checkboxes, tooltips), collect_state/apply_state lossless round-trip with _loading guard, session-only _uploaded slot
+Plan: 8 of 15 complete — 04-01 (offscreen-Qt probe) + 04-02 (setup_form pure helpers, TDD) + 04-04 (ligand_content upload pipe) + 04-03 (game_file core, TDD) + 04-05 (Qt window shell + menu rewire) + 04-06 (game_file upload helpers, TDD) + 04-07 (7-field window form + collect/apply round-trip) + 04-08 (cmd-tier upload bridge + SMOKE-12) DONE
+Status: Executing Phase 4 — 688 WSL tests green, SMOKE-01..12 all PASS (SMOKE-12: read_sdfstr parity OQ2 CLOSED + 2-record SDF E2E + timing datum + MOL2-MULTI REFUSED fallback pinned); Plugins → AA-match opens the modeless SetupWindow carrying the full form; split record strings → (candidates rows, ligand_content) bridge proven headlessly in upload.py
+Last activity: 2026-09-16 — 04-08: aamatch/upload.py prepare_uploaded_set (fresh _aam_tmp per record, string loads with hasattr fail-closed reader guards, state/0-atom refusals naming record index, delete-in-finally + scene snapshot asserted per record, rows/content delegated to 04-06 pure helpers); SMOKE-12 29/29 PASS against the worktree copy; Decision 14 VERDICT: multi-segment MOL2 fail-closed refused (read_mol2str unexported on this build); timing datum + get_unused_name reservation pitfall recorded
 
-Progress: [███░░░░░░░] 7/15 of Phase 4 · [███░░░░░░░] 33% of project (3/9 phases done)
+Progress: [█████░░░░░] 8/15 of Phase 4 · [███░░░░░░░] 33% of project (3/9 phases done)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 36 (Phase 1: 01-01…01-09; Phase 2: 02-01…02-15; Phase 3: 03-01…03-07; Phase 4: 04-01, 04-02, 04-04, 04-03, 04-05, 04-06, 04-07)
-- Average duration: ~11 min (02-03); 6 min (02-04); ~29 min (02-05); 23 min (02-06); 4 min (02-09); 11 min (02-07); 17 min (02-08); ~20 min (02-13); ~27 min (02-11); 16 min (02-14); 29 min (02-15); ~15 min (03-01); ~55 min (03-02); ~14 min (03-03); ~27 min (03-04); ~14 min (03-05); ~10 min (04-01); ~8 min (04-02); 16 min (04-04); ~9 min (04-03); 17 min (04-05); ~15 min (04-06); 16 min (04-07)
+- Total plans completed: 37 (Phase 1: 01-01…01-09; Phase 2: 02-01…02-15; Phase 3: 03-01…03-07; Phase 4: 04-01, 04-02, 04-04, 04-03, 04-05, 04-06, 04-07, 04-08)
+- Average duration: ~11 min (02-03); 6 min (02-04); ~29 min (02-05); 23 min (02-06); 4 min (02-09); 11 min (02-07); 17 min (02-08); ~20 min (02-13); ~27 min (02-11); 16 min (02-14); 29 min (02-15); ~15 min (03-01); ~55 min (03-02); ~14 min (03-03); ~27 min (03-04); ~14 min (03-05); ~10 min (04-01); ~8 min (04-02); 16 min (04-04); ~9 min (04-03); 17 min (04-05); ~15 min (04-06); 16 min (04-07); 23 min (04-08)
 - Total execution time: —
 
 **By Phase:**
@@ -30,7 +30,7 @@ Progress: [███░░░░░░░] 7/15 of Phase 4 · [███░░�
 | 1 | 9/9 ✓ | — | — |
 | 2 | 16/16 ✓ | ~8 min (02-02) + ~25 min (02-01 cont.) + 11 min (02-03) + 6 min (02-04) + 29 min (02-05) + 23 min (02-06) + 4 min (02-09) + 11 min (02-07) + 17 min (02-08) + 45 min (02-12) + ~20 min (02-13) + 16 min (02-14) + 29 min (02-15) | — |
 | 3 | 7/7 ✓ | ~15 min (03-01) + ~55 min (03-02) + ~14 min (03-03) + ~27 min (03-04) + ~14 min (03-05) + 2d checkpoint incl. debug detour + fix batch (03-06) + 4d checkpoint incl. framing chain (03-07) | — |
-| 4 | 7/15 | ~10 min (04-01) + ~8 min (04-02) + 16 min (04-04) + ~9 min (04-03) + 17 min (04-05) + ~15 min (04-06) + 16 min (04-07) | — |
+| 4 | 8/15 | ~10 min (04-01) + ~8 min (04-02) + 16 min (04-04) + ~9 min (04-03) + 17 min (04-05) + ~15 min (04-06) + 16 min (04-07) + 23 min (04-08) | — |
 
 **Recent Trend:**
 - Last 5 plans: —
@@ -155,6 +155,9 @@ Decisions are logged in PROJECT.md Key Decisions table. Seeded from PROJECT.md a
 - (04-06) validate_uploaded_rows DELEGATES the 14-key rules to manifest._check_entry (thin same-package adapter, never re-implements) — the absolute/backslash/drive-letter file refusals come intact with manifest set/entry context ("manifest set 'uploaded' entry N"); the adapter is pinned by a broken-bond_order_counts test asserting the manifest's OWN message text (adapter-pin test pattern). read_upload_source uses bare stdlib open(rb) — the same pure I/O persistence performs; module docstring's layer statement extended to say so (purity law = no viewer/Qt, not no-stdlib-open).
 - (04-07) SetupWindow carries the full 7-field form: stacked-pages source selector (radio toggled(bool) must reach stack.setCurrentIndex through a lambda — raw bool→int maps pages BACKWARDS); demo dropdown rows from setup_form.manifest_sets (userData=set_id; empty demo_set_id '' is encoded as combo index -1 = empty selection, keeping apply(DEFAULTS)->collect an identity through validate_state — no synthetic 'all sets' item invented); spinbox setRange/setValue reference frozen setup_state constants ONLY (range == clamp range makes collect->validate lossless; grep-verified zero numeric literals); mode radios auto-exclusive in the group parent (no QButtonGroup) + live context label with the 3 exact research strings; 7 checkboxes built from canonical INTERACTION_TYPES, ENABLED in all modes (unset mode treats the allowed list as sampling vocabulary — disabling would silently discard the user's restriction).
 - (04-07) collect_state/apply_state contract for every handler plan (04-09..04-13): collect emits EXACTLY the 7 validate_state schema keys, zero widget-side validation (pure layer is the single authority); apply is missing-key tolerant (.get + frozen defaults), `_loading` guard set first in try/finally (future valueChanged hooks early-return), combo findData->setCurrentIndex with fallback index 0 + source_note warning on non-empty unfound ids, upload label shows the SAVED path but the session-only `_uploaded` slot is NEVER restored from files. SMOKE-11 proves the round-trip + a full widget mutation drive headlessly (15 checks PASS).
+- (04-08) upload.py = the cmd-tier bridge research upload_pipeline Step 2 named (never PURE_MODULES): prepare_uploaded_set(records, fmt, source_name='<upload>') -> (rows, ligand_content) — shape/reality delegated to the 04-06 pure helpers (build_uploaded_row/validate_uploaded_rows), the cmd tier only extracts; per-record discipline = engine.py:153-180 exactly (fresh _aam_tmp, read_sdfstr/read_mol2str string loads, count_states==1 + 0-atom refusals naming the 1-based index, scoped extraction, _remap_ligand_bonds, capability.ligand_profile, delete-in-finally, object-list snapshot asserted after EVERY record); lazy sibling imports inside the function; NO bounding_sphere (rows carry counts/flags; engine recomputes geometry from ligand_content at new_game).
+- (04-08) SMOKE-12 verdicts (all against the worktree copy, 29/29 PASS): **OQ2 CLOSED** — read_sdfstr parity with file loads exact (atoms 7/7, states 1/1, bond multiset [1,1,1,1,1,2]==, charge sums -1/-1); 2-record SDF E2E green through prepare -> new_game -> materialize (16/16 + 7/7 counts) -> cleanup baseline; timing datum VERBATIM `upload extraction: 2 records in 0.000 s (per-record 0.0000 s)` (Decision 8: 50-record cap ≪ 0.05 s headroom); **Decision 14 VERDICT** — MOL2 probe took the FAILURE path (read_mol2str unexported on this build) → multi-segment MOL2 refused fail-closed BEFORE loading with FormatError naming file+count, refusal PINNED verbatim in PART 4; single-molecule mol2 also refuses with the missing-reader message on this build — SETUP-03 met via SDF per the research fallback. OQ1 moot, OQ3 stays open documentation.
+- (04-08, pitfall recorded) cmd.get_unused_name reservations are NOT atomic: two calls made BEFORE any load return the SAME free name ('_aam_tmp01' both times), and the second string-load then APPENDED a state into the first object — acquire the next temp name only after the previous load has materialized (upload.py's serial acquire+load per record is unaffected; the trap lives in smoke orchestration).
 
 ### Pending Todos
 
@@ -193,13 +196,13 @@ Decisions are logged in PROJECT.md Key Decisions table. Seeded from PROJECT.md a
 
 ## Session Continuity
 
-Last session: 2026-09-16 (wave 3 executed in 2 parallel worktrees + merged: 04-06 game_file upload helpers TDD — 688/688 WSL green, one contract-resolution deviation on set_id-in-row; 04-07 window form — 654/654 in-tree, SMOKE-11 PASS extended with round-trip + mutation drive, 2 minor Rule-1 deviations incl. combo index -1 for empty demo_set_id)
-Stopped at: **Wave 3 COMPLETE + merged (7/15 of Phase 4)** — next: wave 4 (04-08 upload pipeline + SMOKE-12, 04-09 SETUP-07 buttons)
+Last session: 2026-09-16 (wave 4 partial: 04-08 upload bridge executed in worktree tmp/exec-04-08 — upload.py prepare_uploaded_set + SMOKE-12 PASS 29/29 (parity OQ2 CLOSED, 2-record SDF E2E, timing datum, MOL2-MULTI REFUSED fallback pinned per Decision 14); 688/688 WSL green; 3 smoke-side Rule-1 deviations + 1 Rule-2 reader-guard deviation)
+Stopped at: **04-08 COMPLETE in worktree (8/15 of Phase 4)** — awaiting orchestrator merge of exec/04-08 + sibling 04-09; next: wave 5
 Resume file: None
 
 ## Next Actions
 
-- **Phase 4 in progress:** waves 1-3 merged (04-01, 04-02, 04-04, 04-03, 04-05, 04-06, 04-07). **Watch:** this 2.5.0 build lacks the `cmd.read_mol2str` export — 04-08 must pick a mol2 route (e.g. `cmd.load_raw`) before relying on mol2 uploads (see 04-04-SUMMARY.md Deviations #3 + Next Phase Readiness; 04-06's mol2 SPLIT side is pure and unaffected).
+- **Phase 4 in progress:** waves 1-3 merged (04-01, 04-02, 04-04, 04-03, 04-05, 04-06, 04-07). **RESOLVED (04-08):** the read_mol2str-export concern is settled by the Decision-14 verdict — multi-segment MOL2 fail-closed refused naming file+count; single-molecule mol2 refuses with the missing-reader message; SDF multi-record uploads are the working route on this build. 04-10's handler must surface those refusal messages verbatim.
 - **Phase 3 verifier: PASSED (2026-09-15)** — 03-VERIFICATION.md 27/27; ROADMAP criteria 1-4 all satisfied; zero gaps. Phase 3 closed.
 - **04-01 probe verdict (citable line):** `Probe verdict: PASS (platform=offscreen) first attempt succeeded` — plans 04-05..04-13 may use the T1b headless-widget tier; cite the exact line in .planning/phases/04-qt-setup-window/04-01-SUMMARY.md.
 - **Gap-closure planning:** spec.md lines 12-21 setup popup from the Plugins → AA-match menu item is a recorded Phase-3 gap candidate (full Qt setup window = Phase 4; UI code borrowable from bioCHEMeleon).

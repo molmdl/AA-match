@@ -124,8 +124,8 @@ Plans:
 - [x] 04-05-PLAN.md — setup_window Qt-tier shell (modeless singleton, open_window) + menu rewire + deliberate test evolution (skeleton contract, SCANNED_MODULES, SMOKE-08 re-point)
 - [x] 04-06-PLAN.md — pure game_file upload helpers: split/supply-cap/read/row-build/validate (TDD)
 - [x] 04-07-PLAN.md — window form: source selector, dropdown, spinboxes, mode group, 7 checkboxes, collect/apply round-trip
-- [ ] 04-08-PLAN.md — cmd-tier upload.py extraction pipeline + SMOKE-12 (parity + multi-record SDF + MOL2 probe)
-- [ ] 04-09-PLAN.md — SETUP-07 buttons: Reset, Randomize, Save Setup, Load Setup (+ shared _guard)
+- [x] 04-08-PLAN.md — cmd-tier upload.py extraction pipeline + SMOKE-12 (parity + multi-record SDF + MOL2 probe)
+- [x] 04-09-PLAN.md — SETUP-07 buttons: Reset, Randomize, Save Setup, Load Setup (+ shared _guard)
 - [ ] 04-10-PLAN.md — upload ingestion handler (single-select, session slot, upload_ready plumbing)
 - [ ] 04-11-PLAN.md — Cleanup handler (GameWizard pop-first, prefix-only deletion)
 - [ ] 04-12-PLAN.md — Generate-and-export handler (game container write, seed policy, _last_export)
@@ -238,7 +238,7 @@ Lifted from PITFALLS.md "Pitfall-to-Phase Mapping" (topic names → this roadmap
 | 1. Bootstrap & Pure Foundation | 9/9 | Complete | 2026-09-06 |
 | 2. Headless Game Engine | 16/16 | Complete (verified 2026-09-07 — 02-VERIFICATION.md passed 5/5) | 2026-09-07 |
 | 3. Wizard Gameplay Loop | 7/7 | Complete (verified 2026-09-15 — 03-VERIFICATION.md passed 27/27) | 2026-09-15 |
-| 4. Qt Setup Window | 7/15 | In progress (waves 1-3 complete) | - |
+| 4. Qt Setup Window | 9/15 | In progress (waves 1-4 complete) | - |
 | 5. Game Status Tab & Start Sequence | 0/TBD | Not started | - |
 | 6. Scoring Lifecycle & Endgame | 0/TBD | Not started | - |
 | 7. Checkpoint & Game-File Persistence | 0/TBD | Not started | - |

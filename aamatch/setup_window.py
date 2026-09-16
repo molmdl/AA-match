@@ -70,12 +70,19 @@ def open_window():
 
 
 class SetupWindow(QtWidgets.QDialog):
-    """The modeless setup window shell (SETUP-01).
+    """The modeless setup window (SETUP-01) with the 7-field form.
 
-    04-05 scope: window lifecycle + an empty form-area placeholder +
-    the 7-button row created IN SPEC ORDER with tooltips and NOT
-    connected (each handler plan connects its own button; no dead stub
-    handlers). The form fields land in 04-07.
+    Window lifecycle (04-05) + the full form (04-07, SETUP-02..06
+    widget side): a 2-page molecule-source selector (demo dropdown /
+    upload browse+path label), molecules + difficulty spinboxes whose
+    ranges mirror the frozen setup_state clamp constants exactly
+    (collect -> validate is lossless), a 3-way interaction-mode radio
+    group with a context label, and 7 checkboxes in canonical
+    INTERACTION_TYPES order -- every widget tooltipped. The 7-button
+    row sits below the form, created IN SPEC ORDER and NOT connected
+    (each handler plan connects its own button; no dead stub
+    handlers). collect_state/apply_state round-trip a
+    validate_state-normalized dict losslessly.
     """
 
     def __init__(self):
@@ -87,11 +94,29 @@ class SetupWindow(QtWidgets.QDialog):
 
         top = QtWidgets.QVBoxLayout(self)
 
-        # (a) form-area placeholder -- the 7-field form lands here in
-        # 04-07; the placeholder widget keeps the layout slot stable.
+        # (a) form area -- the 7-field form packs vertically into this
+        # stable layout slot (button row stays pinned below).
         self.form_area = QtWidgets.QWidget(self)
         self.form_area.setLayout(QtWidgets.QVBoxLayout())
         top.addWidget(self.form_area)
+
+        # Session-only ingested-upload slot: the Browse handler (04-10)
+        # populates it with {'path': ..., 'sha256': ...}; collect_state
+        # reads it. Never restored from setup files (uploads are not
+        # stored there -- the sha256 lets Load warn when it moved).
+        self._uploaded = None
+
+        # Bulk-populate guard (prior-art shape): True while apply_state
+        # runs so future valueChanged hooks (none yet) can early-return
+        # instead of cascading recompute.
+        self._loading = False
+
+        # SETUP-02..06 widget side: source selector, spinboxes, mode
+        # group, interaction checkboxes -- in spec order.
+        self._build_source_selector()
+        self._build_spinboxes()
+        self._build_mode_group()
+        self._build_interactions()
 
         # (b) stretch -- keeps the button row pinned to the bottom.
         top.addStretch(1)
@@ -128,6 +153,353 @@ class SetupWindow(QtWidgets.QDialog):
                     self.btn_start):
             row.addWidget(btn)
         top.addLayout(row)
+
+    # ---- the 7-field form (SETUP-02..06 widget side, 04-07) ----
+
+    def _build_source_selector(self):
+        """Molecule-source group: 2 radios + a 2-page QStackedWidget.
+
+        Mirrors the prior-art stacked-pages pattern: the non-active
+        page's values stay INTACT underneath (source_mode, demo_set_id
+        and upload are three coexisting state fields).
+        """
+        group = QtWidgets.QGroupBox('Molecule source', self)
+        vbox = QtWidgets.QVBoxLayout(group)
+
+        radios = QtWidgets.QHBoxLayout()
+        self.src_demo = QtWidgets.QRadioButton('Bundled demo set', group)
+        self.src_demo.setToolTip(
+            'Generate from a demo set bundled with AA-match.')
+        self.src_upload = QtWidgets.QRadioButton(
+            'Upload my molecules...', group)
+        self.src_upload.setToolTip(
+            'Generate from your own SDF or MOL2 file (one file; '
+            'multi-record files give several molecules).')
+        radios.addWidget(self.src_demo)
+        radios.addWidget(self.src_upload)
+        vbox.addLayout(radios)
+
+        self.source_stack = QtWidgets.QStackedWidget(group)
+
+        # Page 0 -- demo page: dropdown of bundled sets + a note label
+        # for placeholder/warning text (initially empty).
+        demo_page = QtWidgets.QWidget(self.source_stack)
+        demo_layout = QtWidgets.QVBoxLayout(demo_page)
+        self.demo_combo = QtWidgets.QComboBox(demo_page)
+        self.demo_combo.setToolTip(
+            'Which bundled demo set to generate from.')
+        demo_layout.addWidget(self.demo_combo)
+        self.source_note = QtWidgets.QLabel('', demo_page)
+        self.source_note.setWordWrap(True)
+        demo_layout.addWidget(self.source_note)
+        self.source_stack.addWidget(demo_page)
+
+        # Page 1 -- upload page: Browse button + read-only path label.
+        # btn_browse is created here but NOT connected (04-10 connects
+        # it to its QFileDialog/ingest handler).
+        upload_page = QtWidgets.QWidget(self.source_stack)
+        upload_layout = QtWidgets.QHBoxLayout(upload_page)
+        self.btn_browse = QtWidgets.QPushButton('Browse...', upload_page)
+        self.btn_browse.setToolTip(
+            'Pick an SDF or MOL2 molecule file (single file; a '
+            'multi-record file provides several molecules).')
+        upload_layout.addWidget(self.btn_browse)
+        self.upload_path_label = QtWidgets.QLabel('', upload_page)
+        upload_layout.addWidget(self.upload_path_label, 1)
+        self.source_stack.addWidget(upload_page)
+        vbox.addWidget(self.source_stack)
+
+        # Radio toggles switch the stack page (demo checked -> page 0,
+        # upload checked -> page 1). toggled(bool) would map True -> 1
+        # directly, i.e. BACKWARDS -- hence the explicit lambda.
+        self.src_demo.toggled.connect(
+            lambda checked: self.source_stack.setCurrentIndex(
+                0 if checked else 1))
+        self.src_demo.setChecked(True)
+
+        self._populate_demo_sets()
+        self.form_area.layout().addWidget(group)
+
+    def _populate_demo_sets(self):
+        """Fill the demo dropdown from the bundled MANIFEST.json.
+
+        Reads exactly the way the engine's manifest flow reads
+        (read_json_file over paths.package_data_path, then
+        parse_manifest_dict); dropdown rows come from the pure
+        setup_form.manifest_sets helper (set_id as userData, title as
+        label, tier suffix). A failure to parse (e.g. a newer manifest
+        version) degrades to a placeholder item plus a visible note --
+        the window must never crash the menu action.
+        """
+        try:
+            from . import manifest, paths
+            from .persistence import read_json_file
+            from . import setup_form
+            payload = manifest.parse_manifest_dict(read_json_file(
+                paths.package_data_path('data', 'MANIFEST.json')))
+            for (set_id, title, tier) in setup_form.manifest_sets(payload):
+                label = title or set_id
+                if tier:
+                    label = '%s (%s)' % (label, tier)
+                self.demo_combo.addItem(label, set_id)
+            self.demo_combo.setCurrentIndex(0)
+        except Exception as e:
+            self.demo_combo.clear()
+            self.demo_combo.addItem('(no bundled sets)', '')
+            self.source_note.setText(
+                'Could not read the bundled demo list: %s' % e)
+
+    # UI-only display labels for the canonical interaction enum strings
+    # (the stored values stay the enum strings from
+    # setup_state.INTERACTION_TYPES; iteration order is frozen there).
+    _INTERACTION_LABELS = {
+        'h_bond': 'Hydrogen bond',
+        'salt_bridge': 'Salt bridge',
+        'pi_stacking': 'Pi-stacking',
+        'cation_pi': 'Cation-pi',
+        'hydrophobic': 'Hydrophobic',
+        'halogen': 'Halogen bond',
+        'metal': 'Metal coordination',
+    }
+    # Per-type tooltips in game terms (spec UI standard: clear but
+    # sufficient in-game explanation).
+    _INTERACTION_TIPS = {
+        'h_bond': 'Hydrogen bond: a donor hydrogen (-OH or -NH) '
+                  'facing an acceptor oxygen or nitrogen on the other '
+                  'molecule.',
+        'salt_bridge': 'Salt bridge: an opposite-charge pair held '
+                       'together (a positive group on one molecule, a '
+                       'negative group on the other).',
+        'pi_stacking': 'Pi-stacking: two aromatic rings stacked '
+                       'face-on or edge-on.',
+        'cation_pi': 'Cation-pi: a positively charged group resting '
+                     'on the face of an aromatic ring.',
+        'hydrophobic': 'Hydrophobic: non-polar carbons of both '
+                       'molecules clustered into the same greasy '
+                       'patch.',
+        'halogen': 'Halogen bond: a Cl/Br/I on the molecule accepting '
+                   'from a donor on the amino acid.',
+        'metal': 'Metal coordination: a metal ion bound by two or '
+                 'more donor atoms.',
+    }
+    # Context-label strings restating the current interaction mode's
+    # meaning under the radios (research mode_widget_design).
+    _MODE_CONTEXT = {
+        'exclusive': 'The game accepts ANY of the checked interactions',
+        'block_exclusive': 'The player must form EXACTLY the checked '
+                           'interactions',
+        'unset': 'The game randomizes the required set from the '
+                 'checked types (hydrophobic excluded from random '
+                 'picks).',
+    }
+
+    def _build_spinboxes(self):
+        """SETUP-04/05 spinboxes with ranges from the frozen constants.
+
+        The ranges are imported from setup_state (never numeric
+        literals): locking the spinbox range to the pure layer's clamp
+        range is what makes collect -> validate_state lossless for
+        these fields (form_field_specs ruling).
+        """
+        from . import setup_state
+        group = QtWidgets.QGroupBox('Game size', self)
+        form = QtWidgets.QFormLayout(group)
+
+        self.molecules_spin = QtWidgets.QSpinBox(group)
+        self.molecules_spin.setRange(setup_state.MOLECULES_MIN,
+                                     setup_state.MOLECULES_CAP)
+        self.molecules_spin.setValue(setup_state.MOLECULES_DEFAULT)
+        self.molecules_spin.setToolTip(
+            'How many small molecules each level contains (default 2; '
+            'range mirrors the frozen 1..10 bounds).')
+        form.addRow('Small molecules per level', self.molecules_spin)
+
+        self.difficulty_spin = QtWidgets.QSpinBox(group)
+        self.difficulty_spin.setRange(setup_state.DIFFICULTY_MIN,
+                                      setup_state.DIFFICULTY_CAP)
+        self.difficulty_spin.setValue(setup_state.DIFFICULTY_DEFAULT)
+        self.difficulty_spin.setToolTip(
+            'How many difficulty levels per game (each level is '
+            'harder: bigger grid, more required interactions).')
+        form.addRow('Difficulty levels', self.difficulty_spin)
+
+        self.form_area.layout().addWidget(group)
+
+    def _build_mode_group(self):
+        """SETUP-06 mode group: 3 radios + a context label.
+
+        Radio exclusivity is automatic within the group parent (no
+        QButtonGroup needed). The context label restates the current
+        mode's meaning and updates on every toggle. Default = the
+        frozen DEFAULTS interaction_mode ('unset').
+        """
+        group = QtWidgets.QGroupBox('Required interactions', self)
+        vbox = QtWidgets.QVBoxLayout(group)
+
+        self.mode_exclusive = QtWidgets.QRadioButton(
+            'Exclusive (any allowed)', group)
+        self.mode_exclusive.setToolTip(
+            'The game accepts ANY of the checked interactions.')
+        self.mode_block = QtWidgets.QRadioButton(
+            'Block-exclusive (checked set)', group)
+        self.mode_block.setToolTip(
+            'The player must form EXACTLY the checked interactions.')
+        self.mode_unset = QtWidgets.QRadioButton(
+            'Unset (random)', group)
+        self.mode_unset.setToolTip(
+            'The game randomizes the required set from the checked '
+            'types (hydrophobic is excluded from random picks).')
+        for radio in (self.mode_exclusive, self.mode_block,
+                      self.mode_unset):
+            radio.toggled.connect(self._on_mode_toggled)
+            vbox.addWidget(radio)
+
+        self.mode_context_label = QtWidgets.QLabel('', group)
+        self.mode_context_label.setWordWrap(True)
+        vbox.addWidget(self.mode_context_label)
+
+        # Default: the frozen DEFAULTS interaction_mode 'unset'.
+        self.mode_unset.setChecked(True)
+        self._on_mode_toggled()   # set the initial context text
+        self.form_area.layout().addWidget(group)
+
+    def _current_mode(self):
+        """The enum string of the checked mode radio."""
+        if self.mode_exclusive.isChecked():
+            return 'exclusive'
+        if self.mode_block.isChecked():
+            return 'block_exclusive'
+        return 'unset'
+
+    def _on_mode_toggled(self, *args):
+        """Restate the current mode's meaning under the radios."""
+        self.mode_context_label.setText(
+            self._MODE_CONTEXT[self._current_mode()])
+
+    def _build_interactions(self):
+        """SETUP-06 checkboxes: 7 in canonical INTERACTION_TYPES order.
+
+        Checkboxes are ENABLED in every mode on purpose: in unset
+        mode a non-empty allowed list narrows the sampling vocabulary,
+        so disabling them would silently discard the user's
+        restriction at collect time. Iterating the frozen canonical
+        list keeps collect order == validate_state order.
+        """
+        from .setup_state import INTERACTION_TYPES
+        group = QtWidgets.QGroupBox('Allowed interactions', self)
+        vbox = QtWidgets.QVBoxLayout(group)
+        self.interaction_checks = []
+        for itype in INTERACTION_TYPES:
+            cb = QtWidgets.QCheckBox(
+                self._INTERACTION_LABELS[itype], group)
+            cb.setToolTip(self._INTERACTION_TIPS[itype])
+            vbox.addWidget(cb)
+            self.interaction_checks.append((itype, cb))
+        self.form_area.layout().addWidget(group)
+
+    # ---- collect/apply: the form as a view of the 7-field model ----
+
+    def collect_state(self):
+        """Snapshot the form into the plain 7-field setup dict.
+
+        Returns EXACTLY the validate_state schema keys; validation and
+        clamping stay with the pure layer (no widget-side
+        re-validation). The upload entry is read from the session-only
+        ingested slot populated by 04-10's Browse handler.
+        """
+        upload = None
+        if self._uploaded:
+            upload = {'path': self._uploaded['path'],
+                      'sha256': self._uploaded['sha256']}
+        return {
+            'source_mode': 'upload' if self.src_upload.isChecked()
+            else 'demo',
+            'demo_set_id': str(self.demo_combo.currentData() or ''),
+            'upload': upload,
+            'molecules_per_level': int(self.molecules_spin.value()),
+            'difficulty_levels': int(self.difficulty_spin.value()),
+            'interaction_mode': self._current_mode(),
+            'allowed_interactions': [
+                t for (t, cb) in self.interaction_checks
+                if cb.isChecked()],
+        }
+
+    def apply_state(self, state):
+        """Repopulate every widget from a setup dict (Reset/Load/init).
+
+        Missing-key tolerance on every field via .get with frozen
+        defaults. The _loading guard is set for the whole populate so
+        future valueChanged hooks (none yet) can early-return instead
+        of cascading recompute. The upload label shows the SAVED path
+        for context only -- the session-only _uploaded slot is NOT
+        restored here (uploads are not stored in setup files).
+        """
+        if not isinstance(state, dict):
+            state = {}
+        from . import setup_state
+        self._loading = True
+        try:
+            if state.get('source_mode', setup_state.DEFAULTS['source_mode']) \
+                    == 'upload':
+                self.src_upload.setChecked(True)
+            else:
+                self.src_demo.setChecked(True)
+
+            set_id = str(state.get('demo_set_id') or '')
+            if set_id:
+                idx = self.demo_combo.findData(set_id)
+                if idx >= 0:
+                    self.demo_combo.setCurrentIndex(idx)
+                else:
+                    # Fallback to the first row, with a visible note --
+                    # never a crash on a stale/named set id.
+                    self.demo_combo.setCurrentIndex(0)
+                    self.source_note.setText(
+                        'set %r is not in the bundled list' % set_id)
+            else:
+                # Empty id = 'no restriction': no combo item selected
+                # (the dropdown holds named sets only; -1 = empty
+                # selection, which collect maps back to '').
+                self.demo_combo.setCurrentIndex(-1)
+
+            try:
+                self.molecules_spin.setValue(int(state.get(
+                    'molecules_per_level',
+                    setup_state.DEFAULTS['molecules_per_level'])))
+            except (TypeError, ValueError):
+                self.molecules_spin.setValue(
+                    setup_state.DEFAULTS['molecules_per_level'])
+            try:
+                self.difficulty_spin.setValue(int(state.get(
+                    'difficulty_levels',
+                    setup_state.DEFAULTS['difficulty_levels'])))
+            except (TypeError, ValueError):
+                self.difficulty_spin.setValue(
+                    setup_state.DEFAULTS['difficulty_levels'])
+
+            mode = state.get('interaction_mode',
+                             setup_state.DEFAULTS['interaction_mode'])
+            if mode == 'exclusive':
+                self.mode_exclusive.setChecked(True)
+            elif mode == 'block_exclusive':
+                self.mode_block.setChecked(True)
+            else:
+                self.mode_unset.setChecked(True)
+
+            allowed = state.get('allowed_interactions') or []
+            for (t, cb) in self.interaction_checks:
+                cb.setChecked(t in allowed)
+
+            upload = state.get('upload')
+            if isinstance(upload, dict) and upload.get('path'):
+                path = str(upload['path'])
+                self.upload_path_label.setText(path)
+                self.upload_path_label.setToolTip(path)
+            else:
+                self.upload_path_label.setText('')
+                self.upload_path_label.setToolTip('')
+        finally:
+            self._loading = False
 
     # NO closeEvent OVERRIDE -- on purpose: default close hides the
     # dialog, and the module-level _window singleton keeps the object

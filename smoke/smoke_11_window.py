@@ -36,7 +36,20 @@ PART B  (T1b -- the 04-01 probe verdict is PASS (platform=offscreen),
         'demo-dev-1'; processEvents; finish dlg.close(). ZERO modals
         (PITFALL P5): no .exec_(), no QFileDialog, no QMessageBox
         anywhere in this script.
-PART C  (ALWAYS, T0-in-smoke): Gate A2 shape sanity echoed inside
+PART C  (T1b, 04-09 SETUP-07 setup-button drives -- success paths
+        ONLY, driving the NON-MODAL _X_impl methods directly; the
+        smoke-99 probe proved a modal QMessageBox BLOCKS under
+        offscreen): C1 reset -- dlg._reset_impl() restores the
+        defaults-normalized dict exactly; C2 randomize -- with the
+        dropdown at 'demo-dev-1', dlg._randomize_impl() yields a
+        validate_state-stable state with source_mode 'demo', upload
+        None and demo_set_id PRESERVED as 'demo-dev-1' (Decision 5 --
+        the 'demo-%04x' trap never reaches collect_state); C3
+        save/load round-trip -- mutated widgets (4/2, block_exclusive,
+        h_bond only) -> dlg._save_setup_to(tmp) writes a container
+        with kind 'setup' version 1, _reset_impl wipes the form,
+        dlg._load_setup_from(tmp) restores the mutated dict exactly.
+PART D  (ALWAYS, T0-in-smoke): Gate A2 shape sanity echoed inside
         PyMOL's interpreter for the record -- aamatch/__init__.py
         carries ZERO column-0 import/from statements (the lazy-import
         discipline the menu rewire must preserve).
@@ -194,7 +207,82 @@ except Exception:
           'raised (see traceback)')
 
 # ============================================================
-# PART C: Gate A2 shape sanity inside PyMOL's interpreter (ALWAYS)
+# PART C: SETUP-07 setup-button drives (T1b -- the 04-01 probe
+# verdict is PASS (platform=offscreen), so these parts RUN; success
+# paths ONLY via the NON-MODAL _X_impl methods -- the smoke-99 probe
+# proved a modal QMessageBox BLOCKS under offscreen)
+# ============================================================
+try:
+    if setup_window is None:
+        raise RuntimeError('part A failed')
+    import tempfile
+    from pymol.Qt import QtWidgets
+    from aamatch import persistence, setup_state
+
+    app = QtWidgets.QApplication.instance()
+    if app is None:
+        app = QtWidgets.QApplication(['aamatch-smoke-11'])
+
+    dlg = setup_window.open_window()   # singleton reuse (PART B closed it)
+
+    # ---- C1: reset restores the defaults-normalized dict ----
+    dlg._reset_impl()
+    got_c1 = dlg.collect_state()
+    check('part C1: _reset_impl restores DEFAULTS (deep-copied frozen)',
+          got_c1 == setup_state.validate_state(dict(setup_state.DEFAULTS)),
+          'got=%r' % (got_c1,))
+
+    # ---- C2: randomize keeps the dropdown selection (Decision 5) ----
+    sel2 = dlg.demo_combo.findData('demo-dev-1')
+    if sel2 >= 0:
+        dlg.demo_combo.setCurrentIndex(sel2)
+    dlg._randomize_impl()
+    got_c2 = dlg.collect_state()
+    check('part C2: _randomize_impl yields a validate_state-stable state',
+          setup_state.validate_state(got_c2) == got_c2,
+          'got=%r' % (got_c2,))
+    check('part C2: source demo, upload None, demo_set_id preserved',
+          sel2 >= 0
+          and got_c2['source_mode'] == 'demo'
+          and got_c2['upload'] is None
+          and got_c2['demo_set_id'] == 'demo-dev-1',
+          "demo_set_id=%r (the 'demo-%%04x' trap must NOT appear)"
+          % (got_c2['demo_set_id'],))
+
+    # ---- C3: save -> reset -> load round-trip ----
+    tmp = os.path.join(tempfile.gettempdir(),
+                       'aamatch_smoke11_setup.aam.setup.json')
+    dlg.molecules_spin.setValue(4)
+    dlg.difficulty_spin.setValue(2)
+    dlg.mode_block.setChecked(True)
+    for (itype, cb) in dlg.interaction_checks:
+        cb.setChecked(itype == 'h_bond')
+    expected = dlg.collect_state()
+    dlg._save_setup_to(tmp)
+    check('part C3: _save_setup_to wrote the setup file',
+          os.path.exists(tmp), 'tmp=%r' % (tmp,))
+    payload = persistence.read_json_file(tmp)
+    check('part C3: on-disk container kind=setup version=1',
+          payload.get('kind') == 'setup' and payload.get('version') == 1,
+          'kind=%r version=%r' % (payload.get('kind'),
+                                  payload.get('version')))
+    dlg._reset_impl()
+    dlg._load_setup_from(tmp)
+    got_c3 = dlg.collect_state()
+    check('part C3: save->reset->load round-trips the mutated dict',
+          got_c3 == expected, 'got=%r expected=%r' % (got_c3, expected))
+    os.remove(tmp)
+
+    app.processEvents()
+    dlg.close()
+    REC['setup_drives'] = 'C1 reset, C2 randomize, C3 save/load'
+except Exception:
+    traceback.print_exc()
+    check('part C setup-button drives', False,
+          'raised (see traceback)')
+
+# ============================================================
+# PART D: Gate A2 shape sanity inside PyMOL's interpreter (ALWAYS)
 # ============================================================
 try:
     init_path = os.path.join(_ROOT, 'aamatch', '__init__.py')
@@ -203,11 +291,11 @@ try:
     offenders = [ln for ln in init_lines
                  if ln and not ln[0].isspace() and not ln.startswith('#')
                  and (ln.startswith('import ') or ln.startswith('from '))]
-    check('part C: Gate A2 shape -- zero column-0 import/from lines',
+    check('part D: Gate A2 shape -- zero column-0 import/from lines',
           not offenders, 'offenders=%r' % (offenders,))
 except Exception:
     traceback.print_exc()
-    check('part C Gate A2 echo', False, 'raised (see traceback)')
+    check('part D Gate A2 echo', False, 'raised (see traceback)')
 
 # --- evidence summary -------------------------------------------------
 print('SMOKE-ENV record: %s'

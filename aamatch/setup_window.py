@@ -154,6 +154,13 @@ class SetupWindow(QtWidgets.QDialog):
             row.addWidget(btn)
         top.addLayout(row)
 
+        # 04-09 SETUP-07 connections: Reset, Randomize, Save Setup,
+        # Load Setup (04-10/04-11/04-12 connect their own buttons).
+        self.btn_reset.clicked.connect(self._on_reset)
+        self.btn_randomize.clicked.connect(self._on_randomize)
+        self.btn_save_setup.clicked.connect(self._on_save_setup)
+        self.btn_load_setup.clicked.connect(self._on_load_setup)
+
     # ---- the 7-field form (SETUP-02..06 widget side, 04-07) ----
 
     def _build_source_selector(self):
@@ -500,6 +507,127 @@ class SetupWindow(QtWidgets.QDialog):
                 self.upload_path_label.setToolTip('')
         finally:
             self._loading = False
+
+    # ---- SETUP-07 button handlers (04-09): the _guard contract ----
+
+    def _guard(self, fn):
+        """Run fn() mapping the ValueError family + OSError to a modal
+        warning box (modal CHILD -- allowed, PITFALL 4). str(e) is shown
+        verbatim: every house refusal already names its cause. Unexpected
+        exceptions PROPAGATE (bug surfacing, never a silent swallow --
+        wizard.py:423-433 precedent)."""
+        try:
+            return fn()
+        except (ValueError, OSError) as e:
+            QtWidgets.QMessageBox.warning(self, 'AA-match', str(e))
+            return None
+
+    def _on_reset(self):
+        """Reset button: restore the frozen DEFAULTS (via _guard)."""
+        self._guard(self._reset_impl)
+
+    def _reset_impl(self):
+        """Apply a DEEP COPY of setup_state.DEFAULTS to every widget.
+
+        Never alias the module dict into mutable widget state (the
+        allowed_interactions list is mutable; research SETUP-07 seam,
+        prior-art gui_setup.py:315). Non-modal: headless smokes drive
+        this method directly.
+        """
+        import copy
+        from . import setup_state
+        self.apply_state(copy.deepcopy(setup_state.DEFAULTS))
+
+    def _on_randomize(self):
+        """Randomize button: random USABLE configuration (via _guard)."""
+        self._guard(self._randomize_impl)
+
+    def _randomize_impl(self):
+        """Randomize via setup_form.usable_randomized_state.
+
+        randomize_state synthesizes demo_set_id 'demo-%04x' which matches
+        NO manifest set (the 04-02 trap) -- usable_randomized_state
+        overwrites it with the CURRENT dropdown selection (Decision 5:
+        preserve the user's chosen set; '' when the placeholder/no
+        selection = all sets). apply_state reflects source_mode 'demo' +
+        upload None back into the widgets automatically. Non-modal.
+        """
+        from . import setup_form
+        current = str(self.demo_combo.currentData() or '')
+        state = setup_form.usable_randomized_state(demo_set_id=current)
+        self.apply_state(state)
+
+    def _on_save_setup(self):
+        """Save Setup button: pick a path, save via _guard, confirm.
+
+        The success box lives HERE (the dialog wrapper), not in the
+        impl: _save_setup_to must stay modal-free so headless smokes
+        can drive it (a modal QMessageBox BLOCKS under platform=
+        offscreen -- the 04-09 smoke-99 probe receipt).
+        """
+        path, _selected_filter = QtWidgets.QFileDialog.getSaveFileName(
+            self, 'Save AA-match Setup', '',
+            'AA-match Setup (*.aam.setup.json);;All Files (*)')
+        if path:
+            saved = self._guard(lambda: self._save_setup_to(path))
+            if saved is not None:
+                QtWidgets.QMessageBox.information(
+                    self, 'AA-match', 'Setup saved to %s' % saved)
+
+    def _save_setup_to(self, path):
+        """Write collect_state() as a versioned 'setup' container.
+
+        Extension auto-append (Decision 2, prior-art gui_setup.py:651-
+        652); the disk path routes through paths.to_windows_path (the
+        AGENTS path law -- QFileDialog Windows paths pass through
+        unchanged by design). persistence.save_setup_file validates
+        BEFORE write; OSError (disk/permission) propagates to _guard,
+        which catches it. NON-MODAL (no boxes) and returns the final
+        path so the wrapper can confirm; headless smokes drive this
+        method directly.
+        """
+        from . import persistence, paths
+        if not path.endswith('.aam.setup.json'):
+            path = path + '.aam.setup.json'
+        persistence.save_setup_file(paths.to_windows_path(path),
+                                    self.collect_state())
+        return path
+
+    def _on_load_setup(self):
+        """Load Setup button: pick a path, load via _guard, confirm.
+
+        Same modal-free-impl rule as _on_save_setup (the smoke-99
+        receipt).
+        """
+        path, _selected_filter = QtWidgets.QFileDialog.getOpenFileName(
+            self, 'Load AA-match Setup', '',
+            'AA-match Setup (*.aam.setup.json);;All Files (*)')
+        if path:
+            loaded = self._guard(lambda: self._load_setup_from(path))
+            if loaded is not None:
+                QtWidgets.QMessageBox.information(
+                    self, 'AA-match', 'Setup loaded from %s' % loaded)
+
+    def _load_setup_from(self, path):
+        """Read a versioned setup container and apply it to the form.
+
+        persistence.load_setup_file validates AGAIN on load; the 4
+        FormatError refusal classes (foreign / newer / misfiled /
+        unparseable -- all ValueError subclasses) arrive with clear
+        user-facing messages that _guard shows verbatim. OSError
+        (missing file) is likewise caught by _guard. NON-MODAL (no
+        boxes); returns the path so the wrapper can confirm.
+
+        CAVEAT: a loaded setup with source_mode 'upload' restores the
+        path/sha256 LABELS only (apply_state's contract) -- the
+        molecules themselves are session-only and are NOT re-ingested
+        here; Start/Export refuse via build_state's upload_ready
+        pre-check until re-ingested (04-10 wires that).
+        """
+        from . import persistence, paths
+        state = persistence.load_setup_file(paths.to_windows_path(path))
+        self.apply_state(state)
+        return path
 
     # NO closeEvent OVERRIDE -- on purpose: default close hides the
     # dialog, and the module-level _window singleton keeps the object

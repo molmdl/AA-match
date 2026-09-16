@@ -154,6 +154,12 @@ class SetupWindow(QtWidgets.QDialog):
             row.addWidget(btn)
         top.addLayout(row)
 
+        # 04-09 SETUP-07 connections: Reset + Randomize here; Save
+        # Setup + Load Setup with their handlers below (04-10/04-11/
+        # 04-12 connect their own buttons).
+        self.btn_reset.clicked.connect(self._on_reset)
+        self.btn_randomize.clicked.connect(self._on_randomize)
+
     # ---- the 7-field form (SETUP-02..06 widget side, 04-07) ----
 
     def _build_source_selector(self):
@@ -500,6 +506,55 @@ class SetupWindow(QtWidgets.QDialog):
                 self.upload_path_label.setToolTip('')
         finally:
             self._loading = False
+
+    # ---- SETUP-07 button handlers (04-09): the _guard contract ----
+
+    def _guard(self, fn):
+        """Run fn() mapping the ValueError family + OSError to a modal
+        warning box (modal CHILD -- allowed, PITFALL 4). str(e) is shown
+        verbatim: every house refusal already names its cause. Unexpected
+        exceptions PROPAGATE (bug surfacing, never a silent swallow --
+        wizard.py:423-433 precedent)."""
+        try:
+            return fn()
+        except (ValueError, OSError) as e:
+            QtWidgets.QMessageBox.warning(self, 'AA-match', str(e))
+            return None
+
+    def _on_reset(self):
+        """Reset button: restore the frozen DEFAULTS (via _guard)."""
+        self._guard(self._reset_impl)
+
+    def _reset_impl(self):
+        """Apply a DEEP COPY of setup_state.DEFAULTS to every widget.
+
+        Never alias the module dict into mutable widget state (the
+        allowed_interactions list is mutable; research SETUP-07 seam,
+        prior-art gui_setup.py:315). Non-modal: headless smokes drive
+        this method directly.
+        """
+        import copy
+        from . import setup_state
+        self.apply_state(copy.deepcopy(setup_state.DEFAULTS))
+
+    def _on_randomize(self):
+        """Randomize button: random USABLE configuration (via _guard)."""
+        self._guard(self._randomize_impl)
+
+    def _randomize_impl(self):
+        """Randomize via setup_form.usable_randomized_state.
+
+        randomize_state synthesizes demo_set_id 'demo-%04x' which matches
+        NO manifest set (the 04-02 trap) -- usable_randomized_state
+        overwrites it with the CURRENT dropdown selection (Decision 5:
+        preserve the user's chosen set; '' when the placeholder/no
+        selection = all sets). apply_state reflects source_mode 'demo' +
+        upload None back into the widgets automatically. Non-modal.
+        """
+        from . import setup_form
+        current = str(self.demo_combo.currentData() or '')
+        state = setup_form.usable_randomized_state(demo_set_id=current)
+        self.apply_state(state)
 
     # NO closeEvent OVERRIDE -- on purpose: default close hides the
     # dialog, and the module-level _window singleton keeps the object

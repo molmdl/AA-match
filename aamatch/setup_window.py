@@ -750,9 +750,13 @@ class SetupWindow(QtWidgets.QDialog):
         The result lands in the session-only slot self._uploaded with
         the rows + ligand_content engine.new_game already accepts plus
         the path/FILE-sha256/fmt labels; a NEW upload REPLACES the
-        slot (single slot v1). The form reflects upload mode: source
-        radio switches to the upload page and the path label shows the
-        file (collect_state then reports upload={'path','sha256'}).
+         slot (single slot v1). The form reflects upload mode: source
+         radio switches to the upload page and the path label shows the
+         file path with the record count on its OWN second line
+         ('%s\n(%d molecule record(s))' -- a long path on one line
+         clipped the count out of view, the 04-15 checkpoint-B fix;
+         the tooltip still carries the full path) so collect_state
+         then reports upload={'path','sha256'}.
         EXT-04 depth is NOT built -- the fail-closed minimum only
         (research upload_pipeline boundary); every refusal is a
         ValueError/OSError that _guard shows verbatim.
@@ -771,7 +775,7 @@ class SetupWindow(QtWidgets.QDialog):
                           'sha256': sha256_hex, 'fmt': fmt}
         self.src_upload.setChecked(True)
         self.upload_path_label.setText(
-            '%s (%d molecule record(s))' % (path, len(rows)))
+            '%s\n(%d molecule record(s))' % (path, len(rows)))
         self.upload_path_label.setToolTip(path)
         return len(rows)
 

@@ -5,22 +5,22 @@
 See: .planning/PROJECT.md (updated 2026-09-05)
 
 **Core value:** The player can place amino acids onto a small molecule in the PyMOL 3D viewer and the game correctly detects and scores the interactions they form — turning unguided 3D manipulation practice into a scored game.
-**Current focus:** Phase 4 — Qt Setup Window (executing; waves 1-4 done: 04-01, 04-02, 04-04, 04-03, 04-05, 04-06, 04-07, 04-08, 04-09; T1b tier unlocked, full form + SETUP-07 buttons live, upload bridge proven SMOKE-12)
+**Current focus:** Phase 4 — Qt Setup Window (executing; waves 1-4 + 04-10 done: 04-01, 04-02, 04-04, 04-03, 04-05, 04-06, 04-07, 04-08, 04-09, 04-10; T1b tier unlocked, full form + SETUP-07 buttons live, upload bridge proven SMOKE-12, SETUP-03 upload button wired end-to-end)
 
 ## Current Position
 
 Phase: 4 of 9 (Qt Setup Window) — **IN PROGRESS**
-Plan: 8 of 15 complete — 04-01 (offscreen-Qt probe) + 04-02 (setup_form pure helpers, TDD) + 04-04 (ligand_content upload pipe) + 04-03 (game_file core, TDD) + 04-05 (Qt window shell + menu rewire) + 04-06 (game_file upload helpers, TDD) + 04-07 (7-field window form + collect/apply round-trip) + 04-08 (cmd-tier upload bridge + SMOKE-12) + 04-09 (SETUP-07 buttons: _guard + Reset/Randomize/Save/Load + SMOKE-11 PART C) DONE
-Status: Executing Phase 4 — 688 WSL tests green, SMOKE-01..12 all PASS (SMOKE-12: read_sdfstr parity OQ2 CLOSED + 2-record SDF E2E + timing datum + MOL2-MULTI REFUSED fallback pinned; SMOKE-11 PART C = reset identity, randomize usability + dropdown-id preservation, save->reset->load round-trip — 21 checks); the four SETUP-07 buttons are wired with the shared _guard error-surfacing contract
-Last activity: 2026-09-16 — 04-08: aamatch/upload.py prepare_uploaded_set (fresh _aam_tmp per record, string loads with hasattr fail-closed reader guards, state/0-atom refusals naming record index, delete-in-finally + scene snapshot asserted per record, rows/content delegated to 04-06 pure helpers); SMOKE-12 29/29 PASS; Decision 14 VERDICT: multi-segment MOL2 fail-closed refused (read_mol2str unexported on this build); 04-09: SETUP-07 handlers (_guard catching (ValueError, OSError) -> modal-child warning, unexpected exceptions propagate; Reset = deep-copied frozen DEFAULTS; Randomize via usable_randomized_state — the 'demo-%04x' trap dead; Save/Load = versioned container + .aam.setup.json auto-append + to_windows_path; _X_impl NON-MODAL — smoke-99 probe proved a modal QMessageBox BLOCKS under offscreen)
+Plan: 9 of 15 complete — 04-01 (offscreen-Qt probe) + 04-02 (setup_form pure helpers, TDD) + 04-04 (ligand_content upload pipe) + 04-03 (game_file core, TDD) + 04-05 (Qt window shell + menu rewire) + 04-06 (game_file upload helpers, TDD) + 04-07 (7-field window form + collect/apply round-trip) + 04-08 (cmd-tier upload bridge + SMOKE-12) + 04-09 (SETUP-07 buttons + SMOKE-11 PART C) + 04-10 (SETUP-03 upload button: _on_browse_upload/_ingest_upload + upload_ready_for + SMOKE-11 PART D) DONE
+Status: Executing Phase 4 — 688 WSL tests green, SMOKE-01..12 all PASS (SMOKE-11 now carries PART D: 11-check upload-ingest drive on bundled benzamide.sdf — n=1, session slot rows/content/FILE-sha256, form reflects upload mode, re-ingest replaces slot, upload_ready_for verdict matrix own/stale/empty/demo); the upload seam chain 04-04 -> 04-06 -> 04-08 -> 04-10 is COMPLETE (ROADMAP criterion-2 sequencing check closed ahead of the checkpoints)
+Last activity: 2026-09-17 — 04-10: SETUP-03 form side — single-select Browse (Decision 9) -> _guard -> NON-MODAL _ingest_upload (pure read_upload_source/split/check_upload_supply -> upload.prepare_uploaded_set -> session-only _uploaded slot + widget reflection, replace-on-new-upload); upload_ready_for compares session slot path+FILE-sha256 vs the form block (Load-restored labels alone never startable); apply_state upload tooltip carries the saved FILE sha256; ZERO deviations from plan
 
-Progress: [█████░░░░░] 8/15 of Phase 4 · [███░░░░░░░] 33% of project (3/9 phases done)
+Progress: [██████░░░░] 9/15 of Phase 4 · [███░░░░░░░] 33% of project (3/9 phases done)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 38 (Phase 1: 01-01…01-09; Phase 2: 02-01…02-15; Phase 3: 03-01…03-07; Phase 4: 04-01, 04-02, 04-04, 04-03, 04-05, 04-06, 04-07, 04-08, 04-09)
-- Average duration: ~11 min (02-03); 6 min (02-04); ~29 min (02-05); 23 min (02-06); 4 min (02-09); 11 min (02-07); 17 min (02-08); ~20 min (02-13); ~27 min (02-11); 16 min (02-14); 29 min (02-15); ~15 min (03-01); ~55 min (03-02); ~14 min (03-03); ~27 min (03-04); ~14 min (03-05); ~10 min (04-01); ~8 min (04-02); 16 min (04-04); ~9 min (04-03); 17 min (04-05); ~15 min (04-06); 16 min (04-07); 23 min (04-08); ~49 min (04-09)
+- Total plans completed: 39 (Phase 1: 01-01…01-09; Phase 2: 02-01…02-15; Phase 3: 03-01…03-07; Phase 4: 04-01, 04-02, 04-04, 04-03, 04-05, 04-06, 04-07, 04-08, 04-09, 04-10)
+- Average duration: ~11 min (02-03); 6 min (02-04); ~29 min (02-05); 23 min (02-06); 4 min (02-09); 11 min (02-07); 17 min (02-08); ~20 min (02-13); ~27 min (02-11); 16 min (02-14); 29 min (02-15); ~15 min (03-01); ~55 min (03-02); ~14 min (03-03); ~27 min (03-04); ~14 min (03-05); ~10 min (04-01); ~8 min (04-02); 16 min (04-04); ~9 min (04-03); 17 min (04-05); ~15 min (04-06); 16 min (04-07); 23 min (04-08); ~49 min (04-09); ~7 min (04-10)
 - Total execution time: —
 
 **By Phase:**
@@ -30,7 +30,7 @@ Progress: [█████░░░░░] 8/15 of Phase 4 · [███░░�
 | 1 | 9/9 ✓ | — | — |
 | 2 | 16/16 ✓ | ~8 min (02-02) + ~25 min (02-01 cont.) + 11 min (02-03) + 6 min (02-04) + 29 min (02-05) + 23 min (02-06) + 4 min (02-09) + 11 min (02-07) + 17 min (02-08) + 45 min (02-12) + ~20 min (02-13) + 16 min (02-14) + 29 min (02-15) | — |
 | 3 | 7/7 ✓ | ~15 min (03-01) + ~55 min (03-02) + ~14 min (03-03) + ~27 min (03-04) + ~14 min (03-05) + 2d checkpoint incl. debug detour + fix batch (03-06) + 4d checkpoint incl. framing chain (03-07) | — |
-| 4 | 8/15 | ~10 min (04-01) + ~8 min (04-02) + 16 min (04-04) + ~9 min (04-03) + 17 min (04-05) + ~15 min (04-06) + 16 min (04-07) + 23 min (04-08) + ~49 min (04-09) | — |
+| 4 | 9/15 | ~10 min (04-01) + ~8 min (04-02) + 16 min (04-04) + ~9 min (04-03) + 17 min (04-05) + ~15 min (04-06) + 16 min (04-07) + 23 min (04-08) + ~49 min (04-09) + ~7 min (04-10) | — |
 
 **Recent Trend:**
 - Last 5 plans: —
@@ -160,6 +160,8 @@ Decisions are logged in PROJECT.md Key Decisions table. Seeded from PROJECT.md a
 - (04-08, pitfall recorded) cmd.get_unused_name reservations are NOT atomic: two calls made BEFORE any load return the SAME free name ('_aam_tmp01' both times), and the second string-load then APPENDED a state into the first object — acquire the next temp name only after the previous load has materialized (upload.py's serial acquire+load per record is unaffected; the trap lives in smoke orchestration).
 - (04-09) **The _guard error-surfacing contract (phase-wide, reused verbatim by 04-10..04-13):** catch ONLY (ValueError, OSError) -> QtWidgets.QMessageBox.warning(self, 'AA-match', str(e)) verbatim (every house refusal names its cause; modal CHILD = legal, PITFALL 4); ANY other exception PROPAGATES (bug surfacing, wizard.py:423-433 precedent). The Qt window has no wizard panel, so the box is the v1 contract, never a status label.
 - (04-09) **The _X_impl factoring rule (binding on 04-10..04-13):** clicked signal -> thin MODAL wrapper (_on_X: QFileDialog pick + _guard + success QMessageBox.information gated on the impl's return) -> NON-MODAL _X_impl that headless smokes drive directly. **The smoke-99 probe receipt: a static QMessageBox BLOCKS INDEFINITELY under platform=offscreen** (modal event loop nothing closes; 'after box' never printed within a 60s timeout) — impls must never own boxes, or T1b smokes hang.
+- (04-10) SETUP-03 form side WIRED: _on_browse_upload = single-select getOpenFileName (Decision 9 — the frozen {'path','sha256'} shape wins; multi-file = version-bump event) -> _guard -> _ingest_upload(path) -> int (NON-MODAL, returns the record count; NO success box — the widget reflection IS the confirmation). Impl chain in plan order: read_upload_source(to_windows_path) -> split by fmt -> check_upload_supply(cap 50) -> upload.prepare_uploaded_set -> session-only self._uploaded {rows, content, path, sha256, fmt} (REPLACE-on-new-upload, single slot v1) -> src_upload.setChecked(True) + path label '%s (%d molecule record(s))' + full-path tooltip. EXT-04 depth NOT built (fail-closed minimum).
+- (04-10) upload_ready_for(form_values): True iff source_mode != 'upload' OR the session slot matches the form upload path AND FILE sha256 — a setup-file Load restores LABELS only, so a not-re-ingested upload config is never startable; 04-12/04-13 pass upload_ready=self.upload_ready_for(self.collect_state()) into pure build_state (fatal pre-check BEFORE any scene-touching call). apply_state upload tooltip now carries the saved FILE sha256. SMOKE-11 PART D (11 checks, T1b) drives the impl on bundled benzamide.sdf; the old Gate A2 echo renumbered PART D -> PART E.
 - (04-09) SETUP-07 semantics: Reset = apply_state(copy.deepcopy(setup_state.DEFAULTS)) — NEVER alias the module dict (mutable allowed list); Randomize = apply_state(setup_form.usable_randomized_state(demo_set_id=str(self.demo_combo.currentData() or ''))) — Decision 5 preserves the dropdown selection ('' = all sets), the randomizer's synthetic 'demo-%04x' can never reach Start; Save auto-appends '.aam.setup.json' (Decision 2, gui_setup.py:651-652) and BOTH pickers use the 'AA-match Setup (*.aam.setup.json);;All Files (*)' filter; EVERY disk path routes paths.to_windows_path (QFileDialog Windows paths pass through unchanged by design). Loaded 'upload' setups restore path/sha256 LABELS only — session-only molecules are never re-ingested; Start/Export refuse via build_state's upload_ready pre-check (04-10 wires it). SMOKE-11 PART C proves all three headlessly (21 checks PASS).
 
 ### Pending Todos
@@ -199,13 +201,14 @@ Decisions are logged in PROJECT.md Key Decisions table. Seeded from PROJECT.md a
 
 ## Session Continuity
 
-Last session: 2026-09-16 (wave 4 executed in 2 parallel worktrees + merged: 04-08 upload bridge — SMOKE-12 PASS 29/29, parity OQ2 CLOSED, MOL2-MULTI REFUSED fallback pinned, 3 smoke-side Rule-1 + 1 Rule-2 deviations; 04-09 SETUP-07 buttons — SMOKE-11 PASS 21 checks, one Rule-3 deviation: success boxes moved to wrappers, modal QMessageBox blocks under offscreen)
-Stopped at: **Wave 4 COMPLETE + merged (8/15 of Phase 4)** — next: waves 5-8 (04-10 → 04-13 handlers), then checkpoints 04-14/04-15
+Last session: 2026-09-17 (04-10 SETUP-03 upload button — SMOKE-11 PASS incl. PART D 11 checks, ZERO deviations; single worktree-free plan, 3 atomic commits)
+Stopped at: **04-10 COMPLETE (9/15 of Phase 4)** — next: wave 5 continues (04-11 cleanup, 04-12 export, 04-13 start handlers), then checkpoints 04-14/04-15
 Resume file: None
 
 ## Next Actions
 
-- **Phase 4 in progress:** waves 1-3 merged (04-01, 04-02, 04-04, 04-03, 04-05, 04-06, 04-07). **RESOLVED (04-08):** the read_mol2str-export concern is settled by the Decision-14 verdict — multi-segment MOL2 fail-closed refused naming file+count; single-molecule mol2 refuses with the missing-reader message; SDF multi-record uploads are the working route on this build. 04-10's handler must surface those refusal messages verbatim.
+- **Phase 4 in progress:** waves 1-4 merged (04-01, 04-02, 04-04, 04-03, 04-05, 04-06, 04-07, 04-08, 04-09); wave 5 started (04-10 DONE). **RESOLVED (04-08):** the read_mol2str-export concern is settled by the Decision-14 verdict — multi-segment MOL2 fail-closed refused naming file+count; single-molecule mol2 refuses with the missing-reader message; SDF multi-record uploads are the working route on this build. 04-10's handler surfaces those refusal messages verbatim via _guard (wired + smoke-proven).
+- **04-12/04-13 contract (04-10):** consume `self._uploaded['rows']`/`['content']` as `candidates=`/`ligand_content=` and pass `upload_ready=self.upload_ready_for(self.collect_state())` into `setup_form.build_state` — un-ingested upload configs refuse mechanically before any scene touch.
 - **Phase 3 verifier: PASSED (2026-09-15)** — 03-VERIFICATION.md 27/27; ROADMAP criteria 1-4 all satisfied; zero gaps. Phase 3 closed.
 - **04-01 probe verdict (citable line):** `Probe verdict: PASS (platform=offscreen) first attempt succeeded` — plans 04-05..04-13 may use the T1b headless-widget tier; cite the exact line in .planning/phases/04-qt-setup-window/04-01-SUMMARY.md.
 - **Gap-closure planning:** spec.md lines 12-21 setup popup from the Plugins → AA-match menu item is a recorded Phase-3 gap candidate (full Qt setup window = Phase 4; UI code borrowable from bioCHEMeleon).

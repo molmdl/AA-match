@@ -71,7 +71,23 @@ PART E  (ALWAYS -- the 04-11 SETUP-09 cleanup drive; the substance is
         scene restore, the prefix rule's proof) -> cmd.get_wizard()
         is None (the pop happened, nothing dangling -- research P6
         hazard closed). NO modals anywhere (impl only).
-PART F  (ALWAYS, T0-in-smoke): Gate A2 shape sanity echoed inside
+PART F  (ALWAYS, T1a -- the 04-12 SETUP-08 export drive via the
+        module-level export_game, which needs no dialog and runs
+        regardless of the probe; NO modals anywhere): tmp game file ->
+        usable_randomized_state(7, demo_set_id='demo-dev-1') ->
+        setup_window.export_game(state, 4242, None, None, tmp) -> the
+        file exists with on-disk kind 'game' -> parse_game_data
+        round-trips the validated setup, the embedded payload echoes
+        seed 4242, ligand_texts == {} (bundled molecules are package-
+        resolved, never embedded) and the summary names 'seed 4242'.
+        os.remove(tmp).
+PART F2 (T1b -- the 04-01 probe verdict is PASS (platform=offscreen),
+        so this part RUNS; dlg._export_game_to is NON-MODAL by the
+        smoke-99 receipt, no boxes): drive dlg._export_game_to(tmp2)
+        with the form at defaults -> _last_export is stored (fresh int
+        seed, candidates/ligand_content None on the demo flow); tmp2
+        cleaned up.
+PART G  (ALWAYS, T0-in-smoke): Gate A2 shape sanity echoed inside
         PyMOL's interpreter for the record -- aamatch/__init__.py
         carries ZERO column-0 import/from statements (the lazy-import
         discipline the menu rewire must preserve).
@@ -435,7 +451,104 @@ except Exception:
     check('part E cleanup drive', False, 'raised (see traceback)')
 
 # ============================================================
-# PART F: Gate A2 shape sanity inside PyMOL's interpreter (ALWAYS)
+# PART F: SETUP-08 export_game drive (ALWAYS, T1a -- the module-level
+# function needs no dialog and runs regardless of the probe; NO modals
+# anywhere -- export_game itself owns no boxes)
+# ============================================================
+try:
+    if setup_window is None:
+        raise RuntimeError('part A failed')
+    import tempfile
+    from aamatch import game_file, persistence, setup_form, setup_state
+
+    tmp = os.path.join(tempfile.gettempdir(),
+                       'aamatch_smoke11_game.aamatch.json')
+    state = setup_form.usable_randomized_state(7, demo_set_id='demo-dev-1')
+    # usable_randomized_state guarantees a USABLE demo_set_id, not a
+    # generation-feasible draw against the 2-molecule demo set: seed 7
+    # draws molecules_per_level 9 (needs 9 distinct candidates;
+    # generator.py correctly refuses) AND block_exclusive incl.
+    # cation_pi (which the demo ligands cannot ALL support,
+    # generator.py:403-410). The export smoke needs a FEASIBLE demo
+    # state, so pin these fields the way a user correcting the
+    # infeasible draw would before clicking Export: 2 molecules
+    # (the frozen default; the demo set max) and 'exclusive' with
+    # h_bond (every demo ligand forms at least one of the pair).
+    state['molecules_per_level'] = 2
+    state['interaction_mode'] = 'exclusive'
+    state['allowed_interactions'] = ['h_bond', 'pi_stacking']
+    summary = setup_window.export_game(state, 4242, None, None, tmp)
+    check('part F: export_game returns the summary line',
+          isinstance(summary, str), 'summary=%r' % (summary,))
+    check('part F: the shareable game file exists',
+          os.path.exists(tmp), 'tmp=%r' % (tmp,))
+    container = persistence.read_json_file(tmp)
+    check("part F: on-disk container kind is 'game'",
+          container.get('kind') == 'game',
+          'kind=%r' % (container.get('kind'),))
+    data = game_file.parse_game_data(container)
+    check('part F: parse_game_data round-trips the validated setup',
+          data['setup'] == setup_state.validate_state(state),
+          'setup=%r' % (data['setup'],))
+    check('part F: embedded payload echoes the export seed (4242)',
+          data['payload']['seed'] == 4242,
+          'seed=%r' % (data['payload']['seed'],))
+    check("part F: demo flow embeds NOTHING (ligand_texts == {})",
+          data['ligand_texts'] == {},
+          'keys=%r' % (sorted(data['ligand_texts']),))
+    check("part F: the summary line names the seed ('seed 4242')",
+          'seed 4242' in summary, 'summary=%r' % (summary,))
+    os.remove(tmp)
+    REC['export_game'] = 'seed 4242 round-trip; ligand_texts {} (demo)'
+except Exception:
+    traceback.print_exc()
+    check('part F export_game drive', False, 'raised (see traceback)')
+
+# ============================================================
+# PART F2: dialog export drive (T1b -- the 04-01 probe verdict is PASS
+# (platform=offscreen), so this part RUNS; dlg._export_game_to is
+# NON-MODAL and returns the summary (the smoke-99 receipt: impls own no
+# boxes), so driving it headless is safe)
+# ============================================================
+try:
+    if setup_window is None:
+        raise RuntimeError('part A failed')
+    import tempfile
+    from pymol.Qt import QtWidgets
+
+    app = QtWidgets.QApplication.instance()
+    if app is None:
+        app = QtWidgets.QApplication(['aamatch-smoke-11'])
+    dlg = setup_window.open_window()   # singleton reuse
+    dlg._reset_impl()                  # the form at defaults
+    tmp2 = os.path.join(tempfile.gettempdir(),
+                        'aamatch_smoke11_game2.aamatch.json')
+    summary2 = dlg._export_game_to(tmp2)
+    check('part F2: _export_game_to returns the summary, file written',
+          isinstance(summary2, str) and os.path.exists(tmp2),
+          'tmp2=%r' % (tmp2,))
+    le = dlg._last_export or {}
+    check('part F2: _last_export stored with a fresh int seed',
+          dlg._last_export is not None
+          and isinstance(le.get('seed'), int)
+          and not isinstance(le.get('seed'), bool),
+          'seed=%r' % (le.get('seed'),))
+    check('part F2: demo flow -> candidates/ligand_content None',
+          le.get('candidates') is None
+          and le.get('ligand_content') is None
+          and isinstance(le.get('setup'), dict)
+          and le['setup'].get('source_mode') == 'demo',
+          'mode=%r' % ((le.get('setup') or {}).get('source_mode'),))
+    os.remove(tmp2)
+    app.processEvents()
+    dlg.close()
+    REC['export_drive'] = 'dlg._export_game_to; _last_export tuple ok'
+except Exception:
+    traceback.print_exc()
+    check('part F2 dialog export drive', False, 'raised (see traceback)')
+
+# ============================================================
+# PART G: Gate A2 shape sanity inside PyMOL's interpreter (ALWAYS)
 # ============================================================
 try:
     init_path = os.path.join(_ROOT, 'aamatch', '__init__.py')
@@ -444,11 +557,11 @@ try:
     offenders = [ln for ln in init_lines
                  if ln and not ln[0].isspace() and not ln.startswith('#')
                  and (ln.startswith('import ') or ln.startswith('from '))]
-    check('part F: Gate A2 shape -- zero column-0 import/from lines',
+    check('part G: Gate A2 shape -- zero column-0 import/from lines',
           not offenders, 'offenders=%r' % (offenders,))
 except Exception:
     traceback.print_exc()
-    check('part F Gate A2 echo', False, 'raised (see traceback)')
+    check('part G Gate A2 echo', False, 'raised (see traceback)')
 
 # --- evidence summary -------------------------------------------------
 print('SMOKE-ENV record: %s'

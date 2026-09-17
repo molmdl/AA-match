@@ -62,7 +62,16 @@ PART D  (T1b, 04-10 SETUP-03 upload ingestion -- the 04-01 probe
         for the window's own collect_state, False for a stale-sha256
         config and for a cleared slot, True again on the demo page.
         Cleanup: _uploaded = None, back to the demo page.
-PART E  (ALWAYS, T0-in-smoke): Gate A2 shape sanity echoed inside
+PART E  (ALWAYS -- the 04-11 SETUP-09 cleanup drive; the substance is
+        cmd-tier/T1a-safe): baseline object list -> gamestart.start_game
+        (defaults; scene grows, GameWizard pushed) -> the dialog's
+        dlg._cleanup_now() when PART B's dialog was constructed, else
+        the equivalent direct calls -> deleted > 0 asserted ->
+        cmd.get_names('objects') == the baseline EXACTLY (original-
+        scene restore, the prefix rule's proof) -> cmd.get_wizard()
+        is None (the pop happened, nothing dangling -- research P6
+        hazard closed). NO modals anywhere (impl only).
+PART F  (ALWAYS, T0-in-smoke): Gate A2 shape sanity echoed inside
         PyMOL's interpreter for the record -- aamatch/__init__.py
         carries ZERO column-0 import/from statements (the lazy-import
         discipline the menu rewire must preserve).
@@ -378,7 +387,55 @@ except Exception:
     check('part D upload-ingest drive', False, 'raised (see traceback)')
 
 # ============================================================
-# PART E: Gate A2 shape sanity inside PyMOL's interpreter (ALWAYS)
+# PART E: SETUP-09 cleanup drive (ALWAYS -- the substance is cmd-tier
+# / T1a-safe; dlg._cleanup_now() when PART B's dialog was constructed,
+# else the equivalent direct calls; NO modals anywhere -- impls never
+# own boxes, the smoke-99 probe receipt)
+# ============================================================
+try:
+    from pymol import cmd
+    from aamatch import gamestart
+    baseline = cmd.get_names('objects')
+    wiz = gamestart.start_game()   # defaults: cleanup-first, materialize,
+    scene = cmd.get_names('objects')  # activate -- the scene GREW
+    new_names = [n for n in scene if n not in baseline]
+    check('part E: start_game grows the scene, GameWizard on top',
+          len(new_names) > 0
+          and all(n.startswith('_aam_') for n in new_names)
+          and cmd.get_wizard() is wiz,
+          'grew=%d top=%r' % (len(new_names),
+                              cmd.get_wizard(),))
+    if (setup_window is not None
+            and getattr(setup_window, '_window', None) is not None):
+        deleted = setup_window._window._cleanup_now()
+        drive = 'dlg._cleanup_now()'
+    else:
+        # Dialog unavailable (PART B probe-gated off): the equivalent
+        # direct calls -- same isinstance gate, same None-pop, same
+        # prefix-only deletion.
+        from aamatch import wizard, placement
+        prior = cmd.get_wizard()
+        if isinstance(prior, wizard.GameWizard):
+            cmd.set_wizard()
+        deleted = placement.cleanup_game_objects()['deleted']
+        drive = 'direct calls'
+    check('part E: cleanup (%s) reports deleted > 0' % drive,
+          deleted is not None and deleted > 0,
+          'deleted=%r' % (deleted,))
+    check('part E: exact scene restore -- get_names == baseline',
+          cmd.get_names('objects') == baseline,
+          'after=%r baseline=%r'
+          % (cmd.get_names('objects'), baseline))
+    check('part E: wizard popped iff GameWizard -- stack now empty',
+          cmd.get_wizard() is None,
+          'top=%r (P6 hazard closed)' % (cmd.get_wizard(),))
+    REC['cleanup'] = '%s; deleted=%r' % (drive, deleted)
+except Exception:
+    traceback.print_exc()
+    check('part E cleanup drive', False, 'raised (see traceback)')
+
+# ============================================================
+# PART F: Gate A2 shape sanity inside PyMOL's interpreter (ALWAYS)
 # ============================================================
 try:
     init_path = os.path.join(_ROOT, 'aamatch', '__init__.py')
@@ -387,11 +444,11 @@ try:
     offenders = [ln for ln in init_lines
                  if ln and not ln[0].isspace() and not ln.startswith('#')
                  and (ln.startswith('import ') or ln.startswith('from '))]
-    check('part E: Gate A2 shape -- zero column-0 import/from lines',
+    check('part F: Gate A2 shape -- zero column-0 import/from lines',
           not offenders, 'offenders=%r' % (offenders,))
 except Exception:
     traceback.print_exc()
-    check('part E Gate A2 echo', False, 'raised (see traceback)')
+    check('part F Gate A2 echo', False, 'raised (see traceback)')
 
 # --- evidence summary -------------------------------------------------
 print('SMOKE-ENV record: %s'

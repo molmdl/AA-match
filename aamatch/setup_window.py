@@ -50,6 +50,9 @@ from pymol.Qt import QtWidgets, QtCore, QtGui
 from pymol import cmd   # 04-11 (Decision 17): the cleanup handler is the
                         # only handler that needs raw cmd; module-level is
                         # legal in the Qt tier.
+import random           # 04-12 (Decision 4): the fresh-per-export seed
+                        # policy; stdlib, harmless. Sibling imports stay
+                        # lazy inside functions.
 
 # The GC-prevention singleton -- MUST be module scope, never a local
 # (the v1 dialog=None receipt). Gate A2 scans aamatch/__init__.py only,
@@ -72,6 +75,40 @@ def open_window():
     _window.raise_()
     _window.activateWindow()
     return _window
+
+
+def export_game(state, seed, candidates, ligand_content, path):
+    """Generate the full game for a validated setup and write the
+    shareable versioned game file. Returns the success summary line.
+
+    state must already be build_state/validate_state output.
+    candidates/ligand_content: the uploaded-session pair, or
+    None/None for the bundled-manifest flow. The viewer scene is
+    NEVER touched here (no cleanup, no materialize, no wizard --
+    spec.md:24, "Only generate ... WITHOUT starting play").
+    Side effect (documented): engine.new_game replaces the engine's
+    module-level runtime state (_payload/_game/_registry) -- benign.
+    Module-level and construct-free so headless smokes drive it T1a
+    (research P-hedge); the dialog wrapper is _export_game_to below.
+    """
+    from . import engine, game_file, paths, persistence
+    payload, _rows = engine.new_game(state, seed,
+                                     candidates=candidates,
+                                     ligand_content=ligand_content)
+    import time as _time
+    data = game_file.make_game_data(
+        state, payload,
+        ligand_files=(game_file.encode_ligand_files(ligand_content)
+                      if ligand_content else None),
+        created_at=_time.strftime('%Y-%m-%dT%H:%M:%S'))
+    if not path.endswith('.aamatch.json'):
+        path = path + '.aamatch.json'
+    persistence.save_container(paths.to_windows_path(path), 'game', data)
+    levels = len(payload.get('levels', []))
+    mols = sum(len(l.get('molecules', [])) for l in payload.get('levels', []))
+    mode = state.get('source_mode')
+    return ('Game exported to %s (seed %d, %d level(s), %d molecule '
+            'placements, source: %s)' % (path, int(seed), levels, mols, mode))
 
 
 class SetupWindow(QtWidgets.QDialog):
@@ -110,6 +147,12 @@ class SetupWindow(QtWidgets.QDialog):
         # reads it. Never restored from setup files (uploads are not
         # stored there -- the sha256 lets Load warn when it moved).
         self._uploaded = None
+
+        # Start-after-Generate slot (04-12 / Decision 4): the dialog
+        # remembers the exported {'setup', 'seed', 'candidates',
+        # 'ligand_content'} tuple so 04-13's Start replays the SHARED
+        # game when the form still matches; None until the first export.
+        self._last_export = None
 
         # Bulk-populate guard (prior-art shape): True while apply_state
         # runs so future valueChanged hooks (none yet) can early-return
@@ -161,14 +204,15 @@ class SetupWindow(QtWidgets.QDialog):
 
         # 04-09 SETUP-07 connections: Reset, Randomize, Save Setup,
         # Load Setup; 04-10 connects the upload Browse button; 04-11
-        # SETUP-09 connects Cleanup (04-12/04-13 connect their own
-        # buttons).
+        # SETUP-09 connects Cleanup; 04-12 SETUP-08 connects Generate
+        # and export (04-13 connects its own Start button).
         self.btn_reset.clicked.connect(self._on_reset)
         self.btn_randomize.clicked.connect(self._on_randomize)
         self.btn_save_setup.clicked.connect(self._on_save_setup)
         self.btn_load_setup.clicked.connect(self._on_load_setup)
         self.btn_browse.clicked.connect(self._on_browse_upload)
         self.btn_cleanup.clicked.connect(self._on_cleanup)
+        self.btn_generate_export.clicked.connect(self._on_generate_export)
 
     # ---- the 7-field form (SETUP-02..06 widget side, 04-07) ----
 
@@ -765,6 +809,65 @@ class SetupWindow(QtWidgets.QDialog):
                 self, 'AA-match',
                 'Removed %d game object(s). The scene is back to your '
                 'original objects.' % deleted)
+
+    # ---- SETUP-08 generate-and-export (04-12) ----
+
+    def _on_generate_export(self):
+        """Generate and export button: pick a path, export via _guard.
+
+        Same modal-free-impl rule as _on_save_setup (the smoke-99
+        receipt): _export_game_to is NON-MODAL and returns the summary
+        line; the SUCCESS box lives HERE in the wrapper (a static/modal
+        QMessageBox BLOCKS under platform=offscreen, so impls never own
+        boxes). The export never touches the scene (spec.md:24: only
+        generate, WITHOUT starting play -- no cleanup, no materialize,
+        no wizard).
+        """
+        path, _selected_filter = QtWidgets.QFileDialog.getSaveFileName(
+            self, 'Export AA-match Game', 'game.aamatch.json',
+            'AA-match Game (*.aamatch.json);;All Files (*)')
+        if path:
+            summary = self._guard(lambda: self._export_game_to(path))
+            if summary is not None:
+                QtWidgets.QMessageBox.information(
+                    self, 'AA-match', summary)
+
+    def _export_game_to(self, path):
+        """Build the state, fresh-seed, export, store _last_export.
+        NON-MODAL.
+
+        Returns the success summary line (the wrapper shows it); every
+        refusal is a ValueError/OSError that _guard surfaces verbatim.
+        The seed is FRESH RANDOM per export (Decision 4:
+        random.randint(0, 2**31-1), matching the generator's sub-seed
+        domain). The upload flow reuses the session-ingested
+        rows + ligand_content (bundled molecules are package-relative
+        refs, never embedded); build_state's upload_ready pre-check
+        already refused upload mode without an ingested file, so
+        self._uploaded is non-None on the upload branch. After a
+        successful export the exported tuple is stored as
+        self._last_export for 04-13's Start-after-Generate.
+        Side effect (documented): engine.new_game replaces the engine's
+        module-level runtime state (_payload/_game/_registry) -- benign.
+        Headless smokes drive this method directly.
+        """
+        from . import setup_form
+        form = self.collect_state()
+        form['upload_ready'] = self.upload_ready_for(form)
+        known_ids = tuple(str(self.demo_combo.itemData(i))
+                          for i in range(self.demo_combo.count()))
+        state = setup_form.build_state(form, known_set_ids=known_ids)
+        seed = random.randint(0, 2 ** 31 - 1)
+        if state['source_mode'] == 'upload':
+            up = self._uploaded
+            candidates, content = up['rows'], up['content']
+        else:
+            candidates, content = None, None
+        summary = export_game(state, seed, candidates, content, path)
+        self._last_export = {'setup': state, 'seed': seed,
+                             'candidates': candidates,
+                             'ligand_content': content}
+        return summary
 
     # NO closeEvent OVERRIDE -- on purpose: default close hides the
     # dialog, and the module-level _window singleton keeps the object

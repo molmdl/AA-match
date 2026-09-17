@@ -155,11 +155,13 @@ class SetupWindow(QtWidgets.QDialog):
         top.addLayout(row)
 
         # 04-09 SETUP-07 connections: Reset, Randomize, Save Setup,
-        # Load Setup (04-10/04-11/04-12 connect their own buttons).
+        # Load Setup; 04-10 connects the upload Browse button
+        # (04-11/04-12/04-13 connect their own buttons).
         self.btn_reset.clicked.connect(self._on_reset)
         self.btn_randomize.clicked.connect(self._on_randomize)
         self.btn_save_setup.clicked.connect(self._on_save_setup)
         self.btn_load_setup.clicked.connect(self._on_load_setup)
+        self.btn_browse.clicked.connect(self._on_browse_upload)
 
     # ---- the 7-field form (SETUP-02..06 widget side, 04-07) ----
 
@@ -201,9 +203,8 @@ class SetupWindow(QtWidgets.QDialog):
         demo_layout.addWidget(self.source_note)
         self.source_stack.addWidget(demo_page)
 
-        # Page 1 -- upload page: Browse button + read-only path label.
-        # btn_browse is created here but NOT connected (04-10 connects
-        # it to its QFileDialog/ingest handler).
+        # Page 1 -- upload page: Browse button + read-only path label
+        # (btn_browse connects to _on_browse_upload in __init__).
         upload_page = QtWidgets.QWidget(self.source_stack)
         upload_layout = QtWidgets.QHBoxLayout(upload_page)
         self.btn_browse = QtWidgets.QPushButton('Browse...', upload_page)
@@ -628,6 +629,69 @@ class SetupWindow(QtWidgets.QDialog):
         state = persistence.load_setup_file(paths.to_windows_path(path))
         self.apply_state(state)
         return path
+
+    # ---- SETUP-03 upload ingestion (04-10) ----
+
+    def _on_browse_upload(self):
+        """Browse button: pick ONE molecule file, ingest via _guard.
+
+        Single-select ``getOpenFileName`` (Decision 9): the frozen
+        setup upload field is ``None | {'path', 'sha256'}`` -- a
+        multi-file pick would be a schema change (version-bump event).
+        One multi-record SDF still delivers several molecules
+        (spec.md:14). The picker is a modal CHILD (allowed, PITFALL
+        4); the ingest runs through _guard so every pure/cmd-tier
+        refusal (format whitelist, cap, reader guards -- the MOL2
+        multi-segment refusal included) surfaces verbatim. No success
+        box: the widget reflection (upload page + path label) IS the
+        confirmation.
+        """
+        path, _selected_filter = QtWidgets.QFileDialog.getOpenFileName(
+            self, 'Upload molecule file', '',
+            'Molecule files (*.sdf *.mol2);;All Files (*)')
+        if path:
+            self._guard(lambda: self._ingest_upload(path))
+
+    def _ingest_upload(self, path):
+        """Read/split/cap/extract an uploaded molecule file. NON-MODAL.
+
+        Returns the ingested record count (int); headless smokes drive
+        this method directly (the smoke-99 probe receipt: impls never
+        own boxes). Pipeline, all proven helpers in order: pure
+        read_upload_source (extension whitelist + utf-8 + FILE sha256,
+        Decision 19) -> pure split_sdf_records / split_mol2_segments by
+        fmt -> pure check_upload_supply (cap 50 + degenerate refusals
+        naming the basename) -> cmd-tier prepare_uploaded_set (the
+        04-08 per-record temp discipline; delete-in-finally, scene
+        residue asserted per record, so the scene stays clean).
+
+        The result lands in the session-only slot self._uploaded with
+        the rows + ligand_content engine.new_game already accepts plus
+        the path/FILE-sha256/fmt labels; a NEW upload REPLACES the
+        slot (single slot v1). The form reflects upload mode: source
+        radio switches to the upload page and the path label shows the
+        file (collect_state then reports upload={'path','sha256'}).
+        EXT-04 depth is NOT built -- the fail-closed minimum only
+        (research upload_pipeline boundary); every refusal is a
+        ValueError/OSError that _guard shows verbatim.
+        """
+        import os
+        from . import game_file, paths, upload
+        text, sha256_hex, fmt = game_file.read_upload_source(
+            paths.to_windows_path(path))
+        if fmt == 'sdf':
+            records = game_file.split_sdf_records(text)
+        else:
+            records = game_file.split_mol2_segments(text)
+        game_file.check_upload_supply(records, fmt, os.path.basename(path))
+        rows, content = upload.prepare_uploaded_set(records, fmt)
+        self._uploaded = {'rows': rows, 'content': content, 'path': path,
+                          'sha256': sha256_hex, 'fmt': fmt}
+        self.src_upload.setChecked(True)
+        self.upload_path_label.setText(
+            '%s (%d molecule record(s))' % (path, len(rows)))
+        self.upload_path_label.setToolTip(path)
+        return len(rows)
 
     # NO closeEvent OVERRIDE -- on purpose: default close hides the
     # dialog, and the module-level _window singleton keeps the object

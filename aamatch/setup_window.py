@@ -205,7 +205,7 @@ class SetupWindow(QtWidgets.QDialog):
         # 04-09 SETUP-07 connections: Reset, Randomize, Save Setup,
         # Load Setup; 04-10 connects the upload Browse button; 04-11
         # SETUP-09 connects Cleanup; 04-12 SETUP-08 connects Generate
-        # and export (04-13 connects its own Start button).
+        # and export; 04-13 SETUP-10 connects Start (all 7 wired).
         self.btn_reset.clicked.connect(self._on_reset)
         self.btn_randomize.clicked.connect(self._on_randomize)
         self.btn_save_setup.clicked.connect(self._on_save_setup)
@@ -213,6 +213,7 @@ class SetupWindow(QtWidgets.QDialog):
         self.btn_browse.clicked.connect(self._on_browse_upload)
         self.btn_cleanup.clicked.connect(self._on_cleanup)
         self.btn_generate_export.clicked.connect(self._on_generate_export)
+        self.btn_start.clicked.connect(self._on_start)
 
     # ---- the 7-field form (SETUP-02..06 widget side, 04-07) ----
 
@@ -868,6 +869,64 @@ class SetupWindow(QtWidgets.QDialog):
                              'candidates': candidates,
                              'ligand_content': content}
         return summary
+
+    # ---- SETUP-10 start (04-13) ----
+
+    def _on_start(self):
+        """Start the configured game (SETUP-10). THIN: build_state
+        pre-checks, seed policy, then the one-call seam. The wizard panel
+        is the success feedback (no dialog). SETUP-11 (Game tab,
+        countdown, timer, initial-state store, Import, Hint) is Phase 5."""
+        self._guard(self._start_impl)
+
+    def _start_impl(self):
+        """collect -> build_state -> seed policy -> start_game. NON-MODAL.
+
+        ORDERING LAW: setup_form.build_state raising is CAUGHT BY
+        _guard and the scene is then UNTOUCHED -- the pre-check's whole
+        point (start_game cleans first, so a post-cleanup refusal would
+        already have deleted the prior game objects; build_state's
+        three fatal refusals fire BEFORE anything scene-touching runs).
+        Upload mode without matching session content refuses inside
+        build_state (upload_ready False); upload mode WITH it reuses
+        the session rows + ligand_content (the synthetic upload keys
+        cannot be materialized from the bundled manifest). Seed policy
+        (Decision 4): when self._last_export exists and its stored
+        setup EQUALS the freshly built state (dict equality -- both
+        sides are validate_state-normalized), the whole exported tuple
+        (seed, candidates, ligand_content) is reused, so
+        Start-after-Generate replays the SHARED game; otherwise a fresh
+        random seed is drawn and candidates/content come from the
+        CURRENT form's source mode. NO success dialog (04-13 decision):
+        the materialized scene, the wizard panel and the gamestart
+        status print ARE the feedback -- a Start that opened a modal
+        would be noise. NO SETUP-11 pieces: no Game tab, countdown,
+        timer, initial-state store, Import or Hint (Phase 5). Every
+        refusal is a ValueError/OSError that _guard surfaces verbatim.
+        """
+        from . import setup_form, gamestart
+        form = self.collect_state()
+        form['upload_ready'] = self.upload_ready_for(form)
+        known_ids = tuple(str(self.demo_combo.itemData(i))
+                          for i in range(self.demo_combo.count()))
+        state = setup_form.build_state(form, known_set_ids=known_ids)
+        last = self._last_export
+        if last is not None and last['setup'] == state:
+            seed = last['seed']
+            candidates = last['candidates']
+            ligand_content = last['ligand_content']
+        else:
+            seed = random.randint(0, 2 ** 31 - 1)
+            if state['source_mode'] == 'upload':
+                up = self._uploaded
+                candidates = up['rows']
+                ligand_content = up['content']
+            else:
+                candidates = None
+                ligand_content = None
+        gamestart.start_game(setup=state, seed=seed,
+                             candidates=candidates,
+                             ligand_content=ligand_content)
 
     # NO closeEvent OVERRIDE -- on purpose: default close hides the
     # dialog, and the module-level _window singleton keeps the object

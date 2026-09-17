@@ -49,7 +49,20 @@ PART C  (T1b, 04-09 SETUP-07 setup-button drives -- success paths
         h_bond only) -> dlg._save_setup_to(tmp) writes a container
         with kind 'setup' version 1, _reset_impl wipes the form,
         dlg._load_setup_from(tmp) restores the mutated dict exactly.
-PART D  (ALWAYS, T0-in-smoke): Gate A2 shape sanity echoed inside
+PART D  (T1b, 04-10 SETUP-03 upload ingestion -- the 04-01 probe
+        verdict is PASS (platform=offscreen), so this part RUNS;
+        success paths ONLY, NO modals: _ingest_upload never owns a
+        box): repo-anchored aamatch/data/ligands/benzamide.sdf ->
+        dlg._ingest_upload(path) returns 1; the session slot carries 1
+        row (entry_id 'mol-001', file 'uploads/mol-001.sdf') + the
+        content dict keyed by that file + sha256 == the FILE bytes
+        hash; the form reflects upload mode (src_upload checked, stack
+        on page 1); collect_state()['upload'] matches path + FILE
+        sha256; re-ingest replaces the slot; upload_ready_for is True
+        for the window's own collect_state, False for a stale-sha256
+        config and for a cleared slot, True again on the demo page.
+        Cleanup: _uploaded = None, back to the demo page.
+PART E  (ALWAYS, T0-in-smoke): Gate A2 shape sanity echoed inside
         PyMOL's interpreter for the record -- aamatch/__init__.py
         carries ZERO column-0 import/from statements (the lazy-import
         discipline the menu rewire must preserve).
@@ -282,7 +295,90 @@ except Exception:
           'raised (see traceback)')
 
 # ============================================================
-# PART D: Gate A2 shape sanity inside PyMOL's interpreter (ALWAYS)
+# PART D: upload ingestion drive (T1b -- the 04-01 probe verdict is
+# PASS (platform=offscreen), so this part RUNS; success paths ONLY,
+# NO modals: _ingest_upload never owns a box -- the 04-09 smoke-99
+# probe proved a modal QMessageBox BLOCKS under offscreen)
+# ============================================================
+try:
+    if setup_window is None:
+        raise RuntimeError('part A failed')
+    import hashlib
+    from pymol.Qt import QtWidgets
+
+    app = QtWidgets.QApplication.instance()
+    if app is None:
+        app = QtWidgets.QApplication(['aamatch-smoke-11'])
+    dlg = setup_window.open_window()   # singleton reuse
+
+    benz = os.path.join(_ROOT, 'aamatch', 'data', 'ligands',
+                        'benzamide.sdf')
+    with open(benz, 'rb') as f:
+        benz_bytes = f.read()
+    file_sha = hashlib.sha256(benz_bytes).hexdigest()
+
+    n = dlg._ingest_upload(benz)
+    check('part D: _ingest_upload returns the record count (1)',
+          n == 1, 'n=%r' % (n,))
+    up = dlg._uploaded or {}
+    rows = up.get('rows') or []
+    content = up.get('content') or {}
+    row0 = rows[0] if len(rows) == 1 else {}
+    check('part D: 1 row with synthetic entry/file ids',
+          len(rows) == 1
+          and row0.get('entry_id') == 'mol-001'
+          and row0.get('file') == 'uploads/mol-001.sdf',
+          'rows=%r' % (rows,))
+    check('part D: ligand_content dict keyed by that file',
+          list(content.keys()) == ['uploads/mol-001.sdf'],
+          'keys=%r' % (sorted(content),))
+    check('part D: slot path + sha256 == the FILE bytes hash',
+          up.get('path') == benz and up.get('sha256') == file_sha,
+          'sha256=%r' % (up.get('sha256'),))
+    check('part D: form reflects upload mode (radio + stack page 1)',
+          dlg.src_upload.isChecked()
+          and dlg.source_stack.currentIndex() == 1,
+          'checked=%r page=%r' % (dlg.src_upload.isChecked(),
+                                  dlg.source_stack.currentIndex()))
+    state_u = dlg.collect_state()
+    upload_field = state_u.get('upload') or {}
+    check("part D: collect_state upload={'path','sha256'} (FILE hash)",
+          state_u.get('source_mode') == 'upload'
+          and upload_field.get('path') == benz
+          and upload_field.get('sha256') == file_sha,
+          'upload=%r' % (state_u.get('upload'),))
+    n2 = dlg._ingest_upload(benz)
+    up2 = dlg._uploaded or {}
+    check('part D: re-ingest REPLACES the slot (idempotent, 1 row)',
+          n2 == 1 and len(up2.get('rows') or []) == 1
+          and up2.get('path') == benz and up2.get('sha256') == file_sha,
+          'n2=%r' % (n2,))
+    check('part D: upload_ready_for its own collect_state is True',
+          dlg.upload_ready_for(dlg.collect_state()) is True, '')
+    stale = dict(state_u)
+    stale['upload'] = {'path': benz, 'sha256': '0' * 64}
+    check('part D: upload_ready_for a stale-sha256 config is False',
+          dlg.upload_ready_for(stale) is False,
+          'stale=%r' % (stale['upload'],))
+    dlg._uploaded = None
+    check('part D: upload_ready_for is False once the slot is empty',
+          dlg.upload_ready_for(state_u) is False, '')
+    dlg.src_demo.setChecked(True)
+    check("part D: upload_ready_for a 'demo' config is True regardless",
+          dlg.upload_ready_for(dlg.collect_state()) is True, '')
+    # Cleanup: session slot cleared + demo page restored (above); the
+    # path label is cosmetic -- blank it for a clean close.
+    dlg.upload_path_label.setText('')
+    dlg.upload_path_label.setToolTip('')
+    app.processEvents()
+    dlg.close()
+    REC['upload_ingest'] = 'benzamide n=1; ready/stale/empty/demo verdicts'
+except Exception:
+    traceback.print_exc()
+    check('part D upload-ingest drive', False, 'raised (see traceback)')
+
+# ============================================================
+# PART E: Gate A2 shape sanity inside PyMOL's interpreter (ALWAYS)
 # ============================================================
 try:
     init_path = os.path.join(_ROOT, 'aamatch', '__init__.py')
@@ -291,11 +387,11 @@ try:
     offenders = [ln for ln in init_lines
                  if ln and not ln[0].isspace() and not ln.startswith('#')
                  and (ln.startswith('import ') or ln.startswith('from '))]
-    check('part D: Gate A2 shape -- zero column-0 import/from lines',
+    check('part E: Gate A2 shape -- zero column-0 import/from lines',
           not offenders, 'offenders=%r' % (offenders,))
 except Exception:
     traceback.print_exc()
-    check('part D Gate A2 echo', False, 'raised (see traceback)')
+    check('part E Gate A2 echo', False, 'raised (see traceback)')
 
 # --- evidence summary -------------------------------------------------
 print('SMOKE-ENV record: %s'

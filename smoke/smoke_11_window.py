@@ -87,7 +87,25 @@ PART F2 (T1b -- the 04-01 probe verdict is PASS (platform=offscreen),
         with the form at defaults -> _last_export is stored (fresh int
         seed, candidates/ligand_content None on the demo flow); tmp2
         cleaned up.
-PART G  (ALWAYS, T0-in-smoke): Gate A2 shape sanity echoed inside
+PART G  (T1b -- the 04-01 probe verdict is PASS (platform=offscreen),
+        so this part RUNS; the 04-13 SETUP-10 start drive; NO modals
+        anywhere: Start owns NO success box by design -- the wizard
+        panel IS the feedback, 04-13 decision): form at defaults with
+        the demo-dev-1 dropdown row -> dlg._start_impl() starts a REAL
+        game headlessly -> cmd.get_wizard() is a GameWizard, the scene
+        grew; then export-then-start -- dlg._last_export = {'setup':
+        <the built defaults state>, 'seed': 31337, None, None} ->
+        dlg._start_impl() again (the mid-game restart path) -> the NEW
+        wizard's payload['seed'] == 31337 (the exported tuple was
+        reused -- Decision 4 proven); then molecules_spin.setValue(3)
+        -> the reuse-branch condition last_export['setup'] ==
+        validate_state(collect()) is False (pure branch assert, seed-
+        value tolerant). Restore: canonical done pop + the prefix-only
+        cleanup -> get_names == the pre-start baseline EXACTLY.
+PART G-alt (probe-FAIL degradation): skip the dialog drive; assert the
+        pure chain directly -- build_state on DEFAULTS+upload_ready
+        passes; print the skip line.
+PART H  (ALWAYS, T0-in-smoke): Gate A2 shape sanity echoed inside
         PyMOL's interpreter for the record -- aamatch/__init__.py
         carries ZERO column-0 import/from statements (the lazy-import
         discipline the menu rewire must preserve).
@@ -548,7 +566,119 @@ except Exception:
     check('part F2 dialog export drive', False, 'raised (see traceback)')
 
 # ============================================================
-# PART G: Gate A2 shape sanity inside PyMOL's interpreter (ALWAYS)
+# PART G: SETUP-10 start drive + export-tuple reuse (T1b -- the 04-01
+# probe verdict is PASS (platform=offscreen), so this part RUNS; NO
+# modals anywhere: Start owns NO success box by design -- the wizard
+# panel IS the feedback (04-13 decision), and _start_impl is NON-MODAL
+# by the smoke-99 receipt)
+# ============================================================
+try:
+    if setup_window is None:
+        raise RuntimeError('part A failed')   # PART G-alt below
+    from pymol import cmd
+    from pymol.Qt import QtWidgets
+    from aamatch import placement, setup_form, setup_state, wizard
+
+    app = QtWidgets.QApplication.instance()
+    if app is None:
+        app = QtWidgets.QApplication(['aamatch-smoke-11'])
+    dlg = setup_window.open_window()   # singleton reuse
+    dlg._reset_impl()                  # the form at defaults
+    sel_g = dlg.demo_combo.findData('demo-dev-1')
+    if sel_g >= 0:
+        dlg.demo_combo.setCurrentIndex(sel_g)
+    baseline_g = cmd.get_names('objects')
+
+    # ---- G1: _start_impl starts a REAL game headlessly ----
+    dlg._start_impl()                  # no modal on success by design
+    wiz1 = cmd.get_wizard()
+    scene1 = cmd.get_names('objects')
+    new1 = [n for n in scene1 if n not in baseline_g]
+    check('part G1: _start_impl starts a REAL game -- GameWizard on top',
+          isinstance(wiz1, wizard.GameWizard),
+          'top=%r' % (wiz1,))
+    check('part G1: the scene grew (_aam_* objects materialized)',
+          len(new1) > 0
+          and all(n.startswith('_aam_') for n in new1),
+          'grew=%d' % (len(new1),))
+    seed1 = wiz1._payload.get('seed')
+    check('part G1: the payload carries a real int seed',
+          isinstance(seed1, int) and not isinstance(seed1, bool),
+          'seed=%r' % (seed1,))
+
+    # ---- G2: export-then-start reuses the exported tuple ----
+    # (Decision 4): last_export.setup EQUALS the freshly built state,
+    # so the exported (setup, seed, candidates, ligand_content) tuple
+    # is replayed verbatim -- the game started IS the game shared.
+    form_g = dlg.collect_state()
+    form_g['upload_ready'] = dlg.upload_ready_for(form_g)
+    known_g = tuple(str(dlg.demo_combo.itemData(i))
+                    for i in range(dlg.demo_combo.count()))
+    state_g = setup_form.build_state(form_g, known_set_ids=known_g)
+    dlg._last_export = {'setup': state_g, 'seed': 31337,
+                        'candidates': None, 'ligand_content': None}
+    dlg._start_impl()                  # mid-game restart (replace path)
+    wiz2 = cmd.get_wizard()
+    seed2 = wiz2._payload.get('seed') if wiz2 is not None else None
+    check('part G2: restart replays the exported seed 31337 '
+          '(Decision 4 proven)',
+          wiz2 is not None and wiz2 is not wiz1
+          and isinstance(wiz2, wizard.GameWizard)
+          and seed2 == 31337,
+          'seed=%r' % (seed2,))
+
+    # ---- G3: a form change breaks the reuse guard (pure assert,
+    # tolerant of any random seed the next Start would draw) ----
+    dlg.molecules_spin.setValue(3)
+    check('part G3: setup changed -> reuse branch is skipped',
+          dlg._last_export['setup']
+          != setup_state.validate_state(dlg.collect_state()),
+          'last-setup=%r' % (dlg._last_export['setup'],))
+
+    # ---- restore: canonical done pop + prefix-only cleanup ----
+    cmd.set_wizard()                   # GameWizard done pop
+    result_g = placement.cleanup_game_objects()
+    check('part G: done pop + cleanup restores the baseline scene '
+          'EXACTLY',
+          cmd.get_wizard() is None
+          and result_g['deleted'] > 0
+          and cmd.get_names('objects') == baseline_g,
+          'deleted=%r after=%r baseline=%r'
+          % (result_g['deleted'], cmd.get_names('objects'),
+             baseline_g))
+    app.processEvents()
+    dlg.close()
+    REC['start_drive'] = ('G1 real start, G2 seed 31337 replayed, G3 '
+                          'reuse guard, exact-scene restore')
+except Exception as e_g:
+    if 'part A failed' not in str(e_g):
+        traceback.print_exc()
+        check('part G start drive', False, 'raised (see traceback)')
+    else:
+        # ---- PART G-alt (probe-FAIL): the pure pre-check chain only;
+        # the start drive + reuse proof stay T2 [HUMAN] (04-14) ----
+        print('SMOKE-11 PART G SKIPPED (probe verdict) -- dialog tier '
+              'off; pure chain asserted instead [HUMAN]', flush=True)
+        try:
+            from aamatch import setup_form, setup_state
+            form_alt = dict(setup_state.DEFAULTS)
+            form_alt['upload_ready'] = True
+            state_alt = setup_form.build_state(
+                form_alt, known_set_ids=('demo-dev-1',))
+            check('part G-alt: build_state(DEFAULTS, upload_ready='
+                  'True) passes (pure chain)',
+                  isinstance(state_alt, dict)
+                  and state_alt.get('source_mode') == 'demo'
+                  and state_alt == setup_state.validate_state(state_alt),
+                  'state=%r' % (state_alt,))
+            REC['start_drive'] = 'PART G SKIPPED (probe verdict) [HUMAN]'
+        except Exception:
+            traceback.print_exc()
+            check('part G-alt pure chain', False,
+                  'raised (see traceback)')
+
+# ============================================================
+# PART H: Gate A2 shape sanity inside PyMOL's interpreter (ALWAYS)
 # ============================================================
 try:
     init_path = os.path.join(_ROOT, 'aamatch', '__init__.py')
@@ -557,11 +687,11 @@ try:
     offenders = [ln for ln in init_lines
                  if ln and not ln[0].isspace() and not ln.startswith('#')
                  and (ln.startswith('import ') or ln.startswith('from '))]
-    check('part G: Gate A2 shape -- zero column-0 import/from lines',
+    check('part H: Gate A2 shape -- zero column-0 import/from lines',
           not offenders, 'offenders=%r' % (offenders,))
 except Exception:
     traceback.print_exc()
-    check('part G Gate A2 echo', False, 'raised (see traceback)')
+    check('part H Gate A2 echo', False, 'raised (see traceback)')
 
 # --- evidence summary -------------------------------------------------
 print('SMOKE-ENV record: %s'

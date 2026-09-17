@@ -500,14 +500,44 @@ class SetupWindow(QtWidgets.QDialog):
 
             upload = state.get('upload')
             if isinstance(upload, dict) and upload.get('path'):
+                # LABELS only -- the molecules are session-only and are
+                # never re-ingested from a file (upload_ready_for then
+                # reports False until Browse re-ingests). The tooltip
+                # carries the FILE sha256 so a moved/changed file is
+                # visible to the user (a file-moved warning at Start is
+                # the pure build_state pre-check's job via
+                # upload_ready).
                 path = str(upload['path'])
                 self.upload_path_label.setText(path)
-                self.upload_path_label.setToolTip(path)
+                tip = str(path)
+                if upload.get('sha256'):
+                    tip = '%s\nsha256: %s' % (tip, str(upload['sha256']))
+                self.upload_path_label.setToolTip(tip)
             else:
                 self.upload_path_label.setText('')
                 self.upload_path_label.setToolTip('')
         finally:
             self._loading = False
+
+    def upload_ready_for(self, form_values):
+        """True iff this window can actually start/export ``form_values``.
+
+        False only when source_mode is 'upload' AND the form's upload
+        block does NOT match this session's ingested slot
+        (path AND FILE sha256 both compared): a setup-file Load
+        restores path/sha256 LABELS only -- the molecules are
+        session-only, so a not-re-ingested upload configuration is not
+        startable. Handlers (04-12 export, 04-13 start) pass
+        ``upload_ready=self.upload_ready_for(self.collect_state())``
+        into the pure setup_form.build_state, whose fatal pre-check
+        then refuses BEFORE any scene-touching call.
+        """
+        if form_values.get('source_mode') != 'upload':
+            return True
+        form_upload = form_values.get('upload') or {}
+        return (self._uploaded is not None
+                and self._uploaded['path'] == form_upload.get('path')
+                and self._uploaded['sha256'] == form_upload.get('sha256'))
 
     # ---- SETUP-07 button handlers (04-09): the _guard contract ----
 

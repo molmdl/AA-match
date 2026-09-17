@@ -2,7 +2,9 @@
 
 Layer: QT TIER. Module-level ``from pymol.Qt import ...`` is legal and
 REQUIRED here (the class definition needs QtWidgets at class-creation
-time); this module must NEVER be added to ``PURE_MODULES`` in
+time); module-level ``from pymol import cmd`` is likewise legal in the
+Qt tier (04-11, Decision 17 -- the cleanup handler needs raw cmd).
+This module must NEVER be added to ``PURE_MODULES`` in
 ``tests/test_purity.py`` and is never imported by WSL tests -- it is
 covered by the AST source gates only (Gate D still compiles it under
 the 3.6 syntax floor).
@@ -45,6 +47,9 @@ via QMessageBox in the handler plans.
 """
 
 from pymol.Qt import QtWidgets, QtCore, QtGui
+from pymol import cmd   # 04-11 (Decision 17): the cleanup handler is the
+                        # only handler that needs raw cmd; module-level is
+                        # legal in the Qt tier.
 
 # The GC-prevention singleton -- MUST be module scope, never a local
 # (the v1 dialog=None receipt). Gate A2 scans aamatch/__init__.py only,
@@ -155,13 +160,15 @@ class SetupWindow(QtWidgets.QDialog):
         top.addLayout(row)
 
         # 04-09 SETUP-07 connections: Reset, Randomize, Save Setup,
-        # Load Setup; 04-10 connects the upload Browse button
-        # (04-11/04-12/04-13 connect their own buttons).
+        # Load Setup; 04-10 connects the upload Browse button; 04-11
+        # SETUP-09 connects Cleanup (04-12/04-13 connect their own
+        # buttons).
         self.btn_reset.clicked.connect(self._on_reset)
         self.btn_randomize.clicked.connect(self._on_randomize)
         self.btn_save_setup.clicked.connect(self._on_save_setup)
         self.btn_load_setup.clicked.connect(self._on_load_setup)
         self.btn_browse.clicked.connect(self._on_browse_upload)
+        self.btn_cleanup.clicked.connect(self._on_cleanup)
 
     # ---- the 7-field form (SETUP-02..06 widget side, 04-07) ----
 
@@ -723,13 +730,49 @@ class SetupWindow(QtWidgets.QDialog):
         self.upload_path_label.setToolTip(path)
         return len(rows)
 
+    # ---- SETUP-09 cleanup (04-11) ----
+
+    def _cleanup_now(self):
+        """Cleanup WITHOUT any dialog; returns the deleted-object count.
+
+        Pops a GameWizard FIRST iff it is top-of-stack (canonical
+        cmd.set_wizard() None-pop -- its own cleanup runs, prior wizard
+        auto-resumes; a USER wizard is never popped). Then the
+        prefix-only deletion (placement.cleanup_game_objects):
+        user molecules can never match the reserved _aam_ prefix.
+
+        Adopted-ligand bookkeeping (placement.py:61-63 defers it here):
+        ZERO v1 workload -- v1 never adopts user objects (fresh _aam_*
+        names only), so prefix deletion IS the complete original-scene
+        restore. Recorded reading; no machinery."""
+        from . import placement, wizard
+        prior = cmd.get_wizard()
+        if isinstance(prior, wizard.GameWizard):
+            cmd.set_wizard()
+        result = placement.cleanup_game_objects()
+        return result['deleted']
+
+    def _on_cleanup(self):
+        """Cleanup model button (SETUP-09): pop-first cleanup via _guard.
+
+        deleted == 0 is a LEGAL no-op (nothing on the scene) -- the
+        plan brief: the count is always surfaced, zero included; only
+        None (a _guard-caught refusal) means no box.
+        """
+        deleted = self._guard(self._cleanup_now)
+        if deleted is not None:
+            QtWidgets.QMessageBox.information(
+                self, 'AA-match',
+                'Removed %d game object(s). The scene is back to your '
+                'original objects.' % deleted)
+
     # NO closeEvent OVERRIDE -- on purpose: default close hides the
     # dialog, and the module-level _window singleton keeps the object
     # alive, so re-open via open_window() is reuse-and-raise. That is
     # SETUP-01's survive-minimize/re-open mechanism (the v1 codebase
     # has ZERO closeEvent overrides -- repo-wide grep receipt).
 
-    # NOTE: module-level ``from pymol import cmd`` is deliberately NOT
-    # added here -- only the 04-11 cleanup handler needs cmd, and it
-    # lands there (04-05 plan decision). QtCore/QtGui are part of the
-    # wrapper shim's unit import and are kept for the handler plans.
+    # NOTE: module-level ``from pymol import cmd`` was added by 04-11
+    # (Decision 17) -- the cleanup handler is the only handler that
+    # needs raw cmd. QtCore/QtGui are part of the wrapper shim's unit
+    # import and are kept for the handler plans.

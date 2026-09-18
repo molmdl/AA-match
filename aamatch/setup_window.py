@@ -14,6 +14,12 @@ THE BINDING CONTRACTS:
 1. MODELESS WINDOW -- the main dialog is shown via
    show()/raise_()/activateWindow(), NEVER .exec_() (which would block
    PyMOL's event loop and freeze the viewer -- SETUP-01, PITFALL P1).
+
+   TWO TABS (05-06, SETUP-11): the dialog is a QTabWidget -- 'Setup'
+   wraps the existing 7-field form + stretch + 7-button row (every
+   attribute preserved), and 'Game status' hosts the GameTab from
+   game_window.py (info box, timer label + 1 Hz tick, required label,
+   cancellable countdown, unconnected Hint button).
    Modal .exec_()/static forms are allowed on CHILD dialogs only
    (QFileDialog/QMessageBox in later handler plans).
 
@@ -112,19 +118,26 @@ def export_game(state, seed, candidates, ligand_content, path):
 
 
 class SetupWindow(QtWidgets.QDialog):
-    """The modeless setup window (SETUP-01) with the 7-field form.
+    """The modeless two-tab window (SETUP-01 + SETUP-11 shell, 05-06).
 
-    Window lifecycle (04-05) + the full form (04-07, SETUP-02..06
-    widget side): a 2-page molecule-source selector (demo dropdown /
-    upload browse+path label), molecules + difficulty spinboxes whose
-    ranges mirror the frozen setup_state clamp constants exactly
-    (collect -> validate is lossless), a 3-way interaction-mode radio
-    group with a context label, and 7 checkboxes in canonical
-    INTERACTION_TYPES order -- every widget tooltipped. The 7-button
-    row sits below the form, created IN SPEC ORDER and NOT connected
-    (each handler plan connects its own button; no dead stub
-    handlers). collect_state/apply_state round-trip a
+    'Setup' tab: window lifecycle (04-05) + the full form (04-07,
+    SETUP-02..06 widget side): a 2-page molecule-source selector (demo
+    dropdown / upload browse+path label), molecules + difficulty
+    spinboxes whose ranges mirror the frozen setup_state clamp
+    constants exactly (collect -> validate is lossless), a 3-way
+    interaction-mode radio group with a context label, and 7
+    checkboxes in canonical INTERACTION_TYPES order -- every widget
+    tooltipped. The 7-button row sits below the form on the Setup page
+    (spec.md:21), created IN SPEC ORDER and connected by the handler
+    plans (04-09..04-13). collect_state/apply_state round-trip a
     validate_state-normalized dict losslessly.
+
+    'Game status' tab: self.game_tab, the GameTab from game_window.py
+    (05-06, SETUP-11 shell) -- the read-only rolling info box, the
+    elapsed-timer label + 1 Hz live-anchor tick with modal-pause
+    rebase, the required-interactions label, the cancellable 3-2-1
+    countdown, and the unconnected Hint button. spec.md:33: the Game
+    status tab of the SAME window -- never a second dialog.
     """
 
     def __init__(self):
@@ -134,13 +147,29 @@ class SetupWindow(QtWidgets.QDialog):
         self.setWindowTitle('AA-match Setup')
         self.setMinimumWidth(420)   # the v1 dialog precedent
 
+        # 05-06 (SETUP-11): lazy relative sibling import at the TOP of
+        # __init__ (module-identity law, contract 4 -- never a
+        # module-level sibling import in the Qt tier).
+        from . import game_window
+
         top = QtWidgets.QVBoxLayout(self)
+
+        # The window is a two-tab QTabWidget (spec.md:33 -- the Game
+        # status tab of the SAME window): the 'Setup' page wraps the
+        # EXISTING form area + stretch + 7-button row (every attribute
+        # and label survives -- SMOKE-11 PART B is parentage-blind),
+        # and the 'Game status' page hosts the GameTab
+        # (game_window.py). The 7 setup buttons STAY on the Setup page
+        # (spec.md:21 -- the button row at the bottom of the popup;
+        # game-lifecycle buttons live on the Game tab).
+        setup_page = QtWidgets.QWidget(self)
+        setup_box = QtWidgets.QVBoxLayout(setup_page)
 
         # (a) form area -- the 7-field form packs vertically into this
         # stable layout slot (button row stays pinned below).
-        self.form_area = QtWidgets.QWidget(self)
+        self.form_area = QtWidgets.QWidget(setup_page)
         self.form_area.setLayout(QtWidgets.QVBoxLayout())
-        top.addWidget(self.form_area)
+        setup_box.addWidget(self.form_area)
 
         # Session-only ingested-upload slot: the Browse handler (04-10)
         # populates it with {'path': ..., 'sha256': ...}; collect_state
@@ -167,7 +196,7 @@ class SetupWindow(QtWidgets.QDialog):
         self._build_interactions()
 
         # (b) stretch -- keeps the button row pinned to the bottom.
-        top.addStretch(1)
+        setup_box.addStretch(1)
 
         # (c) the 7-button row, created IN SPEC ORDER (spec.md: row 3:
         # Reset, Randomize, Save Setup, Load Setup, Generate and
@@ -200,7 +229,19 @@ class SetupWindow(QtWidgets.QDialog):
                     self.btn_generate_export, self.btn_cleanup,
                     self.btn_start):
             row.addWidget(btn)
-        top.addLayout(row)
+        setup_box.addLayout(row)
+
+        # The two tabs (SETUP-11, plan 05-06): 'Setup' holds everything
+        # built above (the buttons stay here per spec.md:21); 'Game
+        # status' hosts the GameTab shell -- info box, timer label,
+        # required label, cancellable countdown, unconnected Hint --
+        # from game_window.py (spec.md:33: the same window, not a
+        # second dialog).
+        self.tabs = QtWidgets.QTabWidget(self)
+        self.tabs.addTab(setup_page, 'Setup')
+        self.game_tab = game_window.GameTab(self)
+        self.tabs.addTab(self.game_tab, 'Game status')
+        top.addWidget(self.tabs)
 
         # 04-09 SETUP-07 connections: Reset, Randomize, Save Setup,
         # Load Setup; 04-10 connects the upload Browse button; 04-11
@@ -879,8 +920,10 @@ class SetupWindow(QtWidgets.QDialog):
     def _on_start(self):
         """Start the configured game (SETUP-10). THIN: build_state
         pre-checks, seed policy, then the one-call seam. The wizard panel
-        is the success feedback (no dialog). SETUP-11 (Game tab,
-        countdown, timer, initial-state store, Import, Hint) is Phase 5."""
+        is the success feedback (no dialog). The GameTab shell exists
+        (05-06: two-tab window; the initial-state store landed in
+        05-05); this handler's countdown / tab-switch rework is plan
+        05-09's, Import and the connected Hint in later plans."""
         self._guard(self._start_impl)
 
     def _start_impl(self):
@@ -904,9 +947,11 @@ class SetupWindow(QtWidgets.QDialog):
         CURRENT form's source mode. NO success dialog (04-13 decision):
         the materialized scene, the wizard panel and the gamestart
         status print ARE the feedback -- a Start that opened a modal
-        would be noise. NO SETUP-11 pieces: no Game tab, countdown,
-        timer, initial-state store, Import or Hint (Phase 5). Every
-        refusal is a ValueError/OSError that _guard surfaces verbatim.
+        would be noise. The GameTab shell landed in 05-06 (two-tab
+        window) and the initial-state store in 05-05; this impl's
+        countdown/deferred-activation rework is 05-09, Import and
+        connected Hint later plans. Every refusal is a ValueError/
+        OSError that _guard surfaces verbatim.
         """
         from . import setup_form, gamestart
         form = self.collect_state()

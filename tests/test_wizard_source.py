@@ -49,8 +49,10 @@ if REPO_ROOT not in sys.path:
 # gamestart.py per the 03-03 spawn notes; both scans apply to every
 # module in the set).
 SCANNED_MODULES = ['wizard.py', 'gamestart.py',
-                   'setup_window.py']  # 04-05: Qt setup window (the new
-                                       # cmd/Qt-tier UI module)
+                   'setup_window.py',   # 04-05: Qt setup window
+                   'game_window.py']    # 05-06: GameTab shell (Qt tier,
+                                        # growth protocol, 03-05/04-05
+                                        # precedent)
 
 # Helper-visual primitives banned by PLAY-04 (no scene geometry ever:
 # measurement distance objects, measure-mode overlays, CGO primitives).

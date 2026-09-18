@@ -123,12 +123,38 @@ PART H  (ALWAYS, T1a -- the 05-05 SETUP-11 deferred-activation direct
         fires at GO -- research Q4); restore: canonical done pop +
         prefix-only cleanup -> baseline scene EXACTLY + stack empty;
         _last_start reset so later parts start clean.
-PART I  (ALWAYS, T0-in-smoke): Gate A2 shape sanity echoed inside
+PART I  (T1b -- the 05-06 SETUP-11 two-tab restructure + GameTab
+        shell drives; the 04-01 probe verdict is PASS
+        (platform=offscreen), so this part RUNS; NO modals anywhere --
+        pitfall P-6: the tick/countdown paths own no boxes; the
+        countdown steps and _on_tick are driven AS METHODS per the
+        05-RESEARCH anti-flakiness strategy, with NEVER a processEvents
+        gap between start_countdown and the tick drive -- a real 1 s
+        member QTimer tick firing through a pumped gap would shift
+        _countdown_n and double-fire _begin_play): I1 the two tabs
+        ('Setup'/'Game status'), game_tab is the tab-1 GameTab, and the
+        7 button attributes + exact labels re-green after the re-wrap;
+        I2 the shell state (_info_log a read-only QTextEdit, timer
+        label '0:00', required label 'Required: -', btn_hint text
+        'Hint'); I3 the countdown: start_game(activate=False) ->
+        start_countdown (n == 3, 'Get ready...', timer active, pending
+        wizard stored) -> 4 direct _countdown_tick drives land '3' '2'
+        '1' 'GO!' each on its own line -> GO pushed THAT wizard
+        (cmd.get_wizard() is it) with a float timer anchor and the 1 Hz
+        _timer active (pitfall P-1 closed); I4 the timer label: anchor
+        manipulated to time.time()-75 -> direct _on_tick -> '1:15'
+        (pitfall P-4 live-anchor read); I5 the cancel: done pop +
+        cleanup -> a second start_game(activate=False) ->
+        start_countdown -> cancel_pending_start -> timer inactive +
+        pending None -> one stray direct tick -> no 'GO!' and no stale
+        activation (pitfall P-2 closed). Restore: cancel + done pop +
+        prefix-only cleanup -> baseline scene EXACTLY.
+PART J  (ALWAYS, T0-in-smoke): Gate A2 shape sanity echoed inside
         PyMOL's interpreter for the record -- aamatch/__init__.py
         carries ZERO column-0 import/from statements (the lazy-import
-        discipline the menu rewire must preserve). (05-05 inserted PART
-        H before the echo -- the established renumber pattern, the echo
-        letter shifted H -> I.)
+        discipline the menu rewire must preserve). (05-06 inserted PART
+        I before the echo -- the established renumber pattern; the echo
+        letter shifted H -> I (05-05) -> J (05-06).)
 
 Conventions (frozen Phase 1, kept): anchor the repo root via sys.argv
 first / cwd fallback (never __file__); import aamatch directly (module
@@ -784,7 +810,142 @@ except Exception:
           'raised (see traceback)')
 
 # ============================================================
-# PART I: Gate A2 shape sanity inside PyMOL's interpreter (ALWAYS)
+# PART I: SETUP-11 two-tab + GameTab shell drives (T1b -- the 04-01
+# probe verdict is PASS (platform=offscreen), so this part RUNS; NO
+# modals anywhere -- pitfall P-6: the tick/countdown paths own no
+# boxes. The countdown steps and _on_tick are driven AS METHODS per
+# the 05-RESEARCH anti-flakiness strategy; NEVER pump processEvents
+# between start_countdown and the tick drive -- a real 1 s member
+# QTimer tick firing through a pumped gap would shift _countdown_n
+# and double-fire _begin_play)
+# ============================================================
+try:
+    if setup_window is None:
+        raise RuntimeError('part A failed')
+    import time as time_mod
+    from pymol import cmd
+    from pymol.Qt import QtWidgets
+    from aamatch import engine, gamestart, game_window, placement
+
+    app = QtWidgets.QApplication.instance()
+    if app is None:
+        app = QtWidgets.QApplication(['aamatch-smoke-11'])
+    dlg = setup_window.open_window()   # singleton reuse
+    baseline_i = cmd.get_names('objects')
+
+    # ---- I1: the two-tab structure; every Setup attribute intact ----
+    check("part I1: two tabs -- 'Setup' first, 'Game status' second",
+          dlg.tabs.count() == 2
+          and dlg.tabs.tabText(0) == 'Setup'
+          and dlg.tabs.tabText(1) == 'Game status',
+          'titles=%r' % ([dlg.tabs.tabText(i)
+                          for i in range(dlg.tabs.count())],))
+    check('part I1: game_tab is the GameTab instance on tab 1',
+          isinstance(dlg.game_tab, game_window.GameTab)
+          and dlg.tabs.widget(1) is dlg.game_tab,
+          'type=%r' % (type(dlg.game_tab),))
+    expected_i = [('btn_reset', 'Reset'),
+                  ('btn_randomize', 'Randomize'),
+                  ('btn_save_setup', 'Save Setup'),
+                  ('btn_load_setup', 'Load Setup'),
+                  ('btn_generate_export', 'Generate and export'),
+                  ('btn_cleanup', 'Cleanup model'), ('btn_start', 'Start')]
+    got_i = [(attr, getattr(dlg, attr).text()) if hasattr(dlg, attr)
+             else (attr, None) for (attr, _l) in expected_i]
+    check('part I1: 7 buttons re-green after the tab re-wrap '
+          '(minimal churn)',
+          got_i == expected_i, 'got=%r' % (got_i,))
+
+    # ---- I2: the GameTab shell state ----
+    check('part I2: info box is a read-only QTextEdit',
+          isinstance(dlg.game_tab._info_log, QtWidgets.QTextEdit)
+          and dlg.game_tab._info_log.isReadOnly(),
+          'type=%r' % (type(dlg.game_tab._info_log),))
+    check("part I2: timer label '0:00' + required 'Required: -'",
+          dlg.game_tab._timer_label.text() == '0:00'
+          and dlg.game_tab._required_label.text() == 'Required: -',
+          'timer=%r required=%r' % (dlg.game_tab._timer_label.text(),
+                                    dlg.game_tab._required_label.text()))
+    check("part I2: btn_hint exists with text 'Hint' (unconnected)",
+          dlg.game_tab.btn_hint.text() == 'Hint',
+          'text=%r' % (dlg.game_tab.btn_hint.text(),))
+
+    # ---- I3: countdown drive -- steps AS METHODS; NO processEvents
+    # gap (a real member-timer tick would shift _countdown_n) ----
+    wiz_i = gamestart.start_game(activate=False)   # frozen DEFAULTS
+    dlg.game_tab.start_countdown(wiz_i)
+    check("part I3: start_countdown arms n=3 + 'Get ready...'",
+          dlg.game_tab._countdown_n == 3
+          and 'Get ready...' in dlg.game_tab._info_log.toPlainText(),
+          'n=%r (a premature real tick would have shifted it)'
+          % (dlg.game_tab._countdown_n,))
+    check('part I3: countdown timer active, pending wizard stored',
+          dlg.game_tab._countdown_timer.isActive()
+          and dlg.game_tab._pending_wizard is wiz_i,
+          'active=%r' % (dlg.game_tab._countdown_timer.isActive(),))
+    for _ in range(4):
+        dlg.game_tab._countdown_tick()
+    lines_i = dlg.game_tab._info_log.toPlainText().splitlines()
+    check("part I3: log stepped 'Get ready...' '3' '2' '1' 'GO!'",
+          lines_i == ['Get ready...', '3', '2', '1', 'GO!'],
+          'lines=%r' % (lines_i,))
+    check('part I3: GO pushed THAT wizard, float anchor, 1 Hz on '
+          '(P-1 closed)',
+          cmd.get_wizard() is wiz_i
+          and isinstance(engine._current_game().timer_anchor, float)
+          and dlg.game_tab._timer.isActive(),
+          'top=%r anchor=%r' % (cmd.get_wizard(),
+                                engine._current_game().timer_anchor))
+
+    # ---- I4: timer-label drive (deterministic anchor manipulation --
+    # SMOKE-13 already proved the real cadence) ----
+    engine._current_game().timer_anchor = time_mod.time() - 75
+    dlg.game_tab._on_tick()
+    check("part I4: _on_tick renders '1:15' from the LIVE anchor (P-4)",
+          dlg.game_tab._timer_label.text() == '1:15',
+          'label=%r' % (dlg.game_tab._timer_label.text(),))
+
+    # ---- I5: cancel drive (P-2: a cancelled countdown NEVER fires GO)
+    cmd.set_wizard()                   # done pop of wiz_i
+    placement.cleanup_game_objects()
+    wiz_i2 = gamestart.start_game(activate=False)
+    dlg.game_tab.start_countdown(wiz_i2)
+    dlg.game_tab.cancel_pending_start()
+    check('part I5: cancel stops the timer + clears the pending wizard',
+          not dlg.game_tab._countdown_timer.isActive()
+          and dlg.game_tab._pending_wizard is None,
+          'active=%r' % (dlg.game_tab._countdown_timer.isActive(),))
+    dlg.game_tab._countdown_tick()     # one stray tick after the cancel
+    text_i5 = dlg.game_tab._info_log.toPlainText()
+    check("part I5: no 'GO!' after the cancel; NO stale activation "
+          '(P-2 closed)',
+          'GO!' not in text_i5
+          and cmd.get_wizard() is not wiz_i2,
+          'log=%r top=%r' % (text_i5, cmd.get_wizard()))
+
+    # ---- restore: baseline scene EXACTLY + timers quiet ----
+    dlg.game_tab.cancel_pending_start()
+    dlg.game_tab._timer.stop()         # defensive: no 1 Hz tick over
+    cmd.set_wizard()                   # the post-cleanup no-game state
+    result_i = placement.cleanup_game_objects()
+    check('part I: restore -- baseline scene EXACTLY, stack empty',
+          cmd.get_wizard() is None
+          and result_i['deleted'] > 0
+          and cmd.get_names('objects') == baseline_i,
+          'deleted=%r after=%r baseline=%r'
+          % (result_i['deleted'], cmd.get_names('objects'),
+             baseline_i))
+    app.processEvents()
+    dlg.close()
+    REC['tab_shell'] = ('2 tabs, shell state, countdown 3-2-1-GO as '
+                        "methods, '1:15' tick, cancel P-2, exact restore")
+except Exception:
+    traceback.print_exc()
+    check('part I two-tab/GameTab shell drives', False,
+          'raised (see traceback)')
+
+# ============================================================
+# PART J: Gate A2 shape sanity inside PyMOL's interpreter (ALWAYS)
 # ============================================================
 try:
     init_path = os.path.join(_ROOT, 'aamatch', '__init__.py')
@@ -793,11 +954,11 @@ try:
     offenders = [ln for ln in init_lines
                  if ln and not ln[0].isspace() and not ln.startswith('#')
                  and (ln.startswith('import ') or ln.startswith('from '))]
-    check('part I: Gate A2 shape -- zero column-0 import/from lines',
+    check('part J: Gate A2 shape -- zero column-0 import/from lines',
           not offenders, 'offenders=%r' % (offenders,))
 except Exception:
     traceback.print_exc()
-    check('part I Gate A2 echo', False, 'raised (see traceback)')
+    check('part J Gate A2 echo', False, 'raised (see traceback)')
 
 # --- evidence summary -------------------------------------------------
 print('SMOKE-ENV record: %s'

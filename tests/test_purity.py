@@ -89,10 +89,13 @@ if REPO_ROOT not in sys.path:
 # Phase 4 (04-03): game_file (shareable game container: GAME_VERSION gate,
 #                   payload embedding, ligand_files base64 codec; stdlib +
 #                   persistence/level_spec/setup_state).
+# Phase 5 (05-01): status_text (pure tab-side text builders; imports only
+#                   .wizard_text).
 PURE_MODULES = ['setup_state', 'level_spec', 'persistence', 'backup',
                 'paths', 'vec3', 'spatial', 'manifest', 'capability',
                 'thresholds', 'detector', 'generator', 'game_state',
-                'wizard_core', 'wizard_text', 'setup_form', 'game_file']
+                'wizard_core', 'wizard_text', 'setup_form', 'game_file',
+                'status_text']
 
 # Roots that must NEVER appear in any import of a pure module, in ANY
 # scope (module level or function body -- B7). dataclasses is 3.7+.

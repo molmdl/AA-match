@@ -943,5 +943,238 @@ class TestLigandHasMetal(unittest.TestCase):
         self.assertFalse(capability.ligand_has_metal([]))
 
 
+# ---------------------------------------------------------------------------
+# Plan 05-02 (PLAY-05 pure half): the hint predicate battery. The hint's
+# "could form" MUST be identical to what allocate_slots guaranteed solvable
+# and to what score credits — same aa_capable, same profile, one typing home
+# (DETECT-04). The hint NEVER reads a slot's can_form provenance
+# (generator.py:453-456, pitfall H-2); it recomputes capability live through
+# residue_capabilities.
+# ---------------------------------------------------------------------------
+
+class TestHintRequiredTypes(unittest.TestCase):
+    """hint_required_types(required): the resolved required dict -> the
+    tuple of interaction types the hint may credit. Mode semantics pinned
+    by 05-RESEARCH-hint.md: exclusive -> {'mode': 'any', 'items': []} ->
+    ALL 7 canonical types (scoring-honest vocabulary, game_state.score
+    credits ANY formed record); 'list' -> the item types in GIVEN order;
+    every malformed shape refuses with the game_state.score-family
+    wording."""
+
+    def test_any_mode_returns_all_7_in_canonical_order(self):
+        required = {'mode': 'any', 'items': []}
+        self.assertEqual(capability.hint_required_types(required),
+                         tuple(INTERACTION_TYPES))
+
+    def test_any_mode_ignores_empty_items_echo(self):
+        # generator.py:396 emits exactly {'mode': 'any', 'items': []};
+        # the resolver never samples the allowed list (research H-6:
+        # the hint consumes the RESOLVED dict only).
+        required = {'mode': 'any', 'items': []}
+        result = capability.hint_required_types(required)
+        self.assertEqual(list(result), list(INTERACTION_TYPES))
+
+    def test_list_mode_returns_item_types_in_given_order(self):
+        # GIVEN order, not re-sorted (the payload already carries
+        # canonical order; the resolver must not reshuffle).
+        required = {'mode': 'list',
+                    'items': [{'type': 'pi_stacking', 'count': 1},
+                              {'type': 'h_bond', 'count': 2},
+                              {'type': 'pi_stacking', 'count': 1}]}
+        self.assertEqual(capability.hint_required_types(required),
+                         ('pi_stacking', 'h_bond', 'pi_stacking'))
+
+    def test_non_dict_required_refuses_naming_the_type(self):
+        for bad in (None, ['mode'], 'any', 4):
+            with self.assertRaises(ValueError) as ctx:
+                capability.hint_required_types(bad)
+            self.assertIn(type(bad).__name__, str(ctx.exception))
+
+    def test_unknown_mode_refuses_naming_mode_and_expected_set(self):
+        with self.assertRaises(ValueError) as ctx:
+            capability.hint_required_types({'mode': 'bogus', 'items': []})
+        message = str(ctx.exception)
+        self.assertIn('bogus', message)
+        self.assertIn('any', message)
+        self.assertIn('list', message)
+
+    def test_missing_mode_refuses(self):
+        with self.assertRaises(ValueError) as ctx:
+            capability.hint_required_types({'items': []})
+        self.assertIn('None', str(ctx.exception))
+
+    def test_list_mode_empty_items_refuses(self):
+        # empty items is the 'any'-mode representation; a 'list' with no
+        # items would promise a fraction of nothing (score's refusal).
+        for required in ({'mode': 'list', 'items': []},
+                         {'mode': 'list', 'items': None},
+                         {'mode': 'list'}):
+            with self.assertRaises(ValueError) as ctx:
+                capability.hint_required_types(required)
+            self.assertIn('items', str(ctx.exception))
+
+    def test_list_mode_unknown_item_type_refuses_naming_it(self):
+        with self.assertRaises(ValueError) as ctx:
+            capability.hint_required_types(
+                {'mode': 'list',
+                 'items': [{'type': 'h_bond', 'count': 1},
+                           {'type': 'nonsense', 'count': 1}]})
+        self.assertIn('nonsense', str(ctx.exception))
+
+
+class TestHintCandidateSlots(unittest.TestCase):
+    """hint_candidate_slots(slots, profile, required): the slot_ids whose
+    residue_capabilities(slot['aa'], profile) intersects the required
+    types, in PAYLOAD order. Capable DISTRACTORS are included (their
+    resn is capable even though can_form == [] — pitfall H-2); incapable
+    slots are excluded; a required type the ligand cannot support yields
+    no candidates for it (aa_capable gates on the profile)."""
+
+    def _slots(self, *entries):
+        """Hand-built payload-order slot dicts (generator.py:840-850
+        carries 'slot_id' and the canonical uppercase 'aa')."""
+        return [{'slot_id': 'r%dc0' % index, 'aa': aa, 'role': role,
+                 'can_form': can_form}
+                for index, (aa, role, can_form) in enumerate(entries)]
+
+    def test_returns_tuple(self):
+        slots = self._slots(('SER', 'required', ['h_bond']))
+        result = capability.hint_candidate_slots(
+            slots, RICH, {'mode': 'list',
+                          'items': [{'type': 'h_bond', 'count': 1}]})
+        self.assertIsInstance(result, tuple)
+
+    def test_capable_required_slot_included(self):
+        # SER is h_bond-capable (donor+acceptor OG vs the RICH ligand).
+        slots = self._slots(('SER', 'required', ['h_bond']),
+                            ('GLY', 'distractor', []))
+        self.assertEqual(capability.hint_candidate_slots(
+            slots, RICH,
+            {'mode': 'list', 'items': [{'type': 'h_bond', 'count': 1}]}),
+            ('r0c0',))
+
+    def test_capable_distractor_included_despite_empty_can_form(self):
+        # Pitfall H-2: the hint must NOT read can_form — a distractor
+        # carries can_form [] yet its resn may be perfectly capable.
+        # PHE is pi_stacking-capable against the RICH ring_count > 0.
+        slots = self._slots(('PHE', 'distractor', []),
+                            ('GLY', 'distractor', []),
+                            ('TYR', 'required', ['pi_stacking']))
+        self.assertEqual(capability.hint_candidate_slots(
+            slots, RICH,
+            {'mode': 'list',
+             'items': [{'type': 'pi_stacking', 'count': 1}]}),
+            ('r0c0', 'r2c0'))
+
+    def test_incapable_slot_excluded(self):
+        # GLY has no side chain and is never capable of anything;
+        # MET is excluded from the halogen acceptor set (resolved §3.5).
+        slots = self._slots(('GLY', 'distractor', []),
+                            ('MET', 'distractor', []),
+                            ('SER', 'required', ['metal']))
+        self.assertEqual(capability.hint_candidate_slots(
+            slots, RICH,
+            {'mode': 'list', 'items': [{'type': 'metal', 'count': 1}]}),
+            ('r2c0',))
+
+    def test_any_mode_uses_the_full_7_type_vocabulary(self):
+        # 'any' resolves to all 7 types; against RICH every AA with a
+        # side chain is capable of SOMETHING, GLY of nothing.
+        slots = self._slots(('ALA', 'distractor', []),   # hydrophobic
+                            ('GLY', 'distractor', []),   # nothing
+                            ('ASP', 'distractor', []))   # several
+        self.assertEqual(capability.hint_candidate_slots(
+            slots, RICH, {'mode': 'any', 'items': []}),
+            ('r0c0', 'r2c0'))
+
+    def test_ligand_unsupported_type_yields_no_candidates_for_it(self):
+        # APOLAR has no ring -> pi_stacking unsupported even for PHE
+        # (aa_capable gates on the profile; the hint inherits the gate).
+        slots = self._slots(('PHE', 'distractor', []),
+                            ('SER', 'distractor', []))
+        self.assertEqual(capability.hint_candidate_slots(
+            slots, APOLAR,
+            {'mode': 'list',
+             'items': [{'type': 'pi_stacking', 'count': 1}]}),
+            ())
+
+    def test_payload_order_determinism(self):
+        # Row-major payload order is preserved — cheapest deterministic
+        # rendering contract for the later recolor pass.
+        first = self._slots(('TYR', 'distractor', []),
+                            ('GLY', 'distractor', []),
+                            ('HIS', 'distractor', []),
+                            ('PHE', 'required', ['pi_stacking']))
+        required = {'mode': 'list',
+                    'items': [{'type': 'pi_stacking', 'count': 1}]}
+        expected = ('r0c0', 'r2c0', 'r3c0')
+        self.assertEqual(capability.hint_candidate_slots(first, RICH,
+                                                         required),
+                         expected)
+        # Same content, different payload order -> different output order.
+        second = self._slots(('PHE', 'required', ['pi_stacking']),
+                             ('HIS', 'distractor', []),
+                             ('GLY', 'distractor', []),
+                             ('TYR', 'distractor', []))
+        self.assertEqual(capability.hint_candidate_slots(second, RICH,
+                                                         required),
+                         ('r0c0', 'r1c0', 'r3c0'))
+
+    def test_multi_type_required_matches_a_slot_once(self):
+        # A slot capable of >= 1 required type appears EXACTLY once even
+        # when several required types intersect its capability set.
+        slots = self._slots(('ASP', 'required', ['salt_bridge']))
+        result = capability.hint_candidate_slots(
+            slots, RICH,
+            {'mode': 'list', 'items': [{'type': 'h_bond', 'count': 1},
+                                       {'type': 'salt_bridge', 'count': 1},
+                                       {'type': 'metal', 'count': 1}]})
+        self.assertEqual(result, ('r0c0',))
+
+    def test_non_list_slots_refuses(self):
+        for bad in (None, 'r0c0', {'slot_id': 'r0c0'}):
+            with self.assertRaises(ValueError) as ctx:
+                capability.hint_candidate_slots(
+                    bad, RICH, {'mode': 'any', 'items': []})
+            self.assertIn(type(bad).__name__, str(ctx.exception))
+
+    def test_slot_missing_keys_refuses_naming_the_slot(self):
+        for bad_slot in ({'aa': 'SER'}, {'slot_id': 'r0c0'}, 'SER', None):
+            with self.assertRaises(ValueError) as ctx:
+                capability.hint_candidate_slots(
+                    [bad_slot], RICH, {'mode': 'any', 'items': []})
+            self.assertIn(repr(bad_slot), str(ctx.exception))
+
+    def test_unknown_residue_is_incapable_not_an_error(self):
+        # residue_capabilities fails closed on unknown resn (returns
+        # the empty set); the hint inherits that — excluded, no raise.
+        slots = self._slots(('MSE', 'distractor', []),
+                            ('SER', 'required', ['h_bond']))
+        self.assertEqual(capability.hint_candidate_slots(
+            slots, RICH,
+            {'mode': 'list', 'items': [{'type': 'h_bond', 'count': 1}]}),
+            ('r1c0',))
+
+
+class TestResidueCapabilitiesAgreement(unittest.TestCase):
+    """Belt-and-braces single-home pin (05-RESEARCH-hint.md battery 4):
+    for EVERY residue, residue_capabilities must equal the per-type
+    aa_capable union — the hint, the generator's solvability and the
+    detector's typing can never drift apart (DETECT-04)."""
+
+    def test_residue_capabilities_equals_aa_capable_union(self):
+        for ligand_profile in (RICH, APOLAR, profile(),
+                               profile(has_donor=True),
+                               profile(charge_signs=('-',))):
+            for resn in capability.AA_RESIDUES:
+                with self.subTest(resn=resn, profile=ligand_profile):
+                    self.assertEqual(
+                        capability.residue_capabilities(resn,
+                                                        ligand_profile),
+                        set(t for t in INTERACTION_TYPES
+                            if capability.aa_capable(resn, t,
+                                                     ligand_profile)))
+
+
 if __name__ == '__main__':
     unittest.main()

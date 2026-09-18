@@ -746,5 +746,89 @@ class TestCorpusStatistics(unittest.TestCase):
                            'position sampling looks broken')
 
 
+# ---------------------------------------------------------------------------
+# Group G (plan 05-02 / PLAY-05): GEN-04 hint-parity invariant. The hint's
+# candidate set is computed LIVE from residue_capabilities (never from the
+# can_form provenance, generator.py:453-456), so solvability-by-
+# construction and the hint agree BY CONSTRUCTION: every role='required'
+# slot's aa is aa_capable of its required item against this molecule's
+# profile (allocate_slots draws required AAs from capable ones,
+# generator.py:492-496), hence every required slot must appear in
+# hint_candidate_slots(...). This is the designed alarm for any future
+# capability-table edit: the invariant and allocate_slots' own refusal
+# fire together (05-RESEARCH-hint.md, solvability cross-checks).
+# ---------------------------------------------------------------------------
+
+class TestGen04HintParity(unittest.TestCase):
+
+    PARITY_SEEDS = (0, 17, 42, 88)
+
+    def _fresh_payloads(self):
+        """Several (seed x mode) payloads straight through the public
+        generator API with the shared fixtures (the 02-08 ligand_data
+        contract: profile looked up by the molecule's ligand
+        (set_id, entry_id))."""
+        out = []
+        for mode, allowed in MODE_CONFIGS:
+            setup = make_setup(mode, allowed, 2, 3)
+            for seed in self.PARITY_SEEDS:
+                out.append(generate(seed, setup, CANDIDATES,
+                                    LIGAND_DATA, 3))
+        return out
+
+    def test_G20_required_slots_always_in_hint_candidates(self):
+        for mode in (c[0] for c in MODE_CONFIGS):
+            for payload in self._fresh_payloads():
+                for level, molecule in iter_molecules(payload):
+                    profile = molecule_profile(molecule)
+                    required = molecule['required']
+                    slots = molecule['grid']['slots']
+                    candidates = capability.hint_candidate_slots(
+                        slots, profile, required)
+                    required_ids = [slot['slot_id'] for slot in slots
+                                    if slot['role'] == 'required']
+                    with self.subTest(mode=mode, seed=payload['seed'],
+                                      level=level['level_index'],
+                                      mol=molecule['molecule_id']):
+                        for slot_id in required_ids:
+                            self.assertIn(
+                                slot_id, candidates,
+                                'GEN-04 parity broken: required slot %s '
+                                '(aa %s) is NOT in the live-computed '
+                                'hint candidates — solvability and the '
+                                'hint disagree' % (
+                                    slot_id,
+                                    [s['aa'] for s in slots
+                                     if s['slot_id'] == slot_id][0]))
+                        if required_ids:
+                            self.assertTrue(
+                                candidates,
+                                'list-mode payload with required slots '
+                                'must always have hint candidates')
+
+    def test_G21_hint_candidates_never_dereference_can_form(self):
+        # A capable DISTRACTOR (can_form == []) must appear in the
+        # candidates whenever its resn supports a required type —
+        # prove the hint reads residue_capabilities, not the
+        # generation-time provenance (pitfall H-2).
+        prove_count = 0
+        for payload in self._fresh_payloads():
+            for level, molecule in iter_molecules(payload):
+                profile = molecule_profile(molecule)
+                required = molecule['required']
+                slots = molecule['grid']['slots']
+                candidates = capability.hint_candidate_slots(
+                    slots, profile, required)
+                for slot in slots:
+                    if slot['role'] == 'distractor' \
+                            and slot['slot_id'] in candidates:
+                        prove_count += 1
+        self.assertGreater(
+            prove_count, 0,
+            'no capable distractor ever appeared in the candidates — '
+            'either distractor diversity broke or the hint is reading '
+            'the empty can_form provenance of distractors')
+
+
 if __name__ == '__main__':
     unittest.main()

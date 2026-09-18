@@ -56,8 +56,14 @@ OPS (each count-asserted; plain-data in/out):
 5b. ``detect_molecule(level_index, molecule_index) -> records`` -- the
    MOLECULE-SCOPED variant (see MOLECULE SCOPING above): input atoms
    restricted to the molecule's ligand + slot objects, bonds remapped
-   for that ligand only, detector.detect over the subset, then the
-   pure records_for_molecule post-filter.
+    for that ligand only, detector.detect over the subset, then the
+    pure records_for_molecule post-filter.
+5c. ``ligand_profile_molecule(level_index, molecule_index) ->
+    profile`` -- the molecule's ligand chemistry profile recomputed
+    LIVE from its materialized ligand object (extract restricted to
+    that object -> _remap_ligand_bonds -> capability.ligand_profile);
+    byte-equal to generation-time (the ligand never changes during
+    play). The PLAY-05 hint's "could form" input (05-08).
 6. ``score_current(level_index, molecule_index, required,
    records=None) -> (score, formed_types)`` -- game_state.score via
    record_molecule_result (score + formed types stored together);
@@ -393,6 +399,45 @@ def detect_molecule(level_index, molecule_index):
     found = detector.detect(records, lig_bonds)
     return game_state.records_for_molecule(found, slot_objects,
                                            lig_object)
+
+
+def ligand_profile_molecule(level_index, molecule_index):
+    """Op 5c: the molecule's ligand chemistry profile, recomputed LIVE
+    from its materialized ligand object (the 05-08 PLAY-05 hint op;
+    the 02-08 deviation-3 contract shape, _ligand_data_for above).
+
+    The engine does NOT retain the generation-time profile: ligand_data
+    is a LOCAL in new_game (op 1 above), and the payload carries no
+    profile (level_spec shape, fields only) -- so the PLAY-05 "could
+    form" input is read back from the LIVE object. Scoping mirrors
+    detect_molecule: the record list is restricted to this molecule's
+    ligand object, bonds are remapped via _remap_ligand_bonds, and
+    capability.ligand_profile consumes them.
+
+    Byte-equality argument: the ligand object is loaded once at
+    materialize (placement) and NEVER modified afterwards -- movement
+    in play is AA-only (wizard movement model), and detect writes
+    nothing. ligand_profile reads only elements/names/formal charges +
+    bond orders, so the replayed profile equals the generation-time one
+    -- DETECT-04 by construction: the SAME capability.ligand_profile
+    the generator consumed at generation time (its _profile_of seam),
+    over the SAME chemistry. Fail-closed: out-of-range molecule_index
+    raises EngineError naming the index + registry count, nothing
+    materialized raises via _current_registry.
+    """
+    registry = _current_registry()
+    molecules = registry['molecules']
+    index = int(molecule_index)
+    if not 0 <= index < len(molecules):
+        raise EngineError(
+            'engine.ligand_profile_molecule: molecule_index %d out of '
+            'range (registry has %d molecule(s))'
+            % (index, len(molecules)))
+    lig_object = molecules[index]['ligand'][0]
+    records = [r for r in geometry.extract_game_atoms()
+               if r['object'] == lig_object]
+    lig_records, lig_bonds = _remap_ligand_bonds(records, [lig_object])
+    return capability.ligand_profile(lig_records, lig_bonds)
 
 
 def score_current(level_index, molecule_index, required, records=None):

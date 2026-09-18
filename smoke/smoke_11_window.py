@@ -105,10 +105,30 @@ PART G  (T1b -- the 04-01 probe verdict is PASS (platform=offscreen),
 PART G-alt (probe-FAIL degradation): skip the dialog drive; assert the
         pure chain directly -- build_state on DEFAULTS+upload_ready
         passes; print the skip line.
-PART H  (ALWAYS, T0-in-smoke): Gate A2 shape sanity echoed inside
+PART H  (ALWAYS, T1a -- the 05-05 SETUP-11 deferred-activation direct
+        drive; cmd-substance only, NO dialog needed -- the activate=False
+        seam + activate_game run against the plain cmd tier; the design
+        is 05-RESEARCH-window-start-timer.md Pattern 2, GO-time
+        activation living in the cmd tier): sentinel setup ->
+        gamestart.start_game(setup=sentinel, seed=4242, activate=False)
+        returns an UNACTIVATED GameWizard (cmd.get_wizard() is NOT it --
+        the countdown window is wizard-free, pitfall P-1) while the
+        scene grew (preparation complete); module-level _last_start
+        holds EXACTLY the 4 input-tuple keys with the setup DEEP-COPIED
+        (is not the sentinel, nested list not aliased) and the seed a
+        real int; GO via gamestart.activate_game(wiz) pushes THAT wizard
+        (conditional replace re-evaluated AT activation), anchors
+        engine._current_game().timer_anchor to a float (timer from zero),
+        and captures the wizard's msm snapshot post-push (the ORDER LAW
+        fires at GO -- research Q4); restore: canonical done pop +
+        prefix-only cleanup -> baseline scene EXACTLY + stack empty;
+        _last_start reset so later parts start clean.
+PART I  (ALWAYS, T0-in-smoke): Gate A2 shape sanity echoed inside
         PyMOL's interpreter for the record -- aamatch/__init__.py
         carries ZERO column-0 import/from statements (the lazy-import
-        discipline the menu rewire must preserve).
+        discipline the menu rewire must preserve). (05-05 inserted PART
+        H before the echo -- the established renumber pattern, the echo
+        letter shifted H -> I.)
 
 Conventions (frozen Phase 1, kept): anchor the repo root via sys.argv
 first / cwd fallback (never __file__); import aamatch directly (module
@@ -678,7 +698,93 @@ except Exception as e_g:
                   'raised (see traceback)')
 
 # ============================================================
-# PART H: Gate A2 shape sanity inside PyMOL's interpreter (ALWAYS)
+# PART H: SETUP-11 deferred-activation direct drive (ALWAYS -- T1a
+# cmd-substance only, NO dialog needed; the activate=False seam +
+# activate_game run against the plain cmd tier; the design is
+# 05-RESEARCH-window-start-timer.md Pattern 2, GO-time activation
+# living in the cmd tier)
+# ============================================================
+try:
+    from pymol import cmd
+    from aamatch import engine, gamestart, placement, setup_state, wizard
+
+    sentinel = dict(setup_state.DEFAULTS)
+    baseline_h = cmd.get_names('objects')
+
+    # ---- prepare WITHOUT activating (activate=False) ----
+    wiz_h = gamestart.start_game(setup=sentinel, seed=4242,
+                                 activate=False)
+    check('part H: activate=False returns a GameWizard, NOT pushed',
+          isinstance(wiz_h, wizard.GameWizard)
+          and cmd.get_wizard() is not wiz_h,
+          'top=%r (the countdown window is wizard-free -- pitfall P-1)'
+          % (cmd.get_wizard(),))
+    scene_h = cmd.get_names('objects')
+    new_h = [n for n in scene_h if n not in baseline_h]
+    check('part H: the scene grew though activation is deferred',
+          len(new_h) > 0
+          and all(n.startswith('_aam_') for n in new_h),
+          'grew=%d (preparation complete)' % (len(new_h),))
+
+    # ---- _last_start input tuple (SETUP-11; Phase-6 Restart) ----
+    ls = gamestart._last_start or {}
+    check('part H: _last_start holds EXACTLY the 4 input-tuple keys',
+          sorted(ls) == ['candidates', 'ligand_content', 'seed',
+                         'setup'],
+          'keys=%r' % (sorted(ls),))
+    check('part H: _last_start setup DEEP-COPIED (aliasing proof)',
+          isinstance(ls.get('setup'), dict)
+          and ls.get('setup') is not sentinel
+          and ls['setup'].get('allowed_interactions')
+          is not sentinel['allowed_interactions'],
+          'the 04-09 _reset_impl aliasing note, guarded')
+    check('part H: _last_start seed is a real int',
+          isinstance(ls.get('seed'), int)
+          and not isinstance(ls.get('seed'), bool)
+          and ls.get('seed') == 4242,
+          'seed=%r' % (ls.get('seed'),))
+    check('part H: _last_start tuple echoes the None overrides',
+          ls.get('candidates') is None
+          and ls.get('ligand_content') is None,
+          'candidates=%r ligand_content=%r'
+          % (ls.get('candidates'), ls.get('ligand_content')))
+
+    # ---- GO: activate_game(wiz) pushes + anchors (Pattern 2) ----
+    gamestart.activate_game(wiz_h)
+    check('part H: activate_game pushes THAT wizard at GO',
+          cmd.get_wizard() is wiz_h,
+          'top=%r (conditional replace re-evaluated AT activation)'
+          % (cmd.get_wizard(),))
+    anchor = engine._current_game().timer_anchor
+    check('part H: timer anchored from zero at GO (float)',
+          isinstance(anchor, float),
+          'timer_anchor=%r (GO-time anchor, start from zero)'
+          % (anchor,))
+    check('part H: msm snapshot captured POST-push at GO (ORDER LAW)',
+          isinstance(wiz_h._saved_msm, int),
+          '_saved_msm=%r (the push happens at GO, so the snapshot does)'
+          % (wiz_h._saved_msm,))
+
+    # ---- restore: done pop + prefix-only cleanup + store reset ----
+    cmd.set_wizard()                   # canonical done pop
+    result_h = placement.cleanup_game_objects()
+    check('part H: restore -- baseline scene EXACTLY, stack empty',
+          cmd.get_wizard() is None
+          and result_h['deleted'] > 0
+          and cmd.get_names('objects') == baseline_h,
+          'deleted=%r after=%r baseline=%r'
+          % (result_h['deleted'], cmd.get_names('objects'),
+             baseline_h))
+    gamestart._last_start = None       # later parts start clean
+    REC['deferred_activation'] = ('unactivated prepare, GO push+anchor, '
+                                  '_last_start round-trip, exact restore')
+except Exception:
+    traceback.print_exc()
+    check('part H deferred-activation drive', False,
+          'raised (see traceback)')
+
+# ============================================================
+# PART I: Gate A2 shape sanity inside PyMOL's interpreter (ALWAYS)
 # ============================================================
 try:
     init_path = os.path.join(_ROOT, 'aamatch', '__init__.py')
@@ -687,11 +793,11 @@ try:
     offenders = [ln for ln in init_lines
                  if ln and not ln[0].isspace() and not ln.startswith('#')
                  and (ln.startswith('import ') or ln.startswith('from '))]
-    check('part H: Gate A2 shape -- zero column-0 import/from lines',
+    check('part I: Gate A2 shape -- zero column-0 import/from lines',
           not offenders, 'offenders=%r' % (offenders,))
 except Exception:
     traceback.print_exc()
-    check('part H Gate A2 echo', False, 'raised (see traceback)')
+    check('part I Gate A2 echo', False, 'raised (see traceback)')
 
 # --- evidence summary -------------------------------------------------
 print('SMOKE-ENV record: %s'

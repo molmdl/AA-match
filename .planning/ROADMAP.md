@@ -142,10 +142,20 @@ Plans:
   2. [HUMAN] The Game status tab shows a rolling info box, the elapsed timer outside the info box, and the required interaction types + counts (`any` or from the allowed list). (SCORE-04)
   3. [HUMAN] Hint recolors carbon atoms of amino acids that could form one of the required interactions — recolor only, never lines/dots/geometry. (PLAY-05)
 **Research notes**: QTimer-only timers on the main thread (PITFALL 1/15); pause the timer while any modal child is open (timer-fairness UX rule); win-screen modal timing pattern (~100 ms after last `cmd.color`) applies to later endgame work.
-**Plans**: TBD
+**Plans**: 11 plans
 
 Plans:
-- [ ] 05-01: (TBD)
+- [ ] 05-01-PLAN.md — status_text.py pure battery (required display + event diff rules + EVENT_KINDS) + PURE_MODULES registration (TDD)
+- [ ] 05-02-PLAN.md — capability hint predicates battery (hint_required_types + hint_candidate_slots) + GEN-04 parity invariant (TDD)
+- [ ] 05-03-PLAN.md — HINT_COLOR = 'orange' constant + exact-constants pin (TDD)
+- [ ] 05-04-PLAN.md — GameState.rebase_timer pause-freeze op (TDD)
+- [ ] 05-05-PLAN.md — gamestart deferred-activation seam (activate kwarg + activate_game + _last_start) + SMOKE-11 T1a part
+- [ ] 05-06-PLAN.md — game_window.py GameTab shell (info box, timer tick + modal pause, cancellable countdown) + SetupWindow QTabWidget restructure + SCANNED_MODULES growth + SMOKE-11 T1b parts
+- [ ] 05-07-PLAN.md — status read accessors (GameWizard.get_status + engine.game_status) + SMOKE-14 T1a
+- [ ] 05-08-PLAN.md — Hint vertical slice (engine.ligand_profile_molecule + GameWizard.hint snapshot-before-recolor + GameTab handler + SMOKE-11 hint part)
+- [ ] 05-09-PLAN.md — window-driven deferred start sequence (_pop_game_wizard + _start_impl rework + cleanup cancel) + SMOKE-11 PART G rework
+- [ ] 05-10-PLAN.md — status poll-diff wiring (_refresh_status + _begin_play content) + SMOKE-14 T1b
+- [ ] 05-11-PLAN.md — [HUMAN] consolidated GUI checkpoint: SETUP-11 + SCORE-04 + PLAY-05 (execute-checkpoint-record)
 
 ### Phase 6: Scoring Lifecycle & Endgame
 **Goal**: The full game semantics work end-to-end: confirm scores and advances, levels escalate, skip/give-up protect the player, restart/reset recover, and the endgame reports the complete result.

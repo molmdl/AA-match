@@ -438,12 +438,15 @@ class GameWizard(Wizard):
         message: house errors (the ValueError family -- EngineError,
         PlacementError, WizardError) land on self._error + refresh;
         UNEXPECTED exceptions propagate (bug surfacing, never a silent
-        swallow)."""
+        swallow). Returns op's return value on success (05-08: hint()
+        returns its plain-data result through this seam; every prior
+        caller ignores it), None on a guarded refusal."""
         try:
-            op(*args, **kwargs)
+            return op(*args, **kwargs)
         except ValueError as e:
             self._error = str(e)
             cmd.refresh_wizard()
+            return None
 
     def nudge_cam(self, dx, dy, dz):
         """Camera-frame nudge of the selected AA:
@@ -605,6 +608,68 @@ class GameWizard(Wizard):
             self._assert_identity(obj)
         self._result = None
         cmd.refresh_wizard()
+
+    def hint(self):
+        """PLAY-05 Hint: recolor the CARBONS of every amino-acid slot
+        that could form at least one required interaction -- computed
+        CAPABILITY-LIVE via the shared capability module (the same
+        predicate the generator's solvability and the detector's
+        typing consume; DETECT-04 by construction), NEVER reads the
+        slot's can_form provenance (generation-time data,
+        generator.py:453-456 -- the hint does not touch that field).
+
+        Recolor ONLY (PLAY-04): no lines/dots/geometry; the atom-color
+        property is invisible to detection (extract_game_atoms never
+        reads atom color, geometry.py:134-138). The candidate set is
+        STATIC within a molecule (payload resn x immutable ligand
+        profile x immutable required), so repeated presses are
+        idempotent -- NO new wizard attribute is needed (contract 2);
+        candidates are recomputed per press.
+
+        Returns plain data for the caller's info box through the
+        _guard seam: {'count': n, 'slot_ids': [...] enveloping the
+        payload-order candidate tuple}; None on a guarded refusal."""
+        return self._guard(self._hint_impl)
+
+    def _hint_impl(self):
+        from . import capability, engine
+        required = self._required()
+        slots = self._payload['levels'][self._level_index] \
+            ['molecules'][self._molecule_index]['grid']['slots']
+        profile = engine.ligand_profile_molecule(self._level_index,
+                                                 self._molecule_index)
+        candidate_ids = capability.hint_candidate_slots(slots, profile,
+                                                        required)
+        if not candidate_ids:
+            # Fail-CLOSED: solvability-by-construction makes an empty
+            # candidate set unreachable for a real generated payload;
+            # a silent no-op would hide a bug instead of surfacing it.
+            raise WizardError(
+                'hint: no amino acid in the grid could form a required '
+                'interaction (%s) -- the solvability guarantee was '
+                'violated' % (required.get('mode'),))
+        for slot_id in candidate_ids:
+            # Selection strings are built ONLY from _objects_by_slot
+            # (molecule-scoped by construction via build_slot_map) --
+            # the ligand and other molecules' objects are structurally
+            # unreachable (H-5); the '<obj> and elem C' scope keeps
+            # the recolor carbon-only.
+            obj = self._objects_by_slot[slot_id]
+            # THE CRITICAL LINE (the (a) trap, 05-RESEARCH-hint H-1):
+            # register into the ONE _color_store BEFORE the object's
+            # first recolor -- ensure_snapshot otherwise fires only in
+            # _select_slot, so a hinted-never-selected object would not
+            # be restored on Done. Idempotent: a slot hinted then
+            # selected keeps its ORIGINAL pre-hint snapshot.
+            wizard_core.ensure_snapshot(self._color_store, obj,
+                                        self._atom_colors(obj))
+            # cmd.color (NOT alter) -- redraw-safe apply per the 03-06
+            # display-rebuild law (the color-rep cache invalidation is
+            # C-cited in the research; alter+rebuild stays restore-only).
+            cmd.color(wizard_core.HINT_COLOR, '%s and elem C' % obj)
+        cmd.refresh_wizard()
+        return {'count': len(candidate_ids),
+                'slot_ids': list(candidate_ids)}
 
     # -- Keyboard channels (RESEARCH-wizard sec. 6) ------------------------
 

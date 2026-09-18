@@ -190,6 +190,39 @@ class GameState:
         phase's QTimer, never this module's concern."""
         self.timer_anchor = float(time.time() if now is None else now)
 
+    def rebase_timer(self, now, elapsed):
+        """Re-anchor the ONE timer so the shown elapsed FREEZES at `elapsed`
+        (the 1 Hz tick's modal-open pause mechanism — 05-RESEARCH Pattern 3).
+
+        ``timer_anchor`` becomes ``float(now) - float(elapsed)``, so the
+        live ``time.time() - timer_anchor`` derivation the tick renders
+        stops advancing while a modal child is open. Mutating the single
+        anchor in place kills the v1 bug class (P-4: two clocks drifted
+        because v1 kept a GUI-side copy) — there is ONE clock home, here.
+
+        Granularity: the freeze is pinned to the last shown second, so the
+        modal-open edge can over-count by <= 1 s (documented in the tick
+        that calls this).
+
+        The CALLER (the 1 Hz tick) owns modal detection via the Qt
+        application object's ``activeModalWidget()`` query — this op is a
+        dumb pure function of (now, elapsed) and never touches Qt itself.
+
+        ``elapsed`` must be non-negative: a negative value would push the
+        anchor into the future and REWIND the clock — fail-closed, never
+        silent. Both args are float-coerced (start_timer's contract), so
+        the stored anchor is a real float. Total over valid inputs: works
+        from a never-started game too (no start_timer precondition).
+        """
+        now_f = float(now)
+        elapsed_f = float(elapsed)
+        if elapsed_f < 0.0:
+            raise ValueError(
+                "rebase_timer: elapsed must be non-negative, got %r "
+                "(a negative elapsed would push the anchor into the "
+                "future and rewind the clock)" % (elapsed,))
+        self.timer_anchor = now_f - elapsed_f
+
     def advance_molecule(self):
         """Move to the next molecule within the current level."""
         self.current_molecule_index += 1

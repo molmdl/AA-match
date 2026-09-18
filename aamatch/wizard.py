@@ -331,7 +331,11 @@ class GameWizard(Wizard):
             ['molecules'][self._molecule_index]['required']
 
     def _state_dict(self):
-        """The plain-data state dict the pure text builders consume."""
+        """The plain-data state dict the pure text builders consume.
+
+        The level keys (05-07) are ADDITIVE: the existing pure builders
+        (panel_entries / prompt_lines) read only their own keys and
+        tolerate extras by construction."""
         selected = None
         if self._current_slot is not None:
             selected = {'slot_id': self._current_slot,
@@ -342,11 +346,20 @@ class GameWizard(Wizard):
                 self._molecule_index]['molecule_id'],
             'molecule_pos': self._molecule_index + 1,
             'molecule_total': len(self._registry['molecules']),
+            # 05-07 additive extension (the status tab's READ path):
+            'level_pos': self._level_index + 1,
+            'level_total': len(self._payload['levels']),
             'required': self._required(),
             'selected': selected,
             'result': self._result,
             'error': self._error,
         }
+
+    def get_status(self):
+        """Plain-data status snapshot for the Game status tab's 1 Hz
+        poll (READ path; contract 2 -- plain data only, never Qt or
+        callables). Returns _state_dict()."""
+        return self._state_dict()
 
     def get_prompt(self):
         """List-of-strings prompt, built by the pure builder (the

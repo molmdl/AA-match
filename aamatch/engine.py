@@ -67,6 +67,9 @@ OPS (each count-asserted; plain-data in/out):
    score, formed_types)`` -- detect_molecule + score_current
    composition (records returned are the MOLECULE-SCOPED set); the
    Phase-3 Confirm handler wraps exactly this.
+8. ``game_status() -> dict`` -- the 05-07 READ path: the live
+   GameState's to_dict() snapshot, no mutation; EngineError before
+   new_game (inherited from _current_game).
 
 Python floor: PyMOL's Windows Python 3.9 at runtime, written 3.6-safe
 (Gate D compiles every aamatch/*.py under python3.6).
@@ -419,3 +422,12 @@ def confirm(level_index, molecule_index, required):
     value, formed = score_current(level_index, molecule_index,
                                   required, records=records)
     return records, value, formed
+
+
+def game_status():
+    """Read-only plain-data snapshot of the live GameState (no
+    mutation). Returns GameState.to_dict(): current_level_index,
+    current_molecule_index, molecule_scores, skip_count, giveup_count,
+    timer_anchor, formed_types_per_molecule. Raises EngineError when no
+    game is live."""
+    return _current_game().to_dict()

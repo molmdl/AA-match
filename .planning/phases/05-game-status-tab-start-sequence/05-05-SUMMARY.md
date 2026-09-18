@@ -76,7 +76,7 @@ Each task was committed atomically:
 2. **Task 2: SMOKE-11 deferred-activation T1a PART** - `586445d` (test)
 3. **Task 3: full gate sweep** - no commit (no fixups needed; all gates green on the two task commits)
 
-**Plan metadata:** `(pending)` (docs: complete plan)
+**Plan metadata:** `07bba6e` (docs: complete plan)
 
 ## Files Created/Modified
 - `aamatch/gamestart.py` - activate kwarg + activate_game(wiz) GO home + _last_start store + deferred-activation docstring notes (cmd tier, NO Qt usage, zero banned-token mentions kept)

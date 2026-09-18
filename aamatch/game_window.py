@@ -17,11 +17,12 @@ timer + required line + rolling info box of spec.md:36-40). GameTab
 ships the status-surface SHELL: the read-only rolling info box, the
 elapsed-timer label OUTSIDE the box, the required-interactions label,
 the cancellable 3-2-1 countdown, and the 1 Hz tick that renders from
-the live GameState timer anchor. The Hint button is created but NOT
-connected (the hint handler plan connects its own button -- the 04-05
-shell law: no dead stub handlers). The status POLL (what else the
-info box shows and when) and the hint handler land in later plans on
-this exact skeleton.
+the live GameState timer anchor. The Hint button is CONNECTED (05-08
+landed its handler on this exact skeleton -- the 04-05 shell law: the
+handler plan connects its own button): isinstance-gated dispatch to
+the live GameWizard's capability hint, SILENT no-op before GO (no
+game wizard on the stack yet). The status POLL (what else the info
+box shows and when) lands on a later plan.
 
 LAWS this module enforces (05-RESEARCH-window-start-timer.md):
 
@@ -103,9 +104,8 @@ class GameTab(QtWidgets.QWidget):
         self._info_log.setToolTip('What happened, in order.')
         layout.addWidget(self._info_log, 1)
 
-        # Hint button: created with the spec-meaning tooltip but NOT
-        # connected -- the hint handler plan connects its own button
-        # (the 04-05 shell law, verbatim). The stretch reserves the
+        # Hint button (05-08: CONNECTED by its handler plan -- the
+        # 04-05 shell law, verbatim). The stretch reserves the
         # remaining game-lifecycle button slots for later phases.
         btn_row = QtWidgets.QHBoxLayout()
         self.btn_hint = QtWidgets.QPushButton('Hint', self)
@@ -115,6 +115,7 @@ class GameTab(QtWidgets.QWidget):
         btn_row.addWidget(self.btn_hint)
         btn_row.addStretch(1)
         layout.addLayout(btn_row)
+        self.btn_hint.clicked.connect(self._on_hint)
 
         # The CANCELLABLE countdown: a reusable member QTimer stepping
         # 3 -> 2 -> 1 -> GO (P-2). Constructed here; started only by
@@ -255,3 +256,46 @@ class GameTab(QtWidgets.QWidget):
         self._last_shown_elapsed = self._compute_elapsed()
         self._timer_label.setText(
             self._format_mss(self._last_shown_elapsed))
+
+    # ---- the Hint handler (05-08 PLAY-05) ----
+
+    def _guard(self, fn):
+        """The 04-09 _guard contract, VERBATIM (setup_window.py:637) --
+        the FIRST _guard on this class: run fn() mapping the ValueError
+        family + OSError to a modal warning box (modal CHILD -- allowed;
+        not a tick/countdown path, so P-6 does not apply). str(e) shown
+        verbatim: every house refusal already names its cause. Unexpected
+        exceptions PROPAGATE. Returns fn()'s value, None on refusal."""
+        try:
+            return fn()
+        except (ValueError, OSError) as e:
+            QtWidgets.QMessageBox.warning(self, 'AA-match', str(e))
+            return None
+
+    def _on_hint(self):
+        """Hint button: capability hint via _guard. NON-MODAL: the
+        recolor on-screen IS the feedback; NO success box (the
+        _on_start precedent, setup_window.py:920)."""
+        self._guard(self._hint_now)
+
+    def _hint_now(self):
+        """The non-modal impl: dispatch to the live GameWizard's
+        capability hint (recolor-only, PLAY-05). SILENT no-op when no
+        GameWizard is active -- pre-GO (the countdown window is
+        wizard-free, P-1) or no game at all (H-8; the
+        PA-gui_game:142-145 precedent); the recolor op is reachable
+        ONLY through an active wizard. Logs the pinned count line on
+        success; returns the hint's plain-data dict (or None pre-GO)."""
+        from pymol import cmd
+        from . import wizard as wizard_mod
+        prior = cmd.get_wizard()
+        if not isinstance(prior, wizard_mod.GameWizard):
+            return None
+        result = prior.hint()
+        if result is not None:
+            # result None == the wizard _guard already surfaced a
+            # refusal on the wizard panel (unreachable under
+            # solvability-by-construction) -- never crash logging it.
+            self._log('Hint: %d eligible amino acid(s) highlighted.'
+                      % result['count'])
+        return result

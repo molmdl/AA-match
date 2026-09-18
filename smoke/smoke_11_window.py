@@ -149,12 +149,41 @@ PART I  (T1b -- the 05-06 SETUP-11 two-tab restructure + GameTab
         pending None -> one stray direct tick -> no 'GO!' and no stale
         activation (pitfall P-2 closed). Restore: cancel + done pop +
         prefix-only cleanup -> baseline scene EXACTLY.
-PART J  (ALWAYS, T0-in-smoke): Gate A2 shape sanity echoed inside
+PART J  (T1b -- the 04-01 probe verdict is PASS (platform=offscreen),
+        so the dialog portions RUN; the 05-08 PLAY-05 hint drive;
+        cmd-substance + dialog asserts only, NO modals anywhere: the
+        hint handler is NON-MODAL by design -- impls never own boxes --
+        and this part drives dlg.game_tab._hint_now directly; every
+        color read uses the pinned cmd.iterate recipe, SMOKE-07's
+        _color_map precedent): J1 pre-GO -- start_game(activate=False)
+        + start_countdown -> dlg.game_tab._hint_now() returns None AND
+        the whole scene's color maps are UNCHANGED (H-8 silent no-op);
+        cancel + cleanup -> baseline. J2 main drive -- start_game()
+        (default activates) -> expected candidates computed IN-SMOKE
+        from the payload via capability.hint_candidate_slots over
+        engine.ligand_profile_molecule(0, 0) -> wiz.hint() returns
+        exactly that set (cmd path and pure path AGREE) -> every
+        role=required slot is a candidate (GEN-04 parity live). J3 per
+        candidate object: every elem C atom color ==
+        cmd.get_color_index('orange') and every non-carbon unchanged
+        from pre-hint; per NON-candidate (ligand, distractor slots,
+        the OTHER molecule, the baseline scene): ZERO color change
+        (H-5 closed). J4 re-press idempotence: color maps identical.
+        J5 hint-over-green: cmd.color('green', <one candidate>) ->
+        wiz.hint() -> carbons orange, non-carbons green (the coexist
+        probe). J6 handler line: dlg.game_tab._hint_now() returns the
+        dict AND _info_log carries 'Hint: %d eligible amino acid(s)
+        highlighted.' with the right count. J7 restore: canonical Done
+        -> the WHOLE scene's color maps == materialization colors (a
+        hinted-never-selected object included -- the (a) trap closed,
+        H-1) + _color_store cleared + stack empty + baseline scene
+        EXACTLY after prefix-only cleanup.
+PART K  (ALWAYS, T0-in-smoke): Gate A2 shape sanity echoed inside
         PyMOL's interpreter for the record -- aamatch/__init__.py
         carries ZERO column-0 import/from statements (the lazy-import
         discipline the menu rewire must preserve). (05-06 inserted PART
         I before the echo -- the established renumber pattern; the echo
-        letter shifted H -> I (05-05) -> J (05-06).)
+        letter shifted H -> I (05-05) -> J (05-06) -> K (05-08).)
 
 Conventions (frozen Phase 1, kept): anchor the repo root via sys.argv
 first / cwd fallback (never __file__); import aamatch directly (module
@@ -866,7 +895,7 @@ try:
           and dlg.game_tab._required_label.text() == 'Required: -',
           'timer=%r required=%r' % (dlg.game_tab._timer_label.text(),
                                     dlg.game_tab._required_label.text()))
-    check("part I2: btn_hint exists with text 'Hint' (unconnected)",
+    check("part I2: btn_hint exists with text 'Hint' (05-08 connected)",
           dlg.game_tab.btn_hint.text() == 'Hint',
           'text=%r' % (dlg.game_tab.btn_hint.text(),))
 
@@ -945,7 +974,179 @@ except Exception:
           'raised (see traceback)')
 
 # ============================================================
-# PART J: Gate A2 shape sanity inside PyMOL's interpreter (ALWAYS)
+# PART J: PLAY-05 hint drive (05-08; T1b -- the 04-01 probe verdict is
+# PASS (platform=offscreen), so the dialog portions RUN; cmd-substance
+# + dialog asserts only, NO modals anywhere: the hint handler is
+# NON-MODAL by design -- impls never own boxes -- and this part drives
+# dlg.game_tab._hint_now directly. Every color read uses the pinned
+# cmd.iterate recipe (SMOKE-07's _color_map precedent; wizard.py's
+# _atom_colors mechanism)
+# ============================================================
+try:
+    if setup_window is None:
+        raise RuntimeError('part A failed')
+    from pymol import cmd
+    from pymol.Qt import QtWidgets
+    from aamatch import capability, engine, gamestart, placement, wizard
+
+    app = QtWidgets.QApplication.instance()
+    if app is None:
+        app = QtWidgets.QApplication(['aamatch-smoke-11'])
+    dlg = setup_window.open_window()   # singleton reuse
+    baseline_j = cmd.get_names('objects')
+
+    orange_idx = cmd.get_color_index('orange')
+    green_idx = cmd.get_color_index('green')
+
+    def _scene_color_maps():
+        """{object: sorted [(ID, color, elem), ...]} for EVERY scene
+        object -- the whole-scene color read-back (H-1's assert must
+        cover hinted-never-selected objects, not just selected ones)."""
+        maps = {}
+        for obj in cmd.get_names('objects'):
+            rows = []
+            cmd.iterate(obj, 'stored.append((ID, color, elem))',
+                        space={'stored': rows})
+            maps[obj] = sorted((int(a), int(c), str(e))
+                               for (a, c, e) in rows)
+        return maps
+
+    # ---- J1: pre-GO silent no-op via the dialog handler (H-8) ----
+    wiz_j0 = gamestart.start_game(activate=False)
+    dlg.game_tab.start_countdown(wiz_j0)   # P-1: wizard OFF the stack
+    pre_j0 = _scene_color_maps()
+    res_j0 = dlg.game_tab._hint_now()
+    post_j0 = _scene_color_maps()
+    check('part J1: pre-GO hint press is a SILENT no-op (H-8, P-1 held)',
+          res_j0 is None and post_j0 == pre_j0
+          and cmd.get_wizard() is None,
+          'res=%r top=%r' % (res_j0, cmd.get_wizard()))
+    dlg.game_tab.cancel_pending_start()
+    dlg.game_tab._timer.stop()             # defensive: no 1 Hz ticking
+    placement.cleanup_game_objects()
+    check('part J1: the scratch game cleaned back to the baseline scene',
+          cmd.get_names('objects') == baseline_j
+          and cmd.get_wizard() is None,
+          'names=%r' % (cmd.get_names('objects'),))
+
+    # ---- J2: main drive -- cmd path and pure path AGREE ----
+    wiz_j = gamestart.start_game()         # defaults: activate at once
+    if not isinstance(wiz_j, wizard.GameWizard):
+        raise RuntimeError('part J: start_game did not activate a '
+                           'GameWizard (%r)' % (wiz_j,))
+    mat_j = _scene_color_maps()            # materialization colors
+    mol_j = wiz_j._payload['levels'][0]['molecules'][0]
+    slots_j = mol_j['grid']['slots']
+    required_j = mol_j['required']
+    profile_j = engine.ligand_profile_molecule(0, 0)
+    expected_j = capability.hint_candidate_slots(slots_j, profile_j,
+                                                 required_j)
+    res_j = wiz_j.hint()
+    check('part J2: hint() returns the pure-computed candidate set '
+          '(cmd path == pure path, DETECT-04 live)',
+          res_j is not None
+          and tuple(res_j['slot_ids']) == expected_j
+          and res_j['count'] == len(expected_j)
+          and len(expected_j) > 0,
+          'count=%r expected=%s'
+          % (res_j and res_j.get('count'), expected_j))
+    req_j = tuple(sorted(s['slot_id'] for s in slots_j
+                         if s.get('role') == 'required'))
+    check('part J2: every role=required slot IS a candidate '
+          '(GEN-04 parity, live recompute)',
+          len(req_j) > 0
+          and all(r in expected_j for r in req_j),
+          'required=%s candidates=%s' % (req_j, expected_j))
+
+    # ---- J3: carbon-only recolor on candidates; nothing else moved ----
+    post_j = _scene_color_maps()
+    cand_objs_j = tuple(sorted(wiz_j._objects_by_slot[s]
+                               for s in expected_j))
+    cand_set_j = set(cand_objs_j)
+    carbons_ok = True
+    for obj in cand_objs_j:
+        pre_obj_j = dict((a, c) for (a, c, _e) in mat_j[obj])
+        for (aid, col, elem) in post_j[obj]:
+            if elem == 'C':
+                if col != orange_idx:
+                    carbons_ok = False
+            elif col != pre_obj_j.get(aid):
+                carbons_ok = False
+    check('part J3: every candidate elem C atom reads HINT_COLOR '
+          '(orange), non-carbons unchanged from pre-hint',
+          carbons_ok, 'orange_index=%r' % (orange_idx,))
+    others_ok = all(post_j[obj] == mat_j[obj] for obj in post_j
+                    if obj not in cand_set_j)
+    check('part J3: NON-candidates carry ZERO color change (ligand, '
+          'distractor slots, the other molecule, the baseline scene '
+          '-- H-5 closed)', others_ok, 'candidates=%r' % (cand_objs_j,))
+    check('part J3: object NAMES unchanged (recolor only -- PLAY-04)',
+          sorted(post_j) == sorted(mat_j), '')
+
+    # ---- J4: repeated presses are idempotent (static candidate set) ----
+    res_j4 = wiz_j.hint()
+    post_j4 = _scene_color_maps()
+    check('part J4: re-press is IDEMPOTENT (same set, same colors)',
+          post_j4 == post_j and res_j4 is not None
+          and tuple(res_j4['slot_ids']) == expected_j
+          and res_j4['count'] == len(expected_j), '')
+
+    # ---- J5: hint-over-green coexists per-atom (probe check 6) ----
+    green_obj = cand_objs_j[0]
+    cmd.color('green', green_obj)          # whole-object green first
+    wiz_j.hint()                           # hint recolors carbons back
+    gmap_j = _scene_color_maps()[green_obj]
+    green_ok = True
+    for (aid, col, elem) in gmap_j:
+        if elem == 'C':
+            if col != orange_idx:
+                green_ok = False
+        elif col != green_idx:
+            green_ok = False
+    check('part J5: hint-over-green coexists per-atom (orange carbons '
+          '+ green non-carbons)', green_ok, 'obj=%r' % (green_obj,))
+
+    # ---- J6: the tab handler returns the dict + logs the pinned line ----
+    dlg.game_tab._info_log.clear()
+    res_j6 = dlg.game_tab._hint_now()
+    expect_line = ('Hint: %d eligible amino acid(s) highlighted.'
+                   % len(expected_j))
+    check('part J6: _hint_now returns the dict + logs the pinned hint '
+          'line (wizard still active)',
+          res_j6 is not None
+          and res_j6['count'] == len(expected_j)
+          and tuple(res_j6['slot_ids']) == expected_j
+          and expect_line in dlg.game_tab._info_log.toPlainText(),
+          'line=%r' % (expect_line,))
+
+    # ---- J7: canonical Done restores the WHOLE scene (ONE store) ----
+    cmd.set_wizard()                       # canonical Done pop
+    done_j = _scene_color_maps()
+    check('part J7: Done restores EVERY color map to materialization '
+          'colors (hinted-never-selected objects too -- the (a) trap '
+          'closed, H-1)',
+          done_j == mat_j, '')
+    check('part J7: the ONE store is cleared + the stack is empty',
+          wiz_j._color_store == {} and cmd.get_wizard() is None,
+          'store=%r top=%r' % (wiz_j._color_store, cmd.get_wizard()))
+    result_j = placement.cleanup_game_objects()
+    check('part J7: baseline scene EXACTLY after prefix-only cleanup',
+          result_j['deleted'] > 0
+          and cmd.get_names('objects') == baseline_j,
+          'deleted=%r after=%r baseline=%r'
+          % (result_j['deleted'], cmd.get_names('objects'), baseline_j))
+    app.processEvents()
+    dlg.close()
+    REC['hint'] = ('pre-GO no-op, pure/cmd agreement (count %d), '
+                   'carbon-only recolor, idempotence, hint-over-green, '
+                   'pinned log line, whole-scene Done restore'
+                   % len(expected_j))
+except Exception:
+    traceback.print_exc()
+    check('part J PLAY-05 hint drive', False, 'raised (see traceback)')
+
+# ============================================================
+# PART K: Gate A2 shape sanity inside PyMOL's interpreter (ALWAYS)
 # ============================================================
 try:
     init_path = os.path.join(_ROOT, 'aamatch', '__init__.py')
@@ -954,11 +1155,11 @@ try:
     offenders = [ln for ln in init_lines
                  if ln and not ln[0].isspace() and not ln.startswith('#')
                  and (ln.startswith('import ') or ln.startswith('from '))]
-    check('part J: Gate A2 shape -- zero column-0 import/from lines',
+    check('part K: Gate A2 shape -- zero column-0 import/from lines',
           not offenders, 'offenders=%r' % (offenders,))
 except Exception:
     traceback.print_exc()
-    check('part J Gate A2 echo', False, 'raised (see traceback)')
+    check('part K Gate A2 echo', False, 'raised (see traceback)')
 
 # --- evidence summary -------------------------------------------------
 print('SMOKE-ENV record: %s'

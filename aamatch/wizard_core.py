@@ -52,6 +52,14 @@ ROTATE_BUTTON_STEP_DEG = 90.0  # panel rotate-button step, degrees
 # PLAY-01 feedback color (v1 recolor precedent, game.py:208-213).
 HIGHLIGHT_COLOR = 'green'
 
+# PLAY-06 hint color (05-RESEARCH-hint.md standard_stack + Q3):
+# 'orange' is a registered PyMOL named color on this 2.5.0 build
+# (pymol-src/layer1/Color.cpp:1039; live-probed, color index 13),
+# is the v1 PA-game:12 hint precedent ("distinct from green=found"),
+# and must stay distinct from HIGHLIGHT_COLOR. Any color revisit is a
+# one-constant edit here + one test update -- never a hunt.
+HINT_COLOR = 'orange'
+
 
 def build_slot_map(registry, molecule_index):
     """Reverse map {object_name: slot_id} for ONE molecule's slots.

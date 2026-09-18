@@ -221,13 +221,23 @@ class TestColorSnapshotBookkeeping(unittest.TestCase):
 
 class TestMovementAndFeedbackConstants(unittest.TestCase):
     """Exact pinned constants (v1 recolor precedent game.py:208-213;
-    movement model from 03-RESEARCH-movement-spike.md)."""
+    movement model from 03-RESEARCH-movement-spike.md; hint color from
+    05-RESEARCH-hint.md standard_stack/Q3)."""
 
     def test_constants_exact(self):
         self.assertEqual(wizard_core.NUDGE_STEP, 1.0)
         self.assertEqual(wizard_core.ROTATE_STEP_DEG, 10.0)
         self.assertEqual(wizard_core.ROTATE_BUTTON_STEP_DEG, 90.0)
         self.assertEqual(wizard_core.HIGHLIGHT_COLOR, 'green')
+        self.assertEqual(wizard_core.HINT_COLOR, 'orange')
+
+    def test_hint_color_is_a_string(self):
+        # 'orange' is a registered named color on this PyMOL 2.5.0 build
+        # (Color.cpp:1039; live probe index 13) and must stay a plain
+        # str so cmd.color(HINT_COLOR, ...) consumes it directly.
+        self.assertIsInstance(wizard_core.HINT_COLOR, str)
+        self.assertNotEqual(wizard_core.HINT_COLOR,
+                            wizard_core.HIGHLIGHT_COLOR)
 
     def test_constants_are_float_steps(self):
         self.assertIsInstance(wizard_core.NUDGE_STEP, float)

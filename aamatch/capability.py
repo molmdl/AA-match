@@ -314,6 +314,94 @@ def residue_capabilities(resn, ligand_profile):
                if aa_capable(resn, t, ligand_profile))
 
 
+def hint_required_types(required):
+    """The resolved required dict -> tuple of required interaction types
+    (PLAY-05 pure half; single typing home, DETECT-04).
+
+    Mode semantics (pinned by the generator's emission,
+    generator.py:396/409-410/433-435):
+
+    - {'mode': 'any', 'items': []} -> ALL 7 canonical types. Scoring in
+      'any' mode credits ANY formed record (game_state.score:74-75), so
+      the hint vocabulary is the full type set; ligand-unsupported types
+      yield no candidates because aa_capable gates on the profile. The
+      setup's allowed list is generation-time sampling vocabulary only
+      -- the hint consumes the RESOLVED dict, never the setup.
+    - {'mode': 'list', ...} -> the item types in GIVEN order.
+
+    Fail-closed with the game_state.score / required_summary refusal
+    family wording: a non-dict `required`, an unknown mode, empty items
+    in 'list' mode, or an unknown item type all raise ValueError --
+    the hint half of PLAY-05 never silently resolves a shape scoring
+    would refuse.
+    """
+    if not isinstance(required, dict):
+        raise ValueError('hint_required_types: required must be a dict '
+                         '(found %s)' % type(required).__name__)
+    mode = required.get('mode')
+    if mode == 'any':
+        return tuple(INTERACTION_TYPES)
+    if mode == 'list':
+        items = required.get('items')
+        if not items:
+            raise ValueError(
+                "hint_required_types: 'list' mode requires a non-empty "
+                'items list (empty items is the any-mode '
+                'representation)')
+        unknown = [item.get('type') for item in items
+                   if item.get('type') not in INTERACTION_TYPES]
+        if unknown:
+            raise ValueError(
+                'hint_required_types: unknown required type(s): %s'
+                % ', '.join(str(t) for t in unknown))
+        return tuple(item['type'] for item in items)
+    raise ValueError('hint_required_types: unknown required mode %r '
+                     '(expected one of any, list)' % (mode,))
+
+
+def hint_candidate_slots(slots, profile, required):
+    """Slot ids whose AA could form >= 1 required type with this ligand
+    (PLAY-05 pure half; GEN-04 parity by construction).
+
+    `slots` = the payload's grid.slots list (plain dicts carrying
+    'slot_id' and the canonical uppercase 'aa' resn,
+    generator.py:840-850). Returns the tuple of matching slot_ids in
+    PAYLOAD order (row-major, deterministic).
+
+    The candidate predicate is residue_capabilities & required_types --
+    the SAME predicate the generator's allocate_slots used for
+    solvability-by-construction (generator.py:492-496) and the detector
+    reads for typing (DETECT-04: hint, solvability and scoring agree by
+    construction, never by convention). Capable DISTRACTORS ARE
+    included: their resn may be perfectly capable even though their
+    generation-time provenance field is empty -- the hint NEVER reads
+    that provenance (it is pinned as not the hint's data source,
+    generator.py:453-456). Every role='required' slot is therefore
+    always a candidate for a real generated payload (GEN-04 parity,
+    pinned by tests/test_generator_invariants.py).
+
+    Fail-closed: a non-list `slots` value or a slot without
+    'slot_id'/'aa' raises ValueError; an unknown resn is simply
+    incapable (residue_capabilities fails closed to the empty set).
+    """
+    if not isinstance(slots, list):
+        raise ValueError(
+            "hint_candidate_slots: slots must be the payload's "
+            'grid.slots list (found %s)' % type(slots).__name__)
+    required_types = frozenset(hint_required_types(required))
+    out = []
+    for slot in slots:
+        if not isinstance(slot, dict) or 'slot_id' not in slot \
+                or 'aa' not in slot:
+            raise ValueError(
+                'hint_candidate_slots: every slot must be a dict with '
+                "'slot_id' and 'aa' (found %r)" % (slot,))
+        caps = residue_capabilities(slot['aa'], profile)
+        if caps & required_types:
+            out.append(slot['slot_id'])
+    return tuple(out)
+
+
 # Generator aa-tokens -> materialization vocabulary. ONE mapping for the
 # whole pipeline: the generator emits the token, the materializer calls
 # cmd.fragment(entry['fragment']) and the level spec carries

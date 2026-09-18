@@ -308,5 +308,61 @@ class TestRecordsForMolecule(unittest.TestCase):
         self.assertEqual(self._filter([]), [])
 
 
+class TestRebaseTimer(unittest.TestCase):
+    """The pause-freeze op (plan 05-04): rebase_timer(now, elapsed) re-anchors
+    the ONE timer so the shown elapsed FREEZES at `elapsed` — the 1 Hz tick's
+    modal-open pause mechanism mutates the single anchor in place, never a
+    GUI-side clock copy (P-4: two clocks drift, the v1 bug class).
+    """
+
+    def test_anchor_math_freezes_elapsed(self):
+        gs = GameState()
+        gs.start_timer(1000.0)
+        gs.rebase_timer(1100.0, 42.0)
+        # anchor = float(now) - float(elapsed)
+        self.assertEqual(gs.timer_anchor, 1058.0)
+        # the re-derived elapsed at the rebase instant is exactly 42.0
+        self.assertEqual(1100.0 - gs.timer_anchor, 42.0)
+
+    def test_float_coercion_on_both_args(self):
+        gs = GameState()
+        gs.start_timer(1000.0)
+        # String/int inputs coerce, matching start_timer's float() contract;
+        # the STORED anchor is a real float.
+        gs.rebase_timer('1100', 42)
+        self.assertIsInstance(gs.timer_anchor, float)
+        self.assertEqual(gs.timer_anchor, 1058.0)
+
+    def test_total_over_never_started_game(self):
+        # The tick only calls it after GO, but the op itself is total over
+        # valid inputs — no start_timer precondition.
+        gs = GameState()
+        gs.rebase_timer(500.0, 0.0)
+        self.assertEqual(gs.timer_anchor, 500.0)
+        self.assertIsInstance(gs.timer_anchor, float)
+
+    def test_negative_elapsed_refuses(self):
+        # A negative elapsed would push the anchor into the future and
+        # REWIND the clock — fail-closed, never silent.
+        gs = GameState()
+        gs.start_timer(1000.0)
+        try:
+            gs.rebase_timer(1100.0, -5.0)
+        except ValueError as e:
+            self.assertIn('non-negative', str(e))
+        else:
+            self.fail('negative elapsed must raise ValueError')
+        # The anchor is untouched by the refused call.
+        self.assertEqual(gs.timer_anchor, 1000.0)
+
+    def test_to_dict_carries_rebased_anchor(self):
+        gs = GameState()
+        gs.start_timer(1000.0)
+        gs.rebase_timer(1100.0, 42.0)
+        self.assertEqual(gs.to_dict()['timer_anchor'], 1058.0)
+        self.assertEqual(GameState.from_dict(gs.to_dict()).timer_anchor,
+                         1058.0)
+
+
 if __name__ == '__main__':
     unittest.main()

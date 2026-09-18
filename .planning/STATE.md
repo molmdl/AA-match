@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-09-05)
 
 **Core value:** The player can place amino acids onto a small molecule in the PyMOL 3D viewer and the game correctly detects and scores the interactions they form — turning unguided 3D manipulation practice into a scored game.
-**Current focus:** Phase 4 — Qt Setup Window (**ALL PLANS EXECUTED**: 04-01..04-15 done; 04-14 checkpoint A (criteria 1-3) APPROVED + 04-15 checkpoint B (criterion 4 + upload E2E + extension confirms) APPROVED-WITH-FIX, the one fix-batch item resolved and re-green; next: the Phase-4 phase verifier)
+**Current focus:** Phase 4 — Qt Setup Window — **COMPLETE ✓ (verified 2026-09-16: 04-VERIFICATION.md PASSED 58/58 must-haves)**; next: Phase 5 (Game Status Tab & Start Sequence)
 
 ## Current Position
 
-Phase: 4 of 9 (Qt Setup Window) — **ALL PLANS EXECUTED (phase verifier next)**
+Phase: 4 of 9 (Qt Setup Window) — **COMPLETE ✓ (verified 2026-09-16)**
 Plan: 15 of 15 complete — 04-01 (offscreen-Qt probe) + 04-02 (setup_form pure helpers, TDD) + 04-04 (ligand_content upload pipe) + 04-03 (game_file core, TDD) + 04-05 (Qt window shell + menu rewire) + 04-06 (game_file upload helpers, TDD) + 04-07 (7-field window form + collect/apply round-trip) + 04-08 (cmd-tier upload bridge + SMOKE-12) + 04-09 (SETUP-07 buttons + SMOKE-11 PART C) + 04-10 (SETUP-03 upload button: _on_browse_upload/_ingest_upload + upload_ready_for + SMOKE-11 PART D) + 04-11 (SETUP-09 Cleanup handler: wizard pop-first + prefix-only deletion + SMOKE-11 PART E) + 04-12 (SETUP-08 export handler: module-level construct-free export_game + _export_game_to + _last_export + SMOKE-11 PART F/F2) + 04-13 (SETUP-10 Start handler: _on_start/_start_impl thin seam + Decision-4 seed policy + SMOKE-11 PART G) + 04-14 (checkpoint A APPROVED: SETUP-01..07 / ROADMAP criteria 1-3 human-verified 12/12 PASS) + 04-15 (checkpoint B APPROVED: ROADMAP criterion 4 + upload E2E PASS-AFTER-FIX + extension confirms — 1 cosmetic fix-batch item applied and re-green) DONE
-Status: **Phase 4 ALL PLANS EXECUTED** — 04-15 checkpoint B APPROVED-WITH-FIX (human, 2026-09-18): criterion 4 green (export with seed/kind-version-1/det-1 on disk; cleanup 0-count + mid-game exact-restore + wizard pop; start + gameplay through the window; Start-after-Generate replayed the exported seed — Decision 4 closed; double-Start clean, viewer never frozen); upload E2E built a playable benzamide game (seed 888026772, 1 molecule/9 slots) PASS-AFTER-FIX after the human-prescribed two-line upload-label fix (commit 27e8f34; py_compile + 688/688 WSL + SMOKE-11 PART D re-green); extensions '.aam.setup.json' / '.aamatch.json' + 'game.aamatch.json' human-approved — Decisions 2/3 CLOSED. All four ROADMAP Phase-4 criteria now have [HUMAN] verdict coverage (A: 1-3; B: 4).
+Status: **Phase 4 VERIFIED (58/58 must-haves, 2026-09-16)** — 04-15 checkpoint B APPROVED-WITH-FIX (human, 2026-09-18): criterion 4 green (export with seed/kind-version-1/det-1 on disk; cleanup 0-count + mid-game exact-restore + wizard pop; start + gameplay through the window; Start-after-Generate replayed the exported seed — Decision 4 closed; double-Start clean, viewer never frozen); upload E2E built a playable benzamide game (seed 888026772, 1 molecule/9 slots) PASS-AFTER-FIX after the human-prescribed two-line upload-label fix (commit 27e8f34; py_compile + 688/688 WSL + SMOKE-11 PART D re-green); extensions '.aam.setup.json' / '.aamatch.json' + 'game.aamatch.json' human-approved — Decisions 2/3 CLOSED. All four ROADMAP Phase-4 criteria now have [HUMAN] verdict coverage (A: 1-3; B: 4).
 Last activity: 2026-09-18 — 04-15 checkpoint B verdicts recorded: 8/8 PASS (step 5 PASS-AFTER-FIX) on setenv.bat PyMOL 2.5.0; score-surface clarification recorded for Phase-5 planning (wizard panel = Phase-4 feedback; Qt Game tab/timer/Hint = SETUP-11/Phase 5); one fix commit + one docs commit
 
-Progress: [██████████] 15/15 of Phase 4 · [███░░░░░░░] 33% of project (3/9 phases done; Phase 4 pending verifier)
+Progress: [██████████] 15/15 of Phase 4 · [████░░░░░░] 44% of project (4/9 phases done)
 
 ## Performance Metrics
 
@@ -233,8 +233,8 @@ Decisions are logged in PROJECT.md Key Decisions table. Seeded from PROJECT.md a
 
 ## Session Continuity
 
-Last session: 2026-09-18 (04-15 checkpoint B — ROADMAP criterion 4 + upload E2E + extension confirms APPROVED by human with 1 cosmetic fix-batch item; fix applied (27e8f34) and re-green; verdicts recorded in 04-15-SUMMARY.md + STATE.md; one fix commit + one docs commit)
-Stopped at: **Phase 4 ALL PLANS EXECUTED (15/15)** — next: the Phase-4 phase verifier, then Phase 4 close-out
+Last session: 2026-09-18 (phase verifier PASSED — 04-VERIFICATION.md 58/58 must-haves; SETUP-01..10 marked Complete; Phase 4 closed)
+Stopped at: **Phase 4 COMPLETE (15/15, verified 58/58)** — next: plan Phase 5 (Game Status Tab & Start Sequence: SETUP-11, SCORE-04, PLAY-05)
 Resume file: None
 
 ## Next Actions

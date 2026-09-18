@@ -13,16 +13,16 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Setup
 
-- [ ] **SETUP-01**: Starting the plugin opens a setup window (modeless — the 3D viewer stays interactive)
-- [ ] **SETUP-02**: User can choose a demo set from a dropdown of curated, pre-downloaded sets
-- [ ] **SETUP-03**: User can upload a set of small molecules in SDF or MOL2 format (bond-order-carrying, so valence-correct rendering is preserved)
-- [ ] **SETUP-04**: User can set number of small molecules per level (default 2–5, reasonable cap)
-- [ ] **SETUP-05**: User can set number of difficulty levels per game (default 3–5, reasonable cap)
-- [ ] **SETUP-06**: User can configure the required-interaction mode: exclusive (required target is `any` interaction formed), block-exclusive (required set is the specific checked interactions), or unset (random required set)
-- [ ] **SETUP-07**: User can Reset (restore defaults), Randomize, Save Setup, and Load Setup from the setup window
-- [ ] **SETUP-08**: User can Generate and export the initial game state to a shareable file
-- [ ] **SETUP-09**: User can Cleanup model (remove game-generated objects, restore original objects)
-- [ ] **SETUP-10**: User can Start the game from the setup window
+- [x] **SETUP-01**: Starting the plugin opens a setup window (modeless — the 3D viewer stays interactive)
+- [x] **SETUP-02**: User can choose a demo set from a dropdown of curated, pre-downloaded sets
+- [x] **SETUP-03**: User can upload a set of small molecules in SDF or MOL2 format (bond-order-carrying, so valence-correct rendering is preserved)
+- [x] **SETUP-04**: User can set number of small molecules per level (default 2–5, reasonable cap)
+- [x] **SETUP-05**: User can set number of difficulty levels per game (default 3–5, reasonable cap)
+- [x] **SETUP-06**: User can configure the required-interaction mode: exclusive (required target is `any` interaction formed), block-exclusive (required set is the specific checked interactions), or unset (random required set)
+- [x] **SETUP-07**: User can Reset (restore defaults), Randomize, Save Setup, and Load Setup from the setup window
+- [x] **SETUP-08**: User can Generate and export the initial game state to a shareable file
+- [x] **SETUP-09**: User can Cleanup model (remove game-generated objects, restore original objects)
+- [x] **SETUP-10**: User can Start the game from the setup window
 - [ ] **SETUP-11**: Starting stores the initial state, generates representations per setup, switches to the Game status tab, and counts down 3-2-1 before play begins
 
 ### Game Generation
@@ -116,16 +116,16 @@ Which phases cover which requirements. Updated during roadmap creation (2026-09-
 | Requirement | Phase | Status |
 |-------------|-------|--------|
 | INSTALL-01 | Phase 1 | Complete |
-| SETUP-01 | Phase 4 | Pending |
-| SETUP-02 | Phase 4 | Pending |
-| SETUP-03 | Phase 4 | Pending |
-| SETUP-04 | Phase 4 | Pending |
-| SETUP-05 | Phase 4 | Pending |
-| SETUP-06 | Phase 4 | Pending |
-| SETUP-07 | Phase 4 | Pending |
-| SETUP-08 | Phase 4 | Pending |
-| SETUP-09 | Phase 4 | Pending |
-| SETUP-10 | Phase 4 | Pending |
+| SETUP-01 | Phase 4 | Complete |
+| SETUP-02 | Phase 4 | Complete |
+| SETUP-03 | Phase 4 | Complete |
+| SETUP-04 | Phase 4 | Complete |
+| SETUP-05 | Phase 4 | Complete |
+| SETUP-06 | Phase 4 | Complete |
+| SETUP-07 | Phase 4 | Complete |
+| SETUP-08 | Phase 4 | Complete |
+| SETUP-09 | Phase 4 | Complete |
+| SETUP-10 | Phase 4 | Complete |
 | SETUP-11 | Phase 5 | Pending |
 | GEN-01 | Phase 2 | Complete |
 | GEN-02 | Phase 2 | Complete |

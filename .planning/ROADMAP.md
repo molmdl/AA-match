@@ -20,7 +20,7 @@ AA-match ships as a standard PyMOL 2.5.0 plugin implementing an educational smal
 - [x] **Phase 1: Bootstrap & Pure Foundation** — installable plugin skeleton, WSL→Windows toolchain proof, pure setup/persistence/level-spec layer with WSL tests
 - [x] **Phase 2: Headless Game Engine** — human-approved thresholds → detector → always-solvable generator → bundled data → cmd-only generate/place/detect/score, headless end-to-end
 - [x] **Phase 3: Wizard Gameplay Loop** — click-to-select, move/rotate onto the ligand, Confirm; movement-model decision; no helper visuals
-- [ ] **Phase 4: Qt Setup Window** — modeless setup window: demo dropdown, upload, params, the seven bottom buttons
+- [x] **Phase 4: Qt Setup Window** — modeless setup window: demo dropdown, upload, params, the seven bottom buttons
 - [ ] **Phase 5: Game Status Tab & Start Sequence** — start sequence, live status tab (info box / timer / required interactions), Hint
 - [ ] **Phase 6: Scoring Lifecycle & Endgame** — confirm/debrief/advance, skip/give-up, endgame screen, restart/reset
 - [ ] **Phase 7: Checkpoint & Game-File Persistence** — save/restore round-trip, Import of exported games
@@ -238,7 +238,7 @@ Lifted from PITFALLS.md "Pitfall-to-Phase Mapping" (topic names → this roadmap
 | 1. Bootstrap & Pure Foundation | 9/9 | Complete | 2026-09-06 |
 | 2. Headless Game Engine | 16/16 | Complete (verified 2026-09-07 — 02-VERIFICATION.md passed 5/5) | 2026-09-07 |
 | 3. Wizard Gameplay Loop | 7/7 | Complete (verified 2026-09-15 — 03-VERIFICATION.md passed 27/27) | 2026-09-15 |
-| 4. Qt Setup Window | 15/15 | Plans complete (checkpoints A+B approved) | - |
+| 4. Qt Setup Window | 15/15 | Complete (verified 2026-09-16 — 04-VERIFICATION.md passed 58/58) | 2026-09-16 |
 | 5. Game Status Tab & Start Sequence | 0/TBD | Not started | - |
 | 6. Scoring Lifecycle & Endgame | 0/TBD | Not started | - |
 | 7. Checkpoint & Game-File Persistence | 0/TBD | Not started | - |

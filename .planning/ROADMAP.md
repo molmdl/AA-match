@@ -131,7 +131,7 @@ Plans:
 - [x] 04-12-PLAN.md — Generate-and-export handler (game container write, seed policy, _last_export)
 - [x] 04-13-PLAN.md — Start handler (build_state pre-checks before cleanup, seed policy, thin start_game seam)
 - [x] 04-14-PLAN.md — [HUMAN] checkpoint A: ROADMAP criteria 1-3 (modeless window, form, setup-file round-trip)
-- [ ] 04-15-PLAN.md — [HUMAN] checkpoint B: ROADMAP criterion 4 (export/cleanup/start) + upload E2E + extension confirms
+- [x] 04-15-PLAN.md — [HUMAN] checkpoint B: ROADMAP criterion 4 (export/cleanup/start) + upload E2E + extension confirms
 
 ### Phase 5: Game Status Tab & Start Sequence
 **Goal**: Starting a game feels like a game: the start sequence stores state and builds representations, the Game status tab takes over with live status, a 3-2-1 countdown starts play, and Hint works.
@@ -238,7 +238,7 @@ Lifted from PITFALLS.md "Pitfall-to-Phase Mapping" (topic names → this roadmap
 | 1. Bootstrap & Pure Foundation | 9/9 | Complete | 2026-09-06 |
 | 2. Headless Game Engine | 16/16 | Complete (verified 2026-09-07 — 02-VERIFICATION.md passed 5/5) | 2026-09-07 |
 | 3. Wizard Gameplay Loop | 7/7 | Complete (verified 2026-09-15 — 03-VERIFICATION.md passed 27/27) | 2026-09-15 |
-| 4. Qt Setup Window | 14/15 | In progress (checkpoint A approved; checkpoint B remains) | - |
+| 4. Qt Setup Window | 15/15 | Plans complete (checkpoints A+B approved) | - |
 | 5. Game Status Tab & Start Sequence | 0/TBD | Not started | - |
 | 6. Scoring Lifecycle & Endgame | 0/TBD | Not started | - |
 | 7. Checkpoint & Game-File Persistence | 0/TBD | Not started | - |

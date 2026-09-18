@@ -12,6 +12,22 @@ Gate A2 preserved), the Phase-4 Qt setup window tomorrow (it passes the
 user's validated setup through the same seam). One call takes the scene
 from any state to a playable game:
 
+Phase-5 deferred activation (SETUP-11, plan 05-05): ``start_game``'s
+``activate=False`` branch takes the scene to a FULLY-PREPARED game
+WITHOUT pushing the wizard (spec.md: "countdown ... then start the
+game" -- during the countdown the player must NOT pick/move/confirm via
+a live game wizard). The Phase-5 Qt window orchestrates the whole
+layout: pop the prior wizard -> prepare with ``activate=False`` ->
+switch tab -> countdown 3-2-1 -> GO -> ``activate_game(wiz)``.
+``activate_game`` is THE single activation home: it re-evaluates the
+conditional replace AT ACTIVATION (the wizard stack can change during
+the countdown -- the 03-05 decision is re-checked, never cached) and
+anchors the per-molecule timer from zero via
+``engine._current_game().start_timer(time.time())``. The DEFAULT path
+(``activate=True``) is byte-identical to the pre-Phase-5 behaviour: one
+call still goes from any state to a playable game, and SMOKE-08's
+checks (incl. the msm ORDER-LAW teeth) stay green unchanged.
+
 1. ``placement.cleanup_game_objects()`` FIRST -- a restart must never
    leave two generations of ``_aam_*`` objects (prefix-only deletion;
    user objects untouched).
@@ -19,18 +35,22 @@ from any state to a playable game:
    setup is validated fail-closed INSIDE new_game.
 3. ``engine.materialize(payload, 0)`` -- ONE level (the game's current
    level; cross-level staging is Phase 4/6 flow).
-4. ``GameWizard(payload, registry, 0, 0).activate(replace)`` where
-   replace is CONDITIONAL (RECORDED DECISION, revised per checker):
-   replace=1 ONLY when the prior top-of-stack wizard is itself a
-   GameWizard (restart hygiene: pop + clean the old game wizard so its
-   stale msm/colors/selection cannot leak; 03-03's activate snapshots
-   msm AFTER the push, so the popped wizard's cleanup-restored user
-   value is what the new game captures -- no explicit pre-pop needed
-   here). Otherwise replace=0 (plain push): a user's wizard (e.g.
-   ``wizard measurement``) is NEVER popped at start -- it goes dormant
-      beneath the game and auto-resumes after Done (stack-native
-      lifecycle, 03-RESEARCH-wizard-interaction sec. 1.2/2.3). On a fresh
-      PyMOL (empty stack, prior is None) this degenerates to a plain push.
+4. ``activate_game(wiz)`` -- THE single activation home: on the default
+   path ``start_game`` calls it right after the compose; on the
+   deferred path the Phase-5 window calls it at GO. It pushes the
+   prepared ``GameWizard(payload, registry, 0, 0)`` with a CONDITIONAL
+   replace (RECORDED DECISION, revised per checker) RE-EVALUATED at
+   activation time, and starts the timer from zero. replace=1 ONLY when
+   the then-current top-of-stack wizard is itself a GameWizard (restart
+   hygiene: pop + clean the old game wizard so its stale msm/colors/
+   selection cannot leak; 03-03's activate snapshots msm AFTER the
+   push, so the popped wizard's cleanup-restored user value is what the
+   new game captures -- no explicit pre-pop needed here). Otherwise
+   replace=0 (plain push): a user's wizard (e.g.
+   ``wizard measurement``) is NEVER popped at activation -- it goes
+   dormant beneath the game and auto-resumes after Done (stack-native
+   lifecycle, 03-RESEARCH-wizard-interaction sec. 1.2/2.3). On a fresh
+   PyMOL (empty stack, top is None) this degenerates to a plain push.
 5. Move the ACTIVE molecule's ligand to the FRONT of its own AA-grid
    layer -- IN WORLD SPACE (03-07 human decision 2026-09-10: the human
    explicitly rejected further camera surgery -- "move the molecule"
@@ -113,7 +133,11 @@ from any state to a playable game:
 Engine state (payload / registry / GameState) lives module-side in
 ``aamatch.engine`` -- the wizard requires it live, which start_game
 guarantees by construction (new_game + materialize are called here,
-in order, every time).
+in order, every time). The initial-state INPUT tuple lives module-side
+HERE in ``_last_start`` (SETUP-11; see below): Phase 6 Restart replays
+it verbatim through ``start_game`` (ROADMAP:159). NOT a v1-style
+backup object -- the materialization inputs fully regenerate the
+scene, so no backup machinery is ported.
 
 The editor_scheme start-guard contingency (03-RESEARCH-movement-spike
 sec. 5.6) is explicitly NOT implemented: no start-time scheme check on
@@ -125,6 +149,7 @@ Python floor: PyMOL's Windows Python 3.9 at runtime, written 3.6-safe
 """
 
 import math
+import time
 
 from pymol import cmd
 
@@ -138,6 +163,19 @@ from .wizard import GameWizard
 # raw material; a full 5 Angstrom of viewer-relative lead on top gives
 # unambiguous parallax with zero occlusion).
 _FRONT_LEAD = 5.0
+
+# SETUP-11 initial-state store (plan 05-05): after every successful
+# start, start_game captures the materialization INPUT tuple here --
+# {'setup' (DEEP-COPIED so later widget/export mutation can never
+# corrupt the restart source), 'seed', 'candidates', 'ligand_content'}.
+# Phase 6 Restart replays the tuple verbatim through start_game
+# (ROADMAP:159 -- the inputs fully regenerate the scene; this is NOT
+# a v1-style backup object). Set AFTER new_game + materialize (and the
+# compose) SUCCEED and BEFORE any wizard mutation: a failed start
+# leaves the store holding the last successfully BUILT game's tuple.
+# Lives in gamestart (never in the window's _last_export): a later
+# export must never corrupt the restart source.
+_last_start = None
 
 
 def _active_molecule_selection(registry):
@@ -282,10 +320,30 @@ def _move_ligand_in_front(registry):
                   lig_name, state=1, camera=0)
 
 
-def start_game(setup=None, seed=42, candidates=None, ligand_content=None):
+def activate_game(wiz):
+    """Push the prepared GameWizard + anchor the timer (Phase 5 GO
+    step). The conditional replace is re-evaluated HERE (the stack can
+    change during the countdown -- 03-05's decision re-checked, not
+    cached).
+
+    THE single activation home (05-RESEARCH-window-start-timer
+    Pattern 2): the default ``start_game`` path calls it immediately
+    after the compose; the deferred SETUP-11 countdown path calls it
+    at GO. Either way the push happens per the 03-03 msm ORDER LAW
+    (snapshot after the push) and the per-molecule timer anchors from
+    zero on the live GameState.
+    """
+    from . import engine
+    replace = 1 if isinstance(cmd.get_wizard(), GameWizard) else 0
+    wiz.activate(replace=replace)
+    engine._current_game().start_timer(time.time())
+
+
+def start_game(setup=None, seed=42, candidates=None, ligand_content=None,
+               activate=True):
     """One call: fresh/cleaned scene -> materialized game -> active
-    GameWizard. Returns the LIVE wizard instance (smokes assert on its
-    registry/payload via the return value).
+    GameWizard (unless ``activate=False``). Returns the wizard instance
+    (smokes assert on its registry/payload via the return value).
 
     ``setup``  None -> a copy of setup_state.DEFAULTS (frozen Phase-1
                defaults); a user dict (Phase 4's Qt window output) is
@@ -301,6 +359,21 @@ def start_game(setup=None, seed=42, candidates=None, ligand_content=None):
                site unchanged). Passed through to BOTH engine.new_game
                and engine.materialize so the one-call seam stays
                complete for uploaded payloads.
+    ``activate``  True (default) preserves every existing caller
+               byte-for-byte: the wizard is pushed immediately and the
+               timer anchors at once (the pre-Phase-5 behaviour). False
+               PREPARES the game fully (cleanup -> new_game ->
+               materialize -> compose) but defers activation to
+               ``activate_game(wiz)`` for the countdown window
+               (SETUP-11; the Phase-5 Qt path) -- the returned wizard
+               is NOT on the stack until GO.
+
+    Initial-state store: after new_game + materialize (and the compose)
+    SUCCEED and BEFORE any wizard mutation, the materialization INPUT
+    tuple is captured in module-level ``_last_start`` (setup is
+    DEEP-COPIED; a failed start leaves the store holding the last
+    successfully BUILT game's tuple -- Phase 6 Restart's replay
+    source).
 
     Fail-closed: engine.GenerationError / EngineError / WizardError
     (the ValueError family) propagate -- the menu handler surfaces the
@@ -312,8 +385,10 @@ def start_game(setup=None, seed=42, candidates=None, ligand_content=None):
                                     ligand_content=ligand_content)
     registry = engine.materialize(payload, 0,
                                   ligand_content=ligand_content)
-    prior = cmd.get_wizard()
     wiz = GameWizard(payload, registry, 0, 0)
+    # (No stack-top caching here: the conditional-replace top-of-stack
+    # read moved INTO activate_game, re-evaluated at activation time --
+    # the stack can change during the deferred path's countdown.)
     # Compose BEFORE activate (failure must never leave a live wizard
     # over a half-composed scene): GEOMETRY first -- move the active
     # ligand in FRONT of its own grid in world space (03-07 human
@@ -330,7 +405,17 @@ def start_game(setup=None, seed=42, candidates=None, ligand_content=None):
     _move_ligand_in_front(registry)
     _frame_ligand_above_grid(registry)
     cmd.zoom(_active_molecule_selection(registry), buffer=5.0)
-    wiz.activate(replace=(1 if isinstance(prior, GameWizard) else 0))
+    # Capture the initial-state INPUT tuple AFTER new_game+materialize
+    # (and the compose) SUCCEEDED and BEFORE any wizard mutation
+    # (SETUP-11): the setup is DEEP-COPIED (allowed_interactions list
+    # aliasing -- the 04-09 _reset_impl note) so later widget/export
+    # mutation can never corrupt Phase 6 Restart's replay source.
+    global _last_start
+    import copy
+    _last_start = {'setup': copy.deepcopy(spec), 'seed': seed,
+                   'candidates': candidates, 'ligand_content': ligand_content}
+    if activate:
+        activate_game(wiz)
     slots = sum(len(mol['slots']) for mol in registry['molecules'])
     print('AA-match %s: game started -- %d molecule(s), %d amino-acid '
           'slot(s), seed %d (cleaned %d prior game object(s)).'

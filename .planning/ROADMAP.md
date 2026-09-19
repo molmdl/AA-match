@@ -168,10 +168,19 @@ Plans:
   4. [HUMAN] The endgame screen shows per-level scores + total, a stopped timer, and a winning message with time taken, total molecules and levels, and skip/give-up counts. (SCORE-07)
   5. [HUMAN] Restart replays the stored initial state into a fresh game; Reset returns all amino acids to their grid positions (spec replay — correct for the chosen movement model). (SCORE-09, SCORE-10)
 **Research notes**: PITFALLS topics *scoring-lifecycle*. Reset must reset the same mechanism that moved the AA (PITFALL 6); Restart/Reset route through the Phase-1 backup module + spec replay, never "undo" (PITFALL 9). Confirmation warnings are spec-required — do not drop them.
-**Plans**: TBD
+**Plans**: 10 plans
 
 Plans:
-- [ ] 06-01: (TBD)
+- [ ] 06-01-PLAN.md — [TDD] GameState lifecycle data layer (end-state fields, stop_timer, has_record guard, keyed score store, endgame_summary) + SMOKE-14 key-pin evolution
+- [ ] 06-02-PLAN.md — [TDD] status_text Phase-6 surface (6 event builders, last_event poll-diff, warning constants, endgame_lines, format_mss)
+- [ ] 06-04-PLAN.md — gamestart compose seam: molecule_index params + public compose_molecule_view + SMOKE-08 PART 5 (D6 deviation recorded: no anchor_timer param — level advance rebinds the same wizard)
+- [ ] 06-03-PLAN.md — engine lifecycle ops (guarded record_scored, skip_molecule, advance_level, give_up/complete_game, reads) + SMOKE-15 PART A
+- [ ] 06-05-PLAN.md — wizard confirm rework + atomic two-book advancement (molecule/level/complete) + event marker + _state_dict extension + SMOKE-15 PART B
+- [ ] 06-06-PLAN.md — wizard skip/give_up ops + game-over gating across all gameplay handlers + game_reset marker + SMOKE-15 PART C
+- [ ] 06-07-PLAN.md — Game tab: Confirm button + Skip/Give-Up dropdown with spec warnings + sync _refresh_status + stale-required-label fix + SMOKE-16 PART A
+- [ ] 06-08-PLAN.md — Game tab: Restart (_last_start replay through the deferred sequence) + Reset (wizard-owned grid replay) + SMOKE-16 PART B
+- [ ] 06-09-PLAN.md — endgame modal (v1 _finish_win pattern, ~100 ms after the pop burst) + wrapper scheduling tails + SMOKE-16 PART C + full six-smoke regression battery
+- [ ] 06-10-PLAN.md — [HUMAN] consolidated GUI checkpoint: ROADMAP criteria 1-5 + wording confirmation (one session, setenv.bat PyMOL)
 
 ### Phase 7: Checkpoint & Game-File Persistence
 **Goal**: Games survive closing PyMOL: checkpoints fully reconstruct a running game (positions, scores, counters, timer), and exported game files load through the Game status tab's Import button.

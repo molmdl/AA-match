@@ -24,7 +24,9 @@ PART 1  accessors -- engine.game_status() raises EngineError BEFORE
         molecule counting (molecule_pos == 1, molecule_total ==
         len(registry['molecules'])), and is mutation-free across calls
         (s2 == status); engine.game_status() then returns the EXACT
-        7-key GameState.to_dict() shape with molecule_scores == [].
+        11-key GameState.to_dict() shape (the 7 original keys plus the
+        06-01 lifecycle-key evolution: game_over / end_state /
+        final_time / score_per_molecule) with molecule_scores == [].
         timer_anchor tolerance is UNCONDITIONAL (None or float): same-
         wave plan 05-05 makes the DEFAULT start_game path anchor the
         timer at activation, so a merged-tree regression run may
@@ -138,8 +140,9 @@ _STATE_KEYS = ('molecule_id', 'molecule_pos', 'molecule_total',
                'required', 'selected', 'result', 'error',
                'level_pos', 'level_total')
 _GAME_KEYS = ('current_level_index', 'current_molecule_index',
-              'molecule_scores', 'skip_count', 'giveup_count',
-              'timer_anchor', 'formed_types_per_molecule')
+              'formed_types_per_molecule', 'final_time', 'game_over',
+              'giveup_count', 'molecule_scores', 'score_per_molecule',
+              'skip_count', 'end_state', 'timer_anchor')
 
 # ============================================================
 # PART 0: pre-start snapshot
@@ -203,9 +206,12 @@ try:
     check('repeated get_status is mutation-free (s2 == status)',
           s2 == status, '')
 
-    # -- 5: engine.game_status exact 7-key shape ---
+    # -- 5: engine.game_status exact 11-key shape (pin EVOLVED for the
+    # 06-01 GameState lifecycle data layer: game_over, end_state,
+    # final_time, score_per_molecule added to the original 7) ---
     gs = engine.game_status()
-    check('game_status key set is EXACTLY the 7 to_dict keys',
+    check('game_status key set is EXACTLY the 11 to_dict keys (06-01 '
+          'evolution)',
           isinstance(gs, dict) and set(gs) == set(_GAME_KEYS),
           'keys=%s' % (sorted(gs) if isinstance(gs, dict) else type(gs),))
     anchor = gs.get('timer_anchor')

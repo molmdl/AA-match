@@ -171,10 +171,10 @@ Plans:
 **Plans**: 10 plans
 
 Plans:
-- [ ] 06-01-PLAN.md — [TDD] GameState lifecycle data layer (end-state fields, stop_timer, has_record guard, keyed score store, endgame_summary) + SMOKE-14 key-pin evolution
-- [ ] 06-02-PLAN.md — [TDD] status_text Phase-6 surface (6 event builders, last_event poll-diff, warning constants, endgame_lines, format_mss)
-- [ ] 06-04-PLAN.md — gamestart compose seam: molecule_index params + public compose_molecule_view + SMOKE-08 PART 5 (D6 deviation recorded: no anchor_timer param — level advance rebinds the same wizard)
-- [ ] 06-03-PLAN.md — engine lifecycle ops (guarded record_scored, skip_molecule, advance_level, give_up/complete_game, reads) + SMOKE-15 PART A
+- [x] 06-01-PLAN.md — [TDD] GameState lifecycle data layer (end-state fields, stop_timer, has_record guard, keyed score store, endgame_summary) + SMOKE-14 key-pin evolution
+- [x] 06-02-PLAN.md — [TDD] status_text Phase-6 surface (6 event builders, last_event poll-diff, warning constants, endgame_lines, format_mss)
+- [x] 06-04-PLAN.md — gamestart compose seam: molecule_index params + public compose_molecule_view + SMOKE-08 PART 5 (D6 deviation recorded: no anchor_timer param — level advance rebinds the same wizard)
+- [x] 06-03-PLAN.md — engine lifecycle ops (guarded record_scored, skip_molecule, advance_level, give_up/complete_game, reads) + SMOKE-15 PART A
 - [ ] 06-05-PLAN.md — wizard confirm rework + atomic two-book advancement (molecule/level/complete) + event marker + _state_dict extension + SMOKE-15 PART B
 - [ ] 06-06-PLAN.md — wizard skip/give_up ops + game-over gating across all gameplay handlers + game_reset marker + SMOKE-15 PART C
 - [ ] 06-07-PLAN.md — Game tab: Confirm button + Skip/Give-Up dropdown with spec warnings + sync _refresh_status + stale-required-label fix + SMOKE-16 PART A

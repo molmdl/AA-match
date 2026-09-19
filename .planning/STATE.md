@@ -5,21 +5,21 @@
 See: .planning/PROJECT.md (updated 2026-09-05)
 
 **Core value:** The player can place amino acids onto a small molecule in the PyMOL 3D viewer and the game correctly detects and scores the interactions they form — turning unguided 3D manipulation practice into a scored game.
-**Current focus:** Phase 5 — Game Status Tab & Start Sequence — **COMPLETE ✓ (verified 2026-09-20: 05-VERIFICATION.md PASSED 88/88 must-haves)**; next: Phase 6 (Scoring Lifecycle & Endgame)
+**Current focus:** Phase 6 — Scoring Lifecycle & Endgame — **IN PROGRESS (4/10 plans done)**; next: 06-05 (wizard confirm rework)
 
 ## Current Position
 
-Phase: 5 of 9 (Game Status Tab & Start Sequence) — **COMPLETE ✓ (verified 2026-09-20)**
-Plan: 11 of 11 complete — 05-01 (status_text pure battery, TDD) + 05-02 (hint predicates + GEN-04 parity, TDD) + 05-03 (HINT_COLOR pin, TDD) + 05-04 (rebase_timer, TDD) + 05-05 (gamestart deferred-activation seam + SMOKE-11 PART H) + 05-07 (status read accessors + SMOKE-14 T1a) [wave 1: 6 parallel worktrees] + 05-06 (GameTab shell + two-tab restructure + SMOKE-11 PART I) [wave 2] + 05-08 (Hint vertical slice + SMOKE-11 PART J) [wave 3] + 05-09 (window-driven deferred start + PART G rework) + 05-10 (status poll-diff wiring + SMOKE-14 T1b) [wave 4: 2 parallel worktrees; one orchestrator integration fix 0d5cf92 — SMOKE-11 PART I2 pins shell labels on a FRESH GameTab] + 05-11 ([HUMAN] consolidated checkpoint APPROVED 9/9 steps + 1 fix-batch resolved in-session) DONE
-Status: **Phase 5 VERIFIED (88/88 must-haves, 2026-09-20)** — 05-11 checkpoint APPROVED (human, 2026-09-20): SETUP-11 start sequence (deferred start, wizard-free 3-2-1 countdown, timer from zero, P-2 cancel paths, restart feel), SCORE-04 status surface (info-box narrative + dedupe, M:SS timer OUTSIDE the box with modal-freeze P-5 human-confirmed, both required-mode label forms), PLAY-05 hint (carbon-only orange recolor, idempotent, coexists with selection green, full restores incl. hinted-never-selected; 'orange' CONFIRMED legible) — steps 1-6/8/9 PASS, step 7 adjudicated EXPECTED two-surface vocabulary (zero defect); fix-batch b749135: the block_exclusive refusal now explains the every-molecule semantics + remedy. Verifier: 05-VERIFICATION.md 88/88 (39 truths + 28 artifacts + 21 key links), zero gaps.
-Last activity: 2026-09-20 — 05-11 checkpoint verdicts recorded + refusal-message fix (b749135) + phase verifier PASSED (88/88); Phase 5 closed
+Phase: 6 of 9 (Scoring Lifecycle & Endgame)
+Plan: 4 of 10 complete — 06-01 (GameState lifecycle data layer, TDD) + 06-02 (status_text Phase-6 surface, TDD) + 06-04 (gamestart compose seam) [wave 1: parallel worktrees, merged] + 06-03 (engine lifecycle ops + SMOKE-15 PART A — guarded record_scored/skip, atomic anchor-preserving advance_level, give_up/complete_game, reads) DONE
+Status: In progress — Phase 5 VERIFIED (88/88 must-haves, 2026-09-20); Phase 6 wave 2 (06-03) executed 2026-09-19: 826/826 WSL green, SMOKE-15 PART A 28/28 PASS, SMOKE-04 regression PASS
+Last activity: 2026-09-19 — Completed 06-03-PLAN.md (wave 2, single-plan)
 
-Progress: [██████████] 11/11 of Phase 5 · [█████░░░░░] 56% of project (5/9 phases done)
+Progress: [████░░░░░░] 4/10 of Phase 6 · [█████████░] 91% of planned plans (62/68; 5/9 phases done)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 55 (Phase 1: 01-01…01-09; Phase 2: 02-01…02-15; Phase 3: 03-01…03-07; Phase 4: 04-01…04-15; Phase 5: 05-01…05-11)
+- Total plans completed: 62 (Phase 1: 01-01…01-09; Phase 2: 02-01…02-15; Phase 3: 03-01…03-07; Phase 4: 04-01…04-15; Phase 5: 05-01…05-11; Phase 6 so far: 06-01…06-04)
 - Average duration: ~11 min (02-03); 6 min (02-04); ~29 min (02-05); 23 min (02-06); 4 min (02-09); 11 min (02-07); 17 min (02-08); ~20 min (02-13); ~27 min (02-11); 16 min (02-14); 29 min (02-15); ~15 min (03-01); ~55 min (03-02); ~14 min (03-03); ~27 min (03-04); ~14 min (03-05); ~10 min (04-01); ~8 min (04-02); 16 min (04-04); ~9 min (04-03); 17 min (04-05); ~15 min (04-06); 16 min (04-07); 23 min (04-08); ~49 min (04-09); ~7 min (04-10); ~16 min (04-11); ~10 min (04-12); ~6 min (04-13); ~5 min (04-14 docs-only checkpoint record); ~15 min (04-15 fix + re-verify + checkpoint record); ~7 min (05-02) + 3 min (05-04) + ~7 min (05-05) + 5 min (05-07) + ~17 min (05-08) + ~10 min (05-09) + ~13 min (05-10) + ~20 min (05-11 fix + record); 05-01/05-03/05-06 durations unrecorded (agent reports omitted them)
 - Total execution time: —
 
@@ -32,6 +32,7 @@ Progress: [██████████] 11/11 of Phase 5 · [█████�
 | 3 | 7/7 ✓ | ~15 min (03-01) + ~55 min (03-02) + ~14 min (03-03) + ~27 min (03-04) + ~14 min (03-05) + 2d checkpoint incl. debug detour + fix batch (03-06) + 4d checkpoint incl. framing chain (03-07) | — |
 | 4 | 15/15 ✓ | ~10 min (04-01) + ~8 min (04-02) + 16 min (04-04) + ~9 min (04-03) + 17 min (04-05) + ~15 min (04-06) + 16 min (04-07) + 23 min (04-08) + ~49 min (04-09) + ~7 min (04-10) + ~16 min (04-11) + ~10 min (04-12) + ~6 min (04-13) + ~5 min (04-14 docs-only) + ~15 min (04-15 fix+record) | — |
 | 5 | 11/11 ✓ | ~7 min (05-02) + 3 min (05-04) + ~7 min (05-05) + 5 min (05-07) [wave 1: 6 parallel] + ~20 min (05-06) + ~17 min (05-08) + ~10 min (05-09) + ~13 min (05-10) [wave 4: 2 parallel] + ~20 min (05-11) | — |
+| 6 | 4/10 | 47 min (06-01) + ~12 min (06-03); 06-02/06-04 durations unrecorded (wave-1 agent reports omitted them) | — |
 
 **Recent Trend:**
 - Last 5 plans: 05-07 (5 min), 05-08 (~17 min), 05-09 (~10 min), 05-10 (~13 min), 05-11 (~20 min)
@@ -192,6 +193,14 @@ Decisions are logged in PROJECT.md Key Decisions table. Seeded from PROJECT.md a
 - (05-11, recorded clarification — Phase 8/9 help text inherits) Mode semantics: block_exclusive DEMANDS the checked set from EVERY molecule (per-molecule derive_required refuses naming types); unset SAMPLES per-molecule from each picked molecule's own support (so cation_pi/salt_bridge 'work' there). Dev-set chemistry: benzamide h_bond/pi_stacking/cation_pi/hydrophobic (no charge -> no salt_bridge); acetate h_bond/salt_bridge/hydrophobic (no ring -> no pi_stacking/cation_pi); at molecules_per_level=2 the distinctness rule puts BOTH ligands in every level -> non-universal checked sets refuse deterministically. The refusal is solvability-by-construction fail-closed (the 04-12 seed-7 Randomize anecdote = same mechanism). Probe evidence: block_exclusive {salt_bridge} at m=1 seed 0 DID generate — the mode works; the dev-set pool is the constraint. Phase 8's ~9 curated diverse demos are the designed cure.
 - **Phase 5 VERIFIED (2026-09-20): 05-VERIFICATION.md 88/88 (39 truths + 28 artifacts + 21 key links), zero gaps.** All three ROADMAP criteria carry [HUMAN] verdict coverage (05-11) + mechanical re-runs (SMOKE-08/11/13/14).
 
+### Phase 6 Decisions & Laws (Scoring Lifecycle & Endgame)
+
+- (06-03) **Guard-at-the-front-door law:** the Q10/D4 one-record refusal lives in the NEW op `engine.record_scored` — NEVER inside `score_current`/`confirm` (they stay byte-identical; smoke_04/06/07 legitimately re-score molecule (0,0) as detection probes). Refusal text pinned VERBATIM: 'This molecule already has a recorded result (scored or skipped) -- use Restart to replay the game.' One guard site covers Confirm AND Skip; the Phase-3 wizard.py:550-553 re-Confirm caveat is CLOSED.
+- (06-03) Skip = `record_scored` + `skip_count += 1` — the detection-at-skip-time partial score records via the SAME path as Confirm (02-10 sanctioned semantics, spec.md:44). Give Up does NOT score the current molecule (spec.md:44-45 — the partial store is Skip's only).
+- (06-03) `advance_level` = fail-closed ATOMIC ordering: guards (game over / no payload / no-next-level refusal naming the indexes) → `placement.cleanup_game_objects()` → `materialize(_payload, L+1, ligand_content=_ligand_content)` → `GameState.advance_level()` LAST (pure data cannot fail; a materialize failure leaves the book consistent). Timer anchor UNTOUCHED by design (game clock runs across levels; only give_up/complete_game freeze via stop_timer). Cleanup-order hazard (cleaned scene + live stale wizard, clicks no-op via empty-pk1; Restart is the recovery) documented in the op's docstring.
+- (06-03) Mutate-then-delegate-to-read: `give_up`/`complete_game` set the end state and return the READ-only `engine.endgame_summary()` op (a read can never change the game); `advance_molecule` is deliberately range-check-free (data-only — the wizard owns last-molecule-ends-level routing); engine retains module `_ligand_content` for uploaded-game re-materialization at level advance.
+- (06-03) SMOKE-15 PART A (28/28) proves the lifecycle headlessly over the default seed-42 game; PART letters left open for 06-05/06-06 (PART B/C wizard halves). Zero-score record mechanics (grid state → (0.0, [])) held at seed 42 — score correctness stays smoke_04's proven domain.
+
 
 ### Pending Todos
 
@@ -254,13 +263,13 @@ Decisions are logged in PROJECT.md Key Decisions table. Seeded from PROJECT.md a
 
 ## Session Continuity
 
-Last session: 2026-09-20 (phase verifier PASSED — 05-VERIFICATION.md 88/88 must-haves; SETUP-11/SCORE-04/PLAY-05 marked Complete; Phase 5 closed)
-Stopped at: **Phase 5 COMPLETE (11/11, verified 88/88)** — next: plan Phase 6 (Scoring Lifecycle & Endgame: SCORE-01, SCORE-02, SCORE-03, SCORE-05, SCORE-06, SCORE-07, SCORE-09, SCORE-10)
+Last session: 2026-09-19 (06-03 executed: engine lifecycle ops + SMOKE-15 PART A 28/28; 826/826 WSL green; SMOKE-04 regression PASS)
+Stopped at: Completed 06-03-PLAN.md (Phase 6 wave 2, 4/10 done — 06-01/06-02/06-03/06-04) — next: **06-05 (wizard confirm rework + atomic two-book advancement + SMOKE-15 PART B)**
 Resume file: None
 
 ## Next Actions
 
-- **Phase 5 ALL PLANS EXECUTED + VERIFIED (2026-09-20):** waves 1-5 done — wave 1: 6 parallel worktrees (05-01/02/03/04/05/07), wave 2: 05-06, wave 3: 05-08, wave 4: 2 parallel worktrees (05-09/05-10), wave 5: 05-11 [HUMAN] checkpoint. AGENTS.md worktree protocol throughout; zero merge conflicts; one documented cross-plan smoke interaction fixed by orchestrator commit 0d5cf92 (SMOKE-11 PART I2 fresh-GameTab pin). 753/753 WSL green; SMOKE-08/11/13/14 PASS. **Next: `/gsd-plan-phase 6`.**
+- **Phase 6 wave 1 + 06-03 DONE (2026-09-19):** wave 1 (parallel worktrees): 06-01 GameState lifecycle data layer (47 min; 826 tests incl. 06-02 growth; SMOKE-14 11-key pin) + 06-02 status_text Phase-6 surface + 06-04 gamestart compose seam. Wave 2: 06-03 engine lifecycle ops (record_scored guard, skip_molecule, advance_level, give_up/complete_game, reads) — SMOKE-15 PART A 28/28 headless PASS; SMOKE-04 regression PASS (confirm/score_current byte-identical); PROSE_PIN untouched. **Next: 06-05 (wizard confirm rework; depends on 06-03 + 06-02).**
 - **Phase 6 planning inherits (Phase 5):** (a) `gamestart._last_start` is the Restart replay source — replay the stored tuple verbatim through start_game (05-05); (b) EVENT_KINDS reserves the Phase-6 kinds — emit molecule_scored/molecule_skipped/gave_up/level_advanced/game_reset/game_restarted from the lifecycle ops; status_events NEVER fingerprints 'result' (pitfall 7); (c) score feedback surfaces: wizard panel (Phase-4 contract) + endgame screen (Phase 6) — the Game tab logs events only; (d) GameState.record_molecule_result (score + canonical formed types in ONE call) + skip_count already exist (02-10) — Confirm/Skip/Give-Up wire the lifecycle around them; (e) GameWizard._guard RETURNS the op result now (None on guarded refusal) — new lifecycle ops can deliver data through the seam (05-08); (f) rebase_timer + the 1 Hz tick are the timer-fairness pattern — reuse for Phase-6 modals; the ~100 ms post-`cmd.color` win-screen modal timing pattern (research note) applies to the SCORE-07 endgame screen.
 - **Phase-6 requirements:** SCORE-01 (Confirm: molecule score + running total + advance), SCORE-02 (post-confirm debrief formed vs missed, numbers only), SCORE-03 (level advance at higher difficulty), SCORE-05 (Skip Molecule with confirmation warning, partial score stored), SCORE-06 (Give Up with confirmation warning, endgame at current stage), SCORE-07 (endgame screen: per-level scores + total, stopped timer, winning message with time taken / total molecules and levels / skip+give-up counts), SCORE-09 (Restart replays _last_start), SCORE-10 (Reset returns AAs to grid — the 03-03 position-only replay mechanism exists; Phase 6 wires the button; PITFALL 6: reset the same mechanism that moved the AA; PITFALL 9: backup module + spec replay, never 'undo'). Confirmation warnings are spec-required — do not drop them.
 - **Mode-semantics clarification (05-11 — Phase 8/9 help text + data curation inherits):** block_exclusive demands EVERY molecule support ALL checked types (refusal now self-explains, b749135); unset samples per-molecule from each picked molecule's own support; dev-set chemistry limits (benzamide no salt_bridge, acetate no ring) make non-universal checked sets refuse deterministically at m=2; Phase 8's curated diverse demos are the cure.

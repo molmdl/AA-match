@@ -21,7 +21,7 @@ AA-match ships as a standard PyMOL 2.5.0 plugin implementing an educational smal
 - [x] **Phase 2: Headless Game Engine** — human-approved thresholds → detector → always-solvable generator → bundled data → cmd-only generate/place/detect/score, headless end-to-end
 - [x] **Phase 3: Wizard Gameplay Loop** — click-to-select, move/rotate onto the ligand, Confirm; movement-model decision; no helper visuals
 - [x] **Phase 4: Qt Setup Window** — modeless setup window: demo dropdown, upload, params, the seven bottom buttons
-- [ ] **Phase 5: Game Status Tab & Start Sequence** — start sequence, live status tab (info box / timer / required interactions), Hint
+- [x] **Phase 5: Game Status Tab & Start Sequence** — start sequence, live status tab (info box / timer / required interactions), Hint
 - [ ] **Phase 6: Scoring Lifecycle & Endgame** — confirm/debrief/advance, skip/give-up, endgame screen, restart/reset
 - [ ] **Phase 7: Checkpoint & Game-File Persistence** — save/restore round-trip, Import of exported games
 - [ ] **Phase 8: Demo Curation & Citations** — ~9 curated tier slots under propose → approve → fetch/commit; DATA_SOURCES.md
@@ -145,17 +145,17 @@ Plans:
 **Plans**: 11 plans
 
 Plans:
-- [ ] 05-01-PLAN.md — status_text.py pure battery (required display + event diff rules + EVENT_KINDS) + PURE_MODULES registration (TDD)
-- [ ] 05-02-PLAN.md — capability hint predicates battery (hint_required_types + hint_candidate_slots) + GEN-04 parity invariant (TDD)
-- [ ] 05-03-PLAN.md — HINT_COLOR = 'orange' constant + exact-constants pin (TDD)
-- [ ] 05-04-PLAN.md — GameState.rebase_timer pause-freeze op (TDD)
-- [ ] 05-05-PLAN.md — gamestart deferred-activation seam (activate kwarg + activate_game + _last_start) + SMOKE-11 T1a part
-- [ ] 05-06-PLAN.md — game_window.py GameTab shell (info box, timer tick + modal pause, cancellable countdown) + SetupWindow QTabWidget restructure + SCANNED_MODULES growth + SMOKE-11 T1b parts
-- [ ] 05-07-PLAN.md — status read accessors (GameWizard.get_status + engine.game_status) + SMOKE-14 T1a
-- [ ] 05-08-PLAN.md — Hint vertical slice (engine.ligand_profile_molecule + GameWizard.hint snapshot-before-recolor + GameTab handler + SMOKE-11 hint part)
-- [ ] 05-09-PLAN.md — window-driven deferred start sequence (_pop_game_wizard + _start_impl rework + cleanup cancel) + SMOKE-11 PART G rework
-- [ ] 05-10-PLAN.md — status poll-diff wiring (_refresh_status + _begin_play content) + SMOKE-14 T1b
-- [ ] 05-11-PLAN.md — [HUMAN] consolidated GUI checkpoint: SETUP-11 + SCORE-04 + PLAY-05 (execute-checkpoint-record)
+- [x] 05-01-PLAN.md — status_text.py pure battery (required display + event diff rules + EVENT_KINDS) + PURE_MODULES registration (TDD)
+- [x] 05-02-PLAN.md — capability hint predicates battery (hint_required_types + hint_candidate_slots) + GEN-04 parity invariant (TDD)
+- [x] 05-03-PLAN.md — HINT_COLOR = 'orange' constant + exact-constants pin (TDD)
+- [x] 05-04-PLAN.md — GameState.rebase_timer pause-freeze op (TDD)
+- [x] 05-05-PLAN.md — gamestart deferred-activation seam (activate kwarg + activate_game + _last_start) + SMOKE-11 T1a part
+- [x] 05-06-PLAN.md — game_window.py GameTab shell (info box, timer tick + modal pause, cancellable countdown) + SetupWindow QTabWidget restructure + SCANNED_MODULES growth + SMOKE-11 T1b parts
+- [x] 05-07-PLAN.md — status read accessors (GameWizard.get_status + engine.game_status) + SMOKE-14 T1a
+- [x] 05-08-PLAN.md — Hint vertical slice (engine.ligand_profile_molecule + GameWizard.hint snapshot-before-recolor + GameTab handler + SMOKE-11 hint part)
+- [x] 05-09-PLAN.md — window-driven deferred start sequence (_pop_game_wizard + _start_impl rework + cleanup cancel) + SMOKE-11 PART G rework
+- [x] 05-10-PLAN.md — status poll-diff wiring (_refresh_status + _begin_play content) + SMOKE-14 T1b
+- [x] 05-11-PLAN.md — [HUMAN] consolidated GUI checkpoint: SETUP-11 + SCORE-04 + PLAY-05 (execute-checkpoint-record)
 
 ### Phase 6: Scoring Lifecycle & Endgame
 **Goal**: The full game semantics work end-to-end: confirm scores and advances, levels escalate, skip/give-up protect the player, restart/reset recover, and the endgame reports the complete result.
@@ -249,7 +249,7 @@ Lifted from PITFALLS.md "Pitfall-to-Phase Mapping" (topic names → this roadmap
 | 2. Headless Game Engine | 16/16 | Complete (verified 2026-09-07 — 02-VERIFICATION.md passed 5/5) | 2026-09-07 |
 | 3. Wizard Gameplay Loop | 7/7 | Complete (verified 2026-09-15 — 03-VERIFICATION.md passed 27/27) | 2026-09-15 |
 | 4. Qt Setup Window | 15/15 | Complete (verified 2026-09-16 — 04-VERIFICATION.md passed 58/58) | 2026-09-16 |
-| 5. Game Status Tab & Start Sequence | 0/TBD | Not started | - |
+| 5. Game Status Tab & Start Sequence | 11/11 | Complete (verified 2026-09-20 — 05-VERIFICATION.md passed 88/88) | 2026-09-20 |
 | 6. Scoring Lifecycle & Endgame | 0/TBD | Not started | - |
 | 7. Checkpoint & Game-File Persistence | 0/TBD | Not started | - |
 | 8. Demo Curation & Citations | 0/TBD | Not started | - |

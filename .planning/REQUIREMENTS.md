@@ -23,7 +23,7 @@ Requirements for initial release. Each maps to roadmap phases.
 - [x] **SETUP-08**: User can Generate and export the initial game state to a shareable file
 - [x] **SETUP-09**: User can Cleanup model (remove game-generated objects, restore original objects)
 - [x] **SETUP-10**: User can Start the game from the setup window
-- [ ] **SETUP-11**: Starting stores the initial state, generates representations per setup, switches to the Game status tab, and counts down 3-2-1 before play begins
+- [x] **SETUP-11**: Starting stores the initial state, generates representations per setup, switches to the Game status tab, and counts down 3-2-1 before play begins
 
 ### Game Generation
 
@@ -40,7 +40,7 @@ Requirements for initial release. Each maps to roadmap phases.
 - [x] **PLAY-02**: Player can move/rotate/adjust the selected amino acid onto the small molecule
 - [x] **PLAY-03**: Player can switch to another amino acid by clicking it, or click Confirm to finish the molecule
 - [x] **PLAY-04**: No helper lines/dots are displayed during gameplay
-- [ ] **PLAY-05**: Hint button recolors carbon atoms of amino acids that could form one of the required interactions (recolor only)
+- [x] **PLAY-05**: Hint button recolors carbon atoms of amino acids that could form one of the required interactions (recolor only)
 
 ### Interaction Detection
 
@@ -55,7 +55,7 @@ Requirements for initial release. Each maps to roadmap phases.
 - [ ] **SCORE-01**: Confirm runs detection and shows the molecule score (fraction of required interactions formed, binary per interaction) plus running total, then advances to the next molecule
 - [ ] **SCORE-02**: After Confirm, a debrief shows which required interactions formed vs missed (numbers only — no geometry, respecting the no-helper rule)
 - [ ] **SCORE-03**: Finishing a level advances to the next level with higher difficulty
-- [ ] **SCORE-04**: Game status tab shows a rolling info box, elapsed timer (outside the info box), and the type + number of required interactions (`any` or from the allowed list)
+- [x] **SCORE-04**: Game status tab shows a rolling info box, elapsed timer (outside the info box), and the type + number of required interactions (`any` or from the allowed list)
 - [ ] **SCORE-05**: Skip Molecule (with confirmation warning) stores the partial score and moves to the next molecule
 - [ ] **SCORE-06**: Give Up (with confirmation warning) ends the game at the current stage and shows the endgame screen
 - [ ] **SCORE-07**: After all levels: per-level scores + total score, stopped timer, and a winning message with time taken, total molecules and levels, and skip/give-up counts
@@ -126,7 +126,7 @@ Which phases cover which requirements. Updated during roadmap creation (2026-09-
 | SETUP-08 | Phase 4 | Complete |
 | SETUP-09 | Phase 4 | Complete |
 | SETUP-10 | Phase 4 | Complete |
-| SETUP-11 | Phase 5 | Pending |
+| SETUP-11 | Phase 5 | Complete |
 | GEN-01 | Phase 2 | Complete |
 | GEN-02 | Phase 2 | Complete |
 | GEN-03 | Phase 2 | Complete |
@@ -137,7 +137,7 @@ Which phases cover which requirements. Updated during roadmap creation (2026-09-
 | PLAY-02 | Phase 3 | Complete |
 | PLAY-03 | Phase 3 | Complete |
 | PLAY-04 | Phase 3 | Complete |
-| PLAY-05 | Phase 5 | Pending |
+| PLAY-05 | Phase 5 | Complete |
 | DETECT-01 | Phase 2 | Complete |
 | DETECT-02 | Phase 2 | Complete |
 | DETECT-03 | Phase 2 | Complete |
@@ -146,7 +146,7 @@ Which phases cover which requirements. Updated during roadmap creation (2026-09-
 | SCORE-01 | Phase 6 | Pending |
 | SCORE-02 | Phase 6 | Pending |
 | SCORE-03 | Phase 6 | Pending |
-| SCORE-04 | Phase 5 | Pending |
+| SCORE-04 | Phase 5 | Complete |
 | SCORE-05 | Phase 6 | Pending |
 | SCORE-06 | Phase 6 | Pending |
 | SCORE-07 | Phase 6 | Pending |
@@ -170,4 +170,4 @@ Which phases cover which requirements. Updated during roadmap creation (2026-09-
 
 ---
 *Requirements defined: 2026-09-05*
-*Last updated: 2026-09-05 after roadmap creation (traceability filled)*
+*Last updated: 2026-09-20 — Phase 5 closed (SETUP-11, PLAY-05, SCORE-04 → Complete; 05-VERIFICATION.md passed 88/88)*

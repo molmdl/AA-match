@@ -1,4 +1,4 @@
-"""Tests for aamatch/game_state.py (plan 02-10, TDD).
+"""Tests for aamatch/game_state.py (plan 02-10, TDD; 06-01 lifecycle battery).
 
 SCORE-01 semantics over the CANONICAL detector record contract
 (02-06/02-07): ``results`` is a list of dicts each carrying ``r['type']``
@@ -10,6 +10,10 @@ Note on fixture records: score() is type-agnostic over records — it reads
 only ``r['type']``, so the tests use minimal ``{'type': t}`` dicts rather
 than the full 12-key / metrics-rich detector records. Any canonical record
 satisfies the same contract.
+
+06-01 additions (the SCORE-06/07 lifecycle data layer): end-state fields,
+``stop_timer``, ``has_record``, the keyed ``score_per_molecule`` store,
+and the fail-closed ``endgame_summary`` builder.
 """
 
 import unittest
@@ -206,6 +210,8 @@ class TestGameStateRoundTrip(unittest.TestCase):
         gs.skip_count = 1
         gs.giveup_count = 2
         gs.start_timer(999.25)
+        gs.stop_timer(1064.25)              # 06-01: final_time 65.0 + over
+        gs.end_state = 'completed'
         return gs
 
     def test_round_trip_lossless(self):
@@ -229,6 +235,51 @@ class TestGameStateRoundTrip(unittest.TestCase):
         self.assertEqual(back.timer_anchor, 999.25)
         self.assertEqual(back.formed_types_per_molecule,
                          gs.formed_types_per_molecule)
+
+    def test_to_dict_has_exact_11_keys(self):
+        # 06-01: the additive growth is exactly these 4 keys on top of the
+        # original 7 (SMOKE-14 pins the same 11-key set engine-side).
+        d = self._loaded_state().to_dict()
+        self.assertEqual(set(d), {
+            'current_level_index', 'current_molecule_index',
+            'molecule_scores', 'skip_count', 'giveup_count',
+            'timer_anchor', 'formed_types_per_molecule',
+            'game_over', 'end_state', 'final_time',
+            'score_per_molecule'})
+
+    def test_round_trip_carries_end_state_fields(self):
+        d = self._loaded_state().to_dict()
+        self.assertEqual(d['game_over'], True)
+        self.assertEqual(d['end_state'], 'completed')
+        self.assertEqual(d['final_time'], 65.0)
+        self.assertEqual(d['score_per_molecule'],
+                         {'L0M0': 1.0, 'L1M0': 1.0})
+        back = GameState.from_dict(d)
+        self.assertEqual(back.game_over, True)
+        self.assertEqual(back.end_state, 'completed')
+        self.assertEqual(back.final_time, 65.0)
+        self.assertEqual(back.score_per_molecule, d['score_per_molecule'])
+
+    def test_from_dict_accepts_older_7_key_dict(self):
+        # Accept-older law (.get defaults): a pre-06-01 7-key dict loads
+        # WITHOUT KeyError and yields the zero-init defaults for the 4
+        # new fields (additive-only evolution).
+        old = {'current_level_index': 0, 'current_molecule_index': 1,
+               'molecule_scores': [0.5], 'skip_count': 0,
+               'giveup_count': 0, 'timer_anchor': None,
+               'formed_types_per_molecule': {'L0M0': ['h_bond']}}
+        gs = GameState.from_dict(old)
+        self.assertFalse(gs.game_over)
+        self.assertIsNone(gs.end_state)
+        self.assertIsNone(gs.final_time)
+        self.assertEqual(gs.score_per_molecule, {})
+
+    def test_to_dict_copies_score_per_molecule(self):
+        gs = self._loaded_state()
+        d = gs.to_dict()
+        d['score_per_molecule']['L9M9'] = 9.9
+        self.assertNotIn('L9M9', gs.score_per_molecule)
+        self.assertEqual(gs.score_per_molecule['L0M0'], 1.0)
 
 
 def _mol_rec(rtype, aa_object, lig_object):
@@ -362,6 +413,322 @@ class TestRebaseTimer(unittest.TestCase):
         self.assertEqual(gs.to_dict()['timer_anchor'], 1058.0)
         self.assertEqual(GameState.from_dict(gs.to_dict()).timer_anchor,
                          1058.0)
+
+
+class TestEndStateFields(unittest.TestCase):
+    """06-01 SCORE-06/07 groundwork: a game that ends (give-up or natural
+    completion) carries game_over=True, an end_state reason, a frozen
+    final_time, and a keyed per-molecule score store — all zero-init on
+    a fresh GameState."""
+
+    def test_new_fields_zero_init(self):
+        gs = GameState()
+        self.assertFalse(gs.game_over)
+        self.assertIsNone(gs.end_state)
+        self.assertIsNone(gs.final_time)
+        self.assertEqual(gs.score_per_molecule, {})
+
+    def test_zero_init_survives_to_dict(self):
+        d = GameState().to_dict()
+        self.assertFalse(d['game_over'])
+        self.assertIsNone(d['end_state'])
+        self.assertIsNone(d['final_time'])
+        self.assertEqual(d['score_per_molecule'], {})
+
+
+class TestStopTimer(unittest.TestCase):
+    """stop_timer(now) = capture the final elapsed ONCE + freeze (Q8).
+    The timer anchor itself stays untouched — it is the pause mechanism's
+    home. The caller (the lifecycle op) owns WHEN the game stops; the op
+    only snapshots the clock and marks game_over."""
+
+    def test_captures_elapsed_and_marks_game_over(self):
+        gs = GameState()
+        gs.start_timer(1000.0)
+        gs.stop_timer(1065.0)
+        self.assertEqual(gs.final_time, 65.0)
+        self.assertIsInstance(gs.final_time, float)
+        self.assertTrue(gs.game_over)
+
+    def test_anchor_stays_untouched(self):
+        # The anchor is the pause mechanism's home (rebase_timer's live
+        # derivation); stop_timer must NEVER disturb it.
+        gs = GameState()
+        gs.start_timer(1000.0)
+        gs.stop_timer(1065.0)
+        self.assertEqual(gs.timer_anchor, 1000.0)
+
+    def test_stop_does_not_own_the_reason(self):
+        # end_state ('completed'|'gave_up') is set by the lifecycle op that
+        # owns the end cause — stop_timer only freezes the clock.
+        gs = GameState()
+        gs.start_timer(1000.0)
+        gs.stop_timer(1065.0)
+        self.assertIsNone(gs.end_state)
+
+    def test_now_default_reads_wall_clock(self):
+        gs = GameState()
+        gs.start_timer()
+        gs.stop_timer()
+        self.assertIsInstance(gs.final_time, float)
+        self.assertGreaterEqual(gs.final_time, 0.0)
+        self.assertTrue(gs.game_over)
+
+    def test_never_started_game_is_zero_tolerant(self):
+        # Total over valid inputs, matching rebase_timer's contract: a
+        # never-started game stops at 0.0, never crashes.
+        gs = GameState()
+        gs.stop_timer(1065.0)
+        self.assertEqual(gs.final_time, 0.0)
+        self.assertIsInstance(gs.final_time, float)
+        self.assertTrue(gs.game_over)
+
+    def test_now_before_anchor_clamps_to_zero(self):
+        gs = GameState()
+        gs.start_timer(1000.0)
+        gs.stop_timer(900.0)
+        self.assertEqual(gs.final_time, 0.0)
+
+    def test_float_coercion_like_start_timer(self):
+        gs = GameState()
+        gs.start_timer(1000.0)
+        gs.stop_timer('1065')
+        self.assertEqual(gs.final_time, 65.0)
+        self.assertIsInstance(gs.final_time, float)
+
+    def test_final_time_round_trips(self):
+        gs = GameState()
+        gs.start_timer(1000.0)
+        gs.stop_timer(1065.0)
+        back = GameState.from_dict(gs.to_dict())
+        self.assertEqual(back.final_time, 65.0)
+        self.assertTrue(back.game_over)
+
+
+class TestHasRecord(unittest.TestCase):
+    """The Q10 one-record guard, derivable from the keyed store:
+    has_record(level, molecule) reports whether a molecule already
+    produced a Confirm/Skip record (06-03's refusal primitive)."""
+
+    def test_false_before_any_record(self):
+        gs = GameState()
+        self.assertFalse(gs.has_record(0, 0))
+        self.assertFalse(gs.has_record(1, 2))
+
+    def test_true_after_record(self):
+        gs = GameState()
+        gs.record_molecule_result(0, 2, LIST_REQUIRED,
+                                  _recs('h_bond', 'pi_stacking'))
+        self.assertTrue(gs.has_record(0, 2))
+        # Other positions stay unrecorded.
+        self.assertFalse(gs.has_record(0, 1))
+
+    def test_true_after_zero_score_record(self):
+        # The zero-score case writes the key too
+        # (record_molecule_result stores unconditionally).
+        gs = GameState()
+        s = gs.record_molecule_result(0, 1, LIST_REQUIRED, [])
+        self.assertEqual(s, 0.0)
+        self.assertTrue(gs.has_record(0, 1))
+
+
+class TestKeyedScoreStore(unittest.TestCase):
+    """06-01 D11: score_per_molecule is written by record_molecule_result
+    in the SAME call as the flat molecule_scores append — the two views
+    can never drift; per-level aggregation no longer needs flat slicing
+    under a one-record invariant."""
+
+    def test_same_call_write_keeps_views_in_sync(self):
+        gs = GameState()
+        s = gs.record_molecule_result(0, 0, LIST_REQUIRED,
+                                      _recs('h_bond'))
+        self.assertEqual(s, 0.5)
+        self.assertEqual(gs.molecule_scores, [0.5])
+        self.assertEqual(gs.score_per_molecule, {'L0M0': 0.5})
+        gs.record_molecule_result(1, 0, ANY_REQUIRED,
+                                  _recs('salt_bridge'))
+        self.assertEqual(gs.score_per_molecule,
+                         {'L0M0': 0.5, 'L1M0': 1.0})
+        self.assertEqual(gs.molecule_scores, [0.5, 1.0])
+
+    def test_zero_score_record_still_writes_key(self):
+        gs = GameState()
+        gs.record_molecule_result(0, 1, LIST_REQUIRED, [])
+        self.assertEqual(gs.score_per_molecule, {'L0M1': 0.0})
+
+    def test_keyed_scores_sum_to_total_score(self):
+        gs = GameState()
+        gs.record_molecule_result(0, 0, LIST_REQUIRED, _recs('h_bond'))
+        gs.record_molecule_result(0, 1, LIST_REQUIRED, _recs('h_bond',
+                                                             'pi_stacking'))
+        self.assertAlmostEqual(sum(gs.score_per_molecule.values()),
+                               gs.total_score)
+
+
+class TestEndgameSummary(unittest.TestCase):
+    """06-01 SCORE-07 data payload (the plain dict 06-03's engine read op
+    and 06-09's endgame screen consume): per-level scores, total, frozen
+    time, sizes, counters, end position — fail-closed on any inconsistency
+    between the end_state and the recorded results."""
+
+    def _completed_game(self):
+        # 2 levels x 2 molecules, scores 0.5/1.0/0.0/1.0 -> [1.5, 1.0].
+        gs = GameState()
+        gs.record_molecule_result(0, 0, LIST_REQUIRED, _recs('h_bond'))
+        gs.record_molecule_result(0, 1, LIST_REQUIRED,
+                                  _recs('h_bond', 'pi_stacking'))
+        gs.advance_level()
+        gs.record_molecule_result(1, 0, LIST_REQUIRED, [])
+        gs.record_molecule_result(1, 1, LIST_REQUIRED,
+                                  _recs('h_bond', 'pi_stacking'))
+        gs.advance_molecule()   # position rests at the last molecule
+        gs.start_timer(1000.0)
+        gs.end_state = 'completed'
+        gs.stop_timer(1065.0)
+        return gs
+
+    def test_payload_key_set_exact(self):
+        summary = self._completed_game().endgame_summary([2, 2])
+        self.assertEqual(set(summary), {
+            'end_state', 'level_scores', 'total', 'final_time',
+            'levels', 'molecules', 'molecules_completed',
+            'skip_count', 'giveup_count',
+            'ended_level', 'ended_molecule'})
+
+    def test_happy_path_numeric(self):
+        gs = self._completed_game()
+        out = gs.endgame_summary([2, 2])
+        self.assertEqual(out['end_state'], 'completed')
+        self.assertEqual(out['level_scores'], [1.5, 1.0])
+        self.assertEqual(out['total'], 2.5)
+        self.assertEqual(out['total'], gs.total_score)
+        self.assertEqual(out['final_time'], 65.0)
+        self.assertIsInstance(out['final_time'], float)
+        self.assertEqual(out['levels'], 2)
+        self.assertEqual(out['molecules'], 4)
+        self.assertEqual(out['molecules_completed'], 4)
+        self.assertEqual(out['skip_count'], 0)
+        self.assertEqual(out['giveup_count'], 0)
+        self.assertEqual(out['ended_level'], 2)
+        self.assertEqual(out['ended_molecule'], 2)
+
+    def test_gave_up_current_molecule_intentionally_unrecorded(self):
+        # Q5: the current molecule at give-up is NOT recorded — a complete
+        # level 0, then give-up at L1M0 with 2 records.
+        gs = GameState()
+        gs.record_molecule_result(0, 0, LIST_REQUIRED, _recs('h_bond'))
+        gs.record_molecule_result(0, 1, LIST_REQUIRED,
+                                  _recs('h_bond', 'pi_stacking'))
+        gs.advance_level()
+        gs.skip_count = 1
+        gs.giveup_count = 1
+        gs.start_timer(1000.0)
+        gs.end_state = 'gave_up'
+        gs.stop_timer(1040.0)
+        out = gs.endgame_summary([2, 2])
+        self.assertEqual(out['end_state'], 'gave_up')
+        self.assertEqual(out['level_scores'], [1.5, 0.0])
+        self.assertEqual(out['total'], 1.5)
+        self.assertEqual(out['final_time'], 40.0)
+        self.assertEqual(out['molecules'], 4)
+        self.assertEqual(out['molecules_completed'], 2)
+        self.assertEqual(out['skip_count'], 1)
+        self.assertEqual(out['giveup_count'], 1)
+        self.assertEqual(out['ended_level'], 2)
+        self.assertEqual(out['ended_molecule'], 1)
+
+    def test_gave_up_mid_level_count_law(self):
+        # 1 record (L0M0), gave up at L0M1: expected records = 0 full
+        # levels + current_molecule_index.
+        gs = GameState()
+        gs.record_molecule_result(0, 0, LIST_REQUIRED, _recs('h_bond'))
+        gs.advance_molecule()
+        gs.end_state = 'gave_up'
+        gs.stop_timer(10.0)
+        out = gs.endgame_summary([2])
+        self.assertEqual(out['molecules_completed'], 1)
+        self.assertEqual(out['level_scores'], [0.5])
+        self.assertEqual(out['ended_level'], 1)
+        self.assertEqual(out['ended_molecule'], 2)
+
+    def test_fail_closed_empty_molecule_counts(self):
+        try:
+            self._completed_game().endgame_summary([])
+        except ValueError as e:
+            self.assertIn('molecule_counts', str(e))
+        else:
+            self.fail('empty molecule_counts must raise ValueError')
+
+    def test_fail_closed_non_int_entries(self):
+        gs = self._completed_game()
+        for bad in (['2', 2], [1.5, 2], [(2, 2)], [True, 2]):
+            try:
+                gs.endgame_summary(bad)
+            except ValueError:
+                pass
+            else:
+                self.fail('non-int molecule_counts entry %r must raise '
+                          'ValueError' % (bad,))
+
+    def test_fail_closed_end_state_none(self):
+        gs = self._completed_game()
+        gs.end_state = None
+        try:
+            gs.endgame_summary([2, 2])
+        except ValueError as e:
+            self.assertIn('end_state', str(e))
+        else:
+            self.fail('end_state None must raise ValueError')
+
+    def test_fail_closed_unknown_end_state(self):
+        gs = self._completed_game()
+        gs.end_state = 'won'
+        try:
+            gs.endgame_summary([2, 2])
+        except ValueError as e:
+            self.assertIn('end_state', str(e))
+        else:
+            self.fail('unknown end_state must raise ValueError')
+
+    def test_fail_closed_completed_requires_every_molecule_recorded(self):
+        gs = self._completed_game()
+        # A 'completed' game missing ANY molecule record is inconsistent —
+        # refuse, never ship a partial summary as believable.
+        del gs.score_per_molecule['L1M1']
+        try:
+            gs.endgame_summary([2, 2])
+        except ValueError as e:
+            self.assertIn('completed', str(e))
+        else:
+            self.fail('completed with a missing record must raise '
+                      'ValueError')
+
+    def test_fail_closed_gave_up_record_count_mismatch(self):
+        # gave_up at L1M0 expects exactly 2 records; only 1 exists.
+        gs = GameState()
+        gs.record_molecule_result(0, 0, LIST_REQUIRED, _recs('h_bond'))
+        gs.advance_level()
+        gs.end_state = 'gave_up'
+        gs.stop_timer(10.0)
+        with self.assertRaises(ValueError):
+            gs.endgame_summary([2, 2])
+
+    def test_fail_closed_per_level_overflow(self):
+        # counts [1, 3]: level 0 carries 2 records for a declared size of
+        # 1 — more records than the level has molecules. (The completed
+        # total-count law alone passes here: 4 records == 1 + 3.)
+        try:
+            self._completed_game().endgame_summary([1, 3])
+        except ValueError as e:
+            self.assertIn('level', str(e))
+        else:
+            self.fail('per-level record overflow must raise ValueError')
+
+    def test_fail_closed_record_for_level_outside_counts(self):
+        # totals [4] alone satisfy the completed law (4 records), but L1*
+        # records name a level the payload never had.
+        with self.assertRaises(ValueError):
+            self._completed_game().endgame_summary([4])
 
 
 if __name__ == '__main__':

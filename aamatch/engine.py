@@ -93,6 +93,16 @@ OPS (each count-asserted; plain-data in/out):
 12. ``total_score()`` -- the running total (SCORE-01 sum).
 13. ``is_over()`` -- the game_over bool gate (EngineError before
     new_game via _current_game, like every read).
+14. ``advance_level() -> registry`` -- SCORE-03 mechanics: cleanup ->
+    materialize(L+1) -> GameState.advance_level LAST (fail-closed
+    ordering; pure data cannot fail), the timer anchor untouched by
+    design.
+15. ``give_up(now=None) -> summary`` -- SCORE-06: giveup_count + 1,
+    end_state 'gave_up', stop_timer freeze, then the endgame summary.
+16. ``complete_game(now=None) -> summary`` -- the natural-completion
+    twin (end_state 'completed'; same freeze + summary).
+17. ``endgame_summary() -> dict`` -- the SCORE-07 READ op: the 06-01
+    contract dict from the live game, no mutation.
 
 Python floor: PyMOL's Windows Python 3.9 at runtime, written 3.6-safe
 (Gate D compiles every aamatch/*.py under python3.6).
@@ -559,6 +569,115 @@ def total_score():
     scores; SCORE-01's accumulated total). EngineError before
     new_game (via _current_game)."""
     return _current_game().total_score
+
+
+def _molecule_counts():
+    """Per-level molecule counts in payload order (the endgame_summary
+    argument; the level structure lives engine-side, not in the pure
+    container). Fail-closed when no payload is live."""
+    if _payload is None:
+        raise EngineError(
+            'engine: no payload on the engine -- call '
+            'new_game/materialize first')
+    return [len(level['molecules']) for level in _payload['levels']]
+
+
+def advance_level():
+    """Op 14: SCORE-03 level advance -- scene collapse + L+1 build +
+    GameState advance, ATOMIC in fail-closed order.
+
+    Guards FIRST: a finished game and a no-payload engine refuse
+    naming the cause; advancing past the last level refuses -- the
+    game should complete instead (the wizard owns that routing).
+    THEN the scene work: ``placement.cleanup_game_objects`` (prefix-
+    only deletion) BEFORE ``materialize(_payload, L+1)`` -- the
+    retained module ``_ligand_content`` is the re-materialization
+    input for uploaded games (op 1's note; demo games pass None)],
+    and ``game.advance_level()`` runs LAST (pure data cannot fail, so
+    a materialize failure leaves the GameState consistent -- the
+    scene, not the book, is the residue). Returns the NEW registry
+    (fresh ``_aam_*`` names).
+
+    CLEANUP-ORDER HAZARD (documented residue, research pitfall
+    register): cleanup deletes the objects the LIVE wizard's maps
+    reference; a mid-op failure leaves a cleaned scene with a live
+    wizard -- clicks no-op via the empty-pk1 path; Restart is the
+    recovery.
+
+    The TIMER ANCHOR is untouched by design: the game clock runs
+    ACROSS levels (only give_up/complete_game freeze it via
+    stop_timer).
+    """
+    game = _current_game()
+    if game.game_over:
+        raise EngineError('engine.advance_level: the game is over')
+    if _payload is None:
+        raise EngineError(
+            'engine.advance_level: no payload on the engine -- call '
+            'new_game/materialize first')
+    nxt = game.current_level_index + 1
+    if nxt >= len(_payload['levels']):
+        raise EngineError(
+            'engine.advance_level: no next level (%d of %d) -- the '
+            'game should complete instead'
+            % (nxt, len(_payload['levels'])))
+    placement.cleanup_game_objects()
+    registry = materialize(_payload, nxt, ligand_content=_ligand_content)
+    game.advance_level()
+    return registry
+
+
+def give_up(now=None):
+    """Op 15: Give Up (SCORE-06) -- end the game at the current stage.
+
+    ``giveup_count`` + 1, ``end_state`` 'gave_up', ``stop_timer``
+    captures + freezes the final elapsed (the anchor itself is NEVER
+    touched -- it is the pause mechanism's home). The CURRENT molecule
+    is NOT scored (spec.md:44-45 -- the partial-score store is Skip's
+    only). Returns the 06-01 SCORE-07 summary dict (end_state,
+    level_scores, total, final_time, levels, molecules,
+    molecules_completed, skip_count, giveup_count, ended_level,
+    ended_molecule). A second give_up (any game-over replay) refuses
+    naming the cause.
+    """
+    game = _current_game()
+    if game.game_over:
+        raise EngineError('engine.give_up: the game is already over')
+    game.giveup_count += 1
+    game.end_state = 'gave_up'
+    game.stop_timer(now)
+    return endgame_summary()
+
+
+def complete_game(now=None):
+    """Op 16: natural completion -- the twin of give_up without the
+    counter: ``end_state`` 'completed', ``stop_timer`` freeze, then
+    the same SCORE-07 summary dict. The 06-01 fail-closed record law
+    applies (a 'completed' game must have EVERY molecule recorded, so
+    this op is the last-molecule-Confirm path's ending, never an early
+    exit). Refuses when the game is already over, same message class
+    as give_up.
+    """
+    game = _current_game()
+    if game.game_over:
+        raise EngineError(
+            'engine.complete_game: the game is already over')
+    game.end_state = 'completed'
+    game.stop_timer(now)
+    return endgame_summary()
+
+
+def endgame_summary():
+    """Op 17: the SCORE-07 endgame READ op (06-03) -- the 06-01
+    contract dict from the live game, returned as plain data through
+    the op. READ-ONLY: give_up/complete_game mutate (counter, end
+    state, freeze) and then delegate HERE, so a read can never change
+    the game. Exact keys per the 06-01 contract: end_state,
+    level_scores, total, final_time, levels, molecules,
+    molecules_completed, skip_count, giveup_count, ended_level,
+    ended_molecule.
+    """
+    return _current_game().endgame_summary(_molecule_counts())
 
 
 def is_over():

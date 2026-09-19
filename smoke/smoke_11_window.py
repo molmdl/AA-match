@@ -88,20 +88,28 @@ PART F2 (T1b -- the 04-01 probe verdict is PASS (platform=offscreen),
         seed, candidates/ligand_content None on the demo flow); tmp2
         cleaned up.
 PART G  (T1b -- the 04-01 probe verdict is PASS (platform=offscreen),
-        so this part RUNS; the 04-13 SETUP-10 start drive; NO modals
-        anywhere: Start owns NO success box by design -- the wizard
-        panel IS the feedback, 04-13 decision): form at defaults with
-        the demo-dev-1 dropdown row -> dlg._start_impl() starts a REAL
-        game headlessly -> cmd.get_wizard() is a GameWizard, the scene
-        grew; then export-then-start -- dlg._last_export = {'setup':
-        <the built defaults state>, 'seed': 31337, None, None} ->
-        dlg._start_impl() again (the mid-game restart path) -> the NEW
-        wizard's payload['seed'] == 31337 (the exported tuple was
-        reused -- Decision 4 proven); then molecules_spin.setValue(3)
-        -> the reuse-branch condition last_export['setup'] ==
-        validate_state(collect()) is False (pure branch assert, seed-
-        value tolerant). Restore: canonical done pop + the prefix-only
-        cleanup -> get_names == the pre-start baseline EXACTLY.
+        so this part RUNS; the SETUP-10 start drive; NO modals
+        anywhere: Start owns NO success box by design, 04-13 decision):
+        form at defaults with the demo-dev-1 dropdown row ->
+        dlg._start_impl() now runs the DEFERRED sequence (05-09): the
+        window pops any prior GameWizard itself, prepares UNACTIVATED,
+        switches to the Game status tab and arms the countdown, so the
+        pending wizard (dlg.game_tab._pending_wizard) is a GameWizard
+        NOT on the stack -> the GO step driven directly
+        (dlg.game_tab._begin_play()) -> cmd.get_wizard() IS that wizard
+        + engine._current_game().timer_anchor a float + the GO-time msm
+        ORDER-LAW snapshot; then export-then-start -- dlg._last_export
+        = {'setup': <the built defaults state>, 'seed': 31337, None,
+        None} -> dlg._start_impl() again -> the PENDING wizard's
+        payload['seed'] == 31337 read BEFORE its GO (Decision 4 proven),
+        then GO; then molecules_spin.setValue(3) -> the reuse guard
+        breaks (pure branch assert, unchanged). Restore:
+        cancel_pending_start FIRST, then canonical done pop + the
+        prefix-only cleanup -> get_names == baseline EXACTLY.
+        DELIBERATE EVOLUTION (05-09; the 03-05 PART-letter precedent):
+        the drive contract changed with the deferred design -- the
+        CHECKS survive, the DRIVE sequence moves (pending-read before
+        GO, GO driven directly).
 PART G-alt (probe-FAIL degradation): skip the dialog drive; assert the
         pure chain directly -- build_state on DEFAULTS+upload_ready
         passes; print the skip line.
@@ -643,16 +651,25 @@ except Exception:
 # ============================================================
 # PART G: SETUP-10 start drive + export-tuple reuse (T1b -- the 04-01
 # probe verdict is PASS (platform=offscreen), so this part RUNS; NO
-# modals anywhere: Start owns NO success box by design -- the wizard
-# panel IS the feedback (04-13 decision), and _start_impl is NON-MODAL
-# by the smoke-99 receipt)
+# modals anywhere: Start owns NO success box by design (04-13
+# decision), and _start_impl is NON-MODAL by the smoke-99 receipt).
+#
+# DELIBERATE EVOLUTION (05-09; the 03-05 PART-letter precedent -- the
+# CHECKS survive, the DRIVE sequence moves when the drive contract
+# changes): _start_impl is now DEFERRED -- the window pops any prior
+# GameWizard itself (P-3), prepares UNACTIVATED (activate=False),
+# switches to the Game status tab and arms the cancellable countdown.
+# After the drive the wizard is PENDING (game_tab._pending_wizard),
+# NOT on the stack; the GO step is driven directly
+# (game_tab._begin_play) per the anti-flakiness strategy, and only
+# THEN do the wizard-active / anchor / msm ORDER-LAW asserts run.
 # ============================================================
 try:
     if setup_window is None:
         raise RuntimeError('part A failed')   # PART G-alt below
     from pymol import cmd
     from pymol.Qt import QtWidgets
-    from aamatch import placement, setup_form, setup_state, wizard
+    from aamatch import engine, placement, setup_form, setup_state, wizard
 
     app = QtWidgets.QApplication.instance()
     if app is None:
@@ -664,14 +681,20 @@ try:
         dlg.demo_combo.setCurrentIndex(sel_g)
     baseline_g = cmd.get_names('objects')
 
-    # ---- G1: _start_impl starts a REAL game headlessly ----
+    # ---- G1: _start_impl -> PENDING (not stacked) -> direct GO ----
     dlg._start_impl()                  # no modal on success by design
-    wiz1 = cmd.get_wizard()
+    wiz1 = dlg.game_tab._pending_wizard
     scene1 = cmd.get_names('objects')
     new1 = [n for n in scene1 if n not in baseline_g]
-    check('part G1: _start_impl starts a REAL game -- GameWizard on top',
+    check('part G1: _start_impl stores a PENDING GameWizard '
+          '(deferred prepare)',
           isinstance(wiz1, wizard.GameWizard),
-          'top=%r' % (wiz1,))
+          'pending=%r' % (wiz1,))
+    check('part G1: the pending wizard is NOT on the stack '
+          '(the countdown window is wizard-free -- pitfalls P-1/P-3)',
+          cmd.get_wizard() is not wiz1
+          and not isinstance(cmd.get_wizard(), wizard.GameWizard),
+          'top=%r' % (cmd.get_wizard(),))
     check('part G1: the scene grew (_aam_* objects materialized)',
           len(new1) > 0
           and all(n.startswith('_aam_') for n in new1),
@@ -681,10 +704,24 @@ try:
           isinstance(seed1, int) and not isinstance(seed1, bool),
           'seed=%r' % (seed1,))
 
-    # ---- G2: export-then-start reuses the exported tuple ----
+    # -- the GO step driven directly (the anti-flakiness strategy:
+    # steps as methods, never a processEvents gap) --
+    dlg.game_tab._begin_play()
+    anchor1 = engine._current_game().timer_anchor
+    check('part G1: GO (_begin_play) pushes THAT wizard + anchors '
+          'the timer (float)',
+          cmd.get_wizard() is wiz1 and isinstance(anchor1, float),
+          'top=%r anchor=%r' % (cmd.get_wizard(), anchor1))
+    check('part G1: msm snapshot captured POST-push at GO (ORDER LAW)',
+          isinstance(wiz1._saved_msm, int),
+          '_saved_msm=%r (the push happens at GO, so the snapshot does)'
+          % (wiz1._saved_msm,))
+
+    # ---- G2: export-then-start replays the exported tuple ----
     # (Decision 4): last_export.setup EQUALS the freshly built state,
     # so the exported (setup, seed, candidates, ligand_content) tuple
-    # is replayed verbatim -- the game started IS the game shared.
+    # is replayed verbatim; the PENDING wizard's seed is read BEFORE
+    # its GO -- the game prepared IS the game shared.
     form_g = dlg.collect_state()
     form_g['upload_ready'] = dlg.upload_ready_for(form_g)
     known_g = tuple(str(dlg.demo_combo.itemData(i))
@@ -692,29 +729,40 @@ try:
     state_g = setup_form.build_state(form_g, known_set_ids=known_g)
     dlg._last_export = {'setup': state_g, 'seed': 31337,
                         'candidates': None, 'ligand_content': None}
-    dlg._start_impl()                  # mid-game restart (replace path)
-    wiz2 = cmd.get_wizard()
+    dlg._start_impl()                  # mid-game restart (deferred)
+    wiz2 = dlg.game_tab._pending_wizard
     seed2 = wiz2._payload.get('seed') if wiz2 is not None else None
-    check('part G2: restart replays the exported seed 31337 '
-          '(Decision 4 proven)',
+    check('part G2: restart replays the exported seed 31337 in the '
+          'PENDING wizard BEFORE its GO (Decision 4 proven)',
           wiz2 is not None and wiz2 is not wiz1
           and isinstance(wiz2, wizard.GameWizard)
           and seed2 == 31337,
           'seed=%r' % (seed2,))
+    check('part G2: the window popped the prior wizard pre-prepare '
+          '(P-3); the new one is pending, not stacked',
+          not isinstance(cmd.get_wizard(), wizard.GameWizard),
+          'top=%r' % (cmd.get_wizard(),))
+    dlg.game_tab._begin_play()         # GO for the seed-31337 wizard
+    check('part G2: GO pushes the seed-31337 wizard',
+          cmd.get_wizard() is wiz2,
+          'top=%r' % (cmd.get_wizard(),))
 
     # ---- G3: a form change breaks the reuse guard (pure assert,
-    # tolerant of any random seed the next Start would draw) ----
+    # tolerant of any random seed the next Start would draw;
+    # UNCHANGED by the 05-09 evolution) ----
     dlg.molecules_spin.setValue(3)
     check('part G3: setup changed -> reuse branch is skipped',
           dlg._last_export['setup']
           != setup_state.validate_state(dlg.collect_state()),
           'last-setup=%r' % (dlg._last_export['setup'],))
 
-    # ---- restore: canonical done pop + prefix-only cleanup ----
+    # ---- restore: cancel any pending countdown FIRST (P-2), then
+    # the canonical done pop + prefix-only cleanup ----
+    dlg.game_tab.cancel_pending_start()
     cmd.set_wizard()                   # GameWizard done pop
     result_g = placement.cleanup_game_objects()
-    check('part G: done pop + cleanup restores the baseline scene '
-          'EXACTLY',
+    check('part G: cancel + done pop + cleanup restores the baseline '
+          'scene EXACTLY',
           cmd.get_wizard() is None
           and result_g['deleted'] > 0
           and cmd.get_names('objects') == baseline_g,
@@ -723,8 +771,9 @@ try:
              baseline_g))
     app.processEvents()
     dlg.close()
-    REC['start_drive'] = ('G1 real start, G2 seed 31337 replayed, G3 '
-                          'reuse guard, exact-scene restore')
+    REC['start_drive'] = ('G1 deferred pending-then-GO (+anchor/ORDER '
+                          'LAW), G2 seed 31337 pending-read-before-GO, '
+                          'G3 reuse guard, cancel-first restore')
 except Exception as e_g:
     if 'part A failed' not in str(e_g):
         traceback.print_exc()

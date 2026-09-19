@@ -29,10 +29,13 @@ and unknown modes raise ValueError — never silently mis-score.
 
 GameState is the minimal in-memory runtime container the engine ops
 mutate: level/molecule position, per-molecule formed types, running
-score, skip/give-up counters, and a timer anchor. PLAIN DATA ONLY — the
-QTimer/rendering side of timing is a later Qt phase; this module merely
-stores the anchor float (``start_timer(now)``, caller supplies
-``time.time()`` or accepts the default wall-clock read).
+score, skip/give-up counters, a timer anchor, and (06-01 lifecycle data
+layer) the end-state fields, the frozen final time, and the keyed
+per-molecule score store. PLAIN DATA ONLY — the QTimer/rendering side
+of timing is a later Qt phase; this module merely stores the anchor
+float (``start_timer(now)``, caller supplies ``time.time()`` or accepts
+the default wall-clock read) and the frozen ``final_time`` float via
+``stop_timer(now)``.
 """
 
 import time
@@ -159,6 +162,18 @@ class GameState:
       INTERACTION_TYPES order, written by ``record_molecule_result``
       which stores the score and the formed types TOGETHER (one record
       call per molecule — the two views can never drift apart).
+    - ``score_per_molecule`` — dict keyed the same way -> that
+      molecule's recorded score (float), written by
+      ``record_molecule_result`` in the SAME call as the flat
+      ``molecule_scores`` append (06-01 D11: per-level aggregation
+      never needs flat-list slicing under a one-record invariant; the
+      key presence is the "already recorded" marker — see
+      ``has_record``).
+    - ``game_over`` / ``end_state`` / ``final_time`` — the lifecycle
+      end state (06-01): ``game_over`` set by ``stop_timer``; the
+      reason ``end_state`` (``None | 'completed' | 'gave_up'``) is set
+      by the caller (the lifecycle op owns the cause); ``final_time``
+      is the frozen final elapsed float from ``stop_timer``.
 
     ``to_dict``/``from_dict`` round-trip ALL fields losslessly as a plain
     JSON-able dict (engine/debug surface; the formal sidecar container
@@ -173,6 +188,10 @@ class GameState:
         self.giveup_count = 0
         self.timer_anchor = None
         self.formed_types_per_molecule = {}
+        self.score_per_molecule = {}
+        self.game_over = False
+        self.end_state = None
+        self.final_time = None
 
     @staticmethod
     def molecule_key(level, molecule):
@@ -223,6 +242,30 @@ class GameState:
                 "future and rewind the clock)" % (elapsed,))
         self.timer_anchor = now_f - elapsed_f
 
+    def stop_timer(self, now=None):
+        """Capture the final elapsed ONCE and freeze it (`final_time`);
+        mark ``game_over`` (Q8: stop = capture once + freeze; the caller
+        — the lifecycle op — owns WHEN the game stops).
+
+        The timer ANCHOR itself is NEVER touched: it is the pause
+        mechanism's home (rebase_timer's live derivation). The end
+        REASON (``end_state``, 'completed' | 'gave_up') is likewise NOT
+        set here — the caller owns the cause.
+
+        ``now`` defaults to the wall clock (start_timer's contract) and
+        is float-coerced, so ``final_time`` is always a real float.
+        Total over valid inputs: a never-started game (anchor None)
+        freezes at 0.0 (matching rebase_timer's totality); a ``now``
+        earlier than the anchor clamps at 0.0 (max(0.0, ...)), never a
+        negative elapsed.
+        """
+        now_f = float(time.time() if now is None else now)
+        if self.timer_anchor is None:
+            self.final_time = 0.0
+        else:
+            self.final_time = max(0.0, now_f - self.timer_anchor)
+        self.game_over = True
+
     def advance_molecule(self):
         """Move to the next molecule within the current level."""
         self.current_molecule_index += 1
@@ -232,9 +275,18 @@ class GameState:
         self.current_level_index += 1
         self.current_molecule_index = 0
 
+    def has_record(self, level, molecule):
+        """Whether molecule (level, molecule) already produced a
+        Confirm/Skip record (the Q10 one-record-per-molecule guard
+        primitive — key presence, including a 0.0-score record)."""
+        return self.molecule_key(level, molecule) in self.score_per_molecule
+
     def record_molecule_result(self, level, molecule, required, results):
         """Score `results` against `required` and store BOTH the score and
-        the formed types for molecule (level, molecule) in one call.
+        the formed types for molecule (level, molecule) in one call — in
+        BOTH views (the flat ``molecule_scores`` list and the keyed
+        ``score_per_molecule`` / ``formed_types_per_molecule`` dicts, so
+        the views can never drift apart).
 
         Returns the SCORE-01 fraction. Raises ValueError on the same
         contract violations as `score` (fail-closed — a malformed record
@@ -242,10 +294,119 @@ class GameState:
         """
         value = score(required, results)
         record_types = _validate_records(results)
+        key = self.molecule_key(level, molecule)
         self.molecule_scores.append(value)
-        self.formed_types_per_molecule[self.molecule_key(level, molecule)] \
+        self.score_per_molecule[key] = value
+        self.formed_types_per_molecule[key] \
             = _formed_types(required, record_types)
         return value
+
+    def endgame_summary(self, molecule_counts):
+        """SCORE-07 endgame data payload as a plain dict (the contract
+        06-03's engine read op and 06-09's endgame screen consume).
+
+        ``molecule_counts`` = list of per-level molecule counts in
+        payload order. ``end_state`` must already be set by the caller
+        (the lifecycle op that owns the end cause).
+
+        Returns a dict with EXACTLY these keys:
+
+        - ``end_state`` (str) — 'completed' | 'gave_up'
+        - ``level_scores`` (list of float, one per level) — the SUM of
+          that level's recorded scores via ``score_per_molecule``
+        - ``total`` (float) — the running ``total_score``
+        - ``final_time`` (float) — the frozen stop_time
+        - ``levels`` / ``molecules`` (int) — len / sum of the counts
+        - ``molecules_completed`` (int) — len(``score_per_molecule``)
+        - ``skip_count`` / ``giveup_count`` (int) — the plain counters
+        - ``ended_level`` / ``ended_molecule`` (int) — the 1-based
+          position the game ended at
+
+        FAIL-CLOSED (ValueError naming the cause, never a believable
+        partial summary): empty ``molecule_counts``; non-int entries;
+        ``end_state`` None or unknown; for 'completed', unless EVERY
+        molecule is recorded (len(store) == sum(counts)); for
+        'gave_up', unless the record count == full levels up to the
+        current one + the current molecule index (the current molecule
+        at give-up is intentionally unrecorded — research Q5); and any
+        per-level record-count overflow (more records for a level than
+        its molecule count — with keys the payload never had counting
+        as overflow records for level 0). Per-level aggregation walks
+        the keyed store, never flat-list slicing.
+        """
+        counts = list(molecule_counts)
+        if not counts:
+            raise ValueError(
+                "endgame_summary: molecule_counts must be a non-empty "
+                "list of per-level molecule counts (payload order)")
+        for c in counts:
+            if isinstance(c, bool) or not isinstance(c, int):
+                raise ValueError(
+                    "endgame_summary: every molecule_counts entry must "
+                    "be a plain int count, got %r" % (c,))
+        end = self.end_state
+        if end is None or end not in ('completed', 'gave_up'):
+            raise ValueError(
+                "endgame_summary: end_state %r is None or unknown — the "
+                "lifecycle op must set 'completed' or 'gave_up' before "
+                "the summary is built" % (end,))
+        total_molecules = sum(counts)
+        n_records = len(self.score_per_molecule)
+        if end == 'completed':
+            if n_records != total_molecules:
+                raise ValueError(
+                    "endgame_summary: a 'completed' game must have EVERY "
+                    "molecule recorded — %d records for %d molecules"
+                    % (n_records, total_molecules))
+        else:
+            expected = (sum(counts[:self.current_level_index])
+                        + self.current_molecule_index)
+            if n_records != expected:
+                raise ValueError(
+                    "endgame_summary: a 'gave_up' game must have exactly "
+                    "the completed molecules recorded (%d) — %d records"
+                    % (expected, n_records))
+        # Per-level aggregation over the keyed store. The container key
+        # is 'L{level}M{molecule}' (molecule_key) — parse it the way we
+        # built it; anything malformed or outside the declared level
+        # range is an overflow/corruption the laws above did not catch,
+        # and refuses with its key named.
+        level_scores = [0.0] * len(counts)
+        seen_per_level = [0] * len(counts)
+        for key, value in self.score_per_molecule.items():
+            try:
+                level = int(key[1:].split('M', 1)[0])
+            except (TypeError, IndexError, ValueError):
+                raise ValueError(
+                    "endgame_summary: score_per_molecule key %r is not a "
+                    "'L{level}M{molecule}' container key (corrupt store)"
+                    % (key,))
+            if level < 0 or level >= len(counts):
+                raise ValueError(
+                    "endgame_summary: level %d (key %r) is outside the "
+                    "declared molecule_counts (%d levels)"
+                    % (level, key, len(counts)))
+            seen_per_level[level] += 1
+            if seen_per_level[level] > counts[level]:
+                raise ValueError(
+                    "endgame_summary: level %d has more recorded results "
+                    "than its molecule count %d (one-record-per-molecule "
+                    "broken, key %r)"
+                    % (level, counts[level], key))
+            level_scores[level] += value
+        return {
+            'end_state': end,
+            'level_scores': level_scores,
+            'total': float(self.total_score),
+            'final_time': self.final_time,
+            'levels': len(counts),
+            'molecules': total_molecules,
+            'molecules_completed': n_records,
+            'skip_count': self.skip_count,
+            'giveup_count': self.giveup_count,
+            'ended_level': self.current_level_index + 1,
+            'ended_molecule': self.current_molecule_index + 1,
+        }
 
     def to_dict(self):
         """Plain JSON-able snapshot of ALL fields (lossless)."""
@@ -259,11 +420,22 @@ class GameState:
             'formed_types_per_molecule':
                 dict((k, list(v))
                      for k, v in self.formed_types_per_molecule.items()),
+            'score_per_molecule':
+                dict((k, float(v))
+                     for k, v in self.score_per_molecule.items()),
+            'game_over': self.game_over,
+            'end_state': self.end_state,
+            'final_time': self.final_time,
         }
 
     @classmethod
     def from_dict(cls, data):
-        """Rebuild a GameState from to_dict output (lossless inverse)."""
+        """Rebuild a GameState from to_dict output (lossless inverse).
+
+        Accept-OLDER law (additive-only evolution): the four 06-01 keys
+        use ``.get`` defaults, so a pre-06-01 7-key dict loads without
+        KeyError and yields the zero-init defaults for the new fields.
+        """
         gs = cls()
         gs.current_level_index = data['current_level_index']
         gs.current_molecule_index = data['current_molecule_index']
@@ -274,4 +446,10 @@ class GameState:
         gs.formed_types_per_molecule = dict(
             (k, list(v))
             for k, v in data['formed_types_per_molecule'].items())
+        gs.score_per_molecule = dict(
+            (k, float(v))
+            for k, v in data.get('score_per_molecule', {}).items())
+        gs.game_over = data.get('game_over', False)
+        gs.end_state = data.get('end_state')
+        gs.final_time = data.get('final_time')
         return gs

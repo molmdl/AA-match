@@ -73,9 +73,26 @@ OPS (each count-asserted; plain-data in/out):
    score, formed_types)`` -- detect_molecule + score_current
    composition (records returned are the MOLECULE-SCOPED set); the
    Phase-3 Confirm handler wraps exactly this.
-8. ``game_status() -> dict`` -- the 05-07 READ path: the live
-   GameState's to_dict() snapshot, no mutation; EngineError before
-   new_game (inherited from _current_game).
+ 8. ``game_status() -> dict`` -- the 05-07 READ path: the live
+    GameState's to_dict() snapshot, no mutation; EngineError before
+    new_game (inherited from _current_game).
+ 9. ``record_scored(level_index, molecule_index, required,
+    records=None) -> (score, formed_types)`` -- the ONE lifecycle
+    record site (06-03): refuses a second record via
+    GameState.has_record (the D4/Q10 guard covers Confirm AND Skip
+    with one check), then delegates to score_current. The guard lives
+    HERE, not inside score_current/confirm -- those stay byte-identical
+    for the smoke detection probes that legitimately re-score.
+10. ``skip_molecule(level_index, molecule_index, required) ->
+    (score, formed_types)`` -- SCORE-05 mechanics: the
+    detection-at-skip-time partial score via record_scored (the 02-10
+    sanctioned semantics), then skip_count += 1.
+11. ``advance_molecule()`` -- the data-only within-level transition
+    (GameState.advance_molecule; deliberately no range check -- the
+    wizard owns range logic).
+12. ``total_score()`` -- the running total (SCORE-01 sum).
+13. ``is_over()`` -- the game_over bool gate (EngineError before
+    new_game via _current_game, like every read).
 
 Python floor: PyMOL's Windows Python 3.9 at runtime, written 3.6-safe
 (Gate D compiles every aamatch/*.py under python3.6).
@@ -102,6 +119,7 @@ class EngineError(ValueError):
 _payload = None
 _registry = None
 _game = None
+_ligand_content = None      # 06-03: advance_level's re-materialization input
 
 
 def _current_game():
@@ -252,7 +270,10 @@ def new_game(setup, seed, candidates=None, ligand_content=None):
     manifest flow (byte-identical for demo sets -- every existing call
     site and test unchanged). Passed straight through to
     ``_ligand_data_for`` per candidate row; the string path never
-    touches ``package_data_path``.
+    touches ``package_data_path``. The value is ALSO retained
+    module-side (``_ligand_content``, 06-03): advance_level's
+    re-materialization input for uploaded games (demo games store
+    None -- byte-identical).
     """
     validated = validate_state(setup)
     names_before = list(cmd.get_names('objects'))
@@ -289,10 +310,11 @@ def new_game(setup, seed, candidates=None, ligand_content=None):
     payload = generator.generate(seed, validated, rows, ligand_data,
                                  validated['difficulty_levels'])
 
-    global _payload, _game, _registry
+    global _payload, _game, _registry, _ligand_content
     _payload = payload
     _registry = None               # a new game invalidates old objects
     _game = game_state.GameState()
+    _ligand_content = ligand_content   # advance_level's re-materialize input
     if cmd.get_names('objects') != names_before:
         raise EngineError(
             'new_game: scene changed across generation (before: %s, '
@@ -469,10 +491,88 @@ def confirm(level_index, molecule_index, required):
     return records, value, formed
 
 
+def record_scored(level_index, molecule_index, required, records=None):
+    """Op 9: the ONE lifecycle record site (06-03) -- Confirm AND Skip
+    route through here.
+
+    Guard FIRST (D4/Q10): a molecule that already produced a record is
+    REFUSED with the pinned message -- one ``GameState.has_record``
+    check covers the re-Confirm AND the skip-after-record paths, so
+    the flat ``molecule_scores`` list maps onto (level, molecule)
+    positions under a strict one-record-per-molecule invariant. The
+    Phase-3 re-Confirm caveat (wizard.py:550-553: repeated Confirm
+    appends molecule_scores; Phase 6 owns score-history lifecycle)
+    closes HERE: ``score_current``/``confirm`` stay BYTE-IDENTICAL
+    (smoke_04/06/07 legitimately re-score as detection probes -- the
+    guard must NOT live inside them); the lifecycle's guarded front
+    door is this op.
+
+    ``records`` None -> a fresh MOLECULE-SCOPED detect pass
+    (detect_molecule -- the 03-06 cross-molecule scoring guard); an
+    already-computed scoped record set can be threaded through to keep
+    one detect pass per press. Returns (score, formed_types) via
+    score_current (the two views still record together -- they can
+    never drift).
+    """
+    game = _current_game()
+    if game.has_record(level_index, molecule_index):
+        raise EngineError(
+            'This molecule already has a recorded result (scored or '
+            'skipped) -- use Restart to replay the game.')
+    if records is None:
+        records = detect_molecule(level_index, molecule_index)
+    return score_current(level_index, molecule_index, required,
+                         records=records)
+
+
+def skip_molecule(level_index, molecule_index, required):
+    """Op 10: Skip (SCORE-05 mechanics) -- record the
+    detection-AT-SKIP-TIME partial score via the SAME record path as
+    Confirm (the 02-10 sanctioned semantics; spec.md:44: "store only
+    up to current score of the molecule"), then increment
+    ``skip_count``.
+
+    The one-record guard applies identically (record_scored refuses a
+    skip-after-record with the pinned message), so Confirm and Skip
+    can never disagree about whether a molecule still accepts a
+    result. Returns (score, formed_types) so the wizard's skip op can
+    debrief exactly like a Confirm.
+    """
+    value, formed = record_scored(level_index, molecule_index,
+                                  required)
+    _current_game().skip_count += 1
+    return value, formed
+
+
+def advance_molecule():
+    """Op 11: the data-only within-level advance. The registry already
+    holds EVERY molecule of the level (placement.materialize builds
+    all of them), so NO scene work happens here; the wizard rebinds
+    its own books (the research-Q1 ownership split). Deliberately NO
+    range check: GameState.advance_molecule is a plain transition and
+    the wizard owns the last-molecule-of-level logic."""
+    _current_game().advance_molecule()
+
+
+def total_score():
+    """Op 12: the running total (sum of the per-molecule recorded
+    scores; SCORE-01's accumulated total). EngineError before
+    new_game (via _current_game)."""
+    return _current_game().total_score
+
+
+def is_over():
+    """Op 13: whether the game has ended (give_up/complete_game set
+    the flag via stop_timer). A cheap bool gate for wizard/tab
+    handlers; EngineError before new_game (via _current_game)."""
+    return _current_game().game_over
+
+
 def game_status():
     """Read-only plain-data snapshot of the live GameState (no
     mutation). Returns GameState.to_dict(): current_level_index,
     current_molecule_index, molecule_scores, skip_count, giveup_count,
-    timer_anchor, formed_types_per_molecule. Raises EngineError when no
+    timer_anchor, formed_types_per_molecule, score_per_molecule,
+    game_over, end_state, final_time. Raises EngineError when no
     game is live."""
     return _current_game().to_dict()

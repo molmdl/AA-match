@@ -21,8 +21,16 @@ the live GameState timer anchor. The Hint button is CONNECTED (05-08
 landed its handler on this exact skeleton -- the 04-05 shell law: the
 handler plan connects its own button): isinstance-gated dispatch to
 the live GameWizard's capability hint, SILENT no-op before GO (no
-game wizard on the stack yet). The status POLL (what else the info
-box shows and when) lands on a later plan.
+game wizard on the stack yet). The status POLL (05-10) rides the
+same 1 Hz tick: ``_on_tick`` calls ``_refresh_status`` AFTER the
+timer-label half; the poll reads ONLY the live GameWizard's public
+``get_status()`` behind a lazy-import isinstance gate and diffs
+through the pure ``status_text.status_events``, so the tab stays a
+dumb renderer (event log only: no wizard-panel mirroring, no
+movement lines, no timestamps, no score lines). ``_begin_play``
+owns the FIRST level line + first required label (instant, ordered
+right after 'GO!') and seeds ``_last_status`` so the poll's first
+observation is silent.
 
 LAWS this module enforces (05-RESEARCH-window-start-timer.md):
 
@@ -131,6 +139,12 @@ class GameTab(QtWidgets.QWidget):
         self._timer.timeout.connect(self._on_tick)
         self._last_shown_elapsed = 0.0
 
+        # The status poll's plain-data baseline (05-10): the previous
+        # get_status() snapshot the 1 Hz diff compares against. The
+        # DIALOG is never pickled, so a plain dict store is free
+        # (05-RESEARCH-status-surface.md pitfall 1).
+        self._last_status = None
+
     # ---- the rolling info box ----
 
     def _log(self, line):
@@ -179,19 +193,29 @@ class GameTab(QtWidgets.QWidget):
             self._begin_play()
 
     def _begin_play(self):
-        """GO: activate the pending wizard and start the 1 Hz render.
+        """GO: activate the pending wizard, own the FIRST status
+        content, and start the 1 Hz render.
 
         ``gamestart.activate_game`` (the cmd tier's Pattern-2 single
         activation home) pushes the wizard per the msm ORDER LAW --
         with the conditional replace re-evaluated at activation -- and
         anchors the GameState timer from zero. This is the ONLY point
-        where the countdown's wizard reaches the stack (P-1). The 1 Hz
-        timer restart is a defensive stop + start (the prior-art
-        shape). The level line / required-label content / status poll
-        are the status-surface plan's; mechanics only here.
+        where the countdown's wizard reaches the stack (P-1). The
+        START SEQUENCE owns the first status content (pitfall 4): the
+        FIRST level line and the FIRST required label render here from
+        the PENDING wizard's get_status() -- instant, ordered right
+        after 'GO!', no poll race -- and ``_last_status`` is seeded so
+        the poll's first observation is SILENT (status_events(None,
+        state) -> []). The poll only reports CHANGES. The 1 Hz timer
+        restart is a defensive stop + start (the prior-art shape).
         """
-        from . import gamestart
+        from . import gamestart, status_text
         gamestart.activate_game(self._pending_wizard)
+        state = self._pending_wizard.get_status()
+        self._log(status_text.level_molecule_line(state))
+        self._required_label.setText(
+            status_text.required_display(state['required']))
+        self._last_status = state
         self._pending_wizard = None
         self._timer.stop()
         self._timer.start(1000)
@@ -244,6 +268,10 @@ class GameTab(QtWidgets.QWidget):
         boxes here (P-6); timers fire through nested loops, so this
         branch is designed for exactly that state (P-8). The EngineError
         guard lets the tick survive a no-game window (mid-restart).
+        The STATUS HALF (05-10) runs AFTER the label render: the same
+        1 Hz tick carries the poll-diff (piggybacked, no second timer);
+        the modal-pause branch returns EARLY, so the poll is skipped
+        while the clock is frozen.
         """
         if QtWidgets.QApplication.activeModalWidget() is not None:
             from . import engine
@@ -256,6 +284,48 @@ class GameTab(QtWidgets.QWidget):
         self._last_shown_elapsed = self._compute_elapsed()
         self._timer_label.setText(
             self._format_mss(self._last_shown_elapsed))
+        self._refresh_status()
+
+    # ---- the 1 Hz status poll (05-10: the poll-diff read path) ----
+
+    def _refresh_status(self):
+        """The 1 Hz poll-diff: append only CHANGES + keep the
+        required label truthful (SCORE-04's dynamic half).
+
+        Public accessors ONLY -- ``cmd.get_wizard()`` behind a lazy
+        relative import + isinstance gate (the module-identity law,
+        pitfall 2; a module-level GameWizard import would silently
+        fail the gate under the installed identity), then the live
+        wizard's plain-data get_status() (05-07; the tab never
+        registers itself on the wizard -- the whole stack is pickled
+        on session save, pitfall 1). No GameWizard live -> the
+        required label resets to 'Required: -' and the baseline
+        clears. Otherwise the PURE diff (``status_text.status_events``)
+        owns every event line -- first observation SILENT (pitfall 4:
+        the start sequence owns the first level line), a molecule/
+        level change -> one level line, a selection change -> the
+        'Selected:' line, a NEW error string -> the 'ERROR:' line with
+        sticky dedupe (pitfall 3). The required label is reference
+        info (Pattern 3): refreshed on molecule change, never a log
+        line, never scrolled away -- rendered by the pure
+        ``status_text.required_display``.
+        """
+        from pymol import cmd
+        from . import status_text, wizard
+        w = cmd.get_wizard()
+        if not isinstance(w, wizard.GameWizard):
+            self._required_label.setText('Required: -')
+            self._last_status = None
+            return
+        state = w.get_status()
+        for line in status_text.status_events(self._last_status, state):
+            self._log(line)
+        prev = self._last_status
+        if prev is None or prev.get('molecule_id') != state.get(
+                'molecule_id'):
+            self._required_label.setText(
+                status_text.required_display(state['required']))
+        self._last_status = state
 
     # ---- the Hint handler (05-08 PLAY-05) ----
 

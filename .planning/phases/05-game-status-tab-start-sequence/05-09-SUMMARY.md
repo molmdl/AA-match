@@ -87,7 +87,7 @@ Each task was committed atomically:
 2. **Task 2: SMOKE-11 PART G rework** — `f79c237` (test)
 3. **Task 3: full gate sweep** — no commit (no fixups needed; all gates green as committed)
 
-**Plan metadata:** `TBD` (docs: complete plan)
+**Plan metadata:** `1f8b651` (docs: complete plan)
 
 ## Files Created/Modified
 - `aamatch/setup_window.py` — `_pop_game_wizard()` new helper; `_cleanup_now` delegates; `_start_impl` deferred sequence + docstring; `_on_cleanup` cancel-first; stale "unconnected Hint" doc mentions corrected

@@ -102,10 +102,16 @@ checks (incl. the msm ORDER-LAW teeth) stay green unchanged.
    pick behavior unchanged). The retired whole-scene sentinel
    selection ('segi AAM' -- every game atom carries it, so it always
    pulled BOTH molecules into frame) is replaced by the registry's own
-   name list, which no user object can ever match either. PHASE 5/6
-   NOTE: re-framing when the active molecule advances is a
-   start-sequence / scoring-lifecycle concern (Phases 5/6), NOT
-   gamestart's -- gamestart composes level-0 molecule-0 starts only.
+    name list, which no user object can ever match either. PHASE 5/6
+    NOTE (updated 06-04): re-framing when the active molecule advances
+    is a scoring-lifecycle concern (Phase 6), NOT start_game's -- but
+    the composition itself is NOW AVAILABLE for any molecule index via
+    ``compose_molecule_view(registry, molecule_index)`` (06-04; the
+    same three helper calls, parameterized). Phase 6's wizard
+    lifecycle consumes it on every molecule/level advance; the history
+    above stands (gamestart composes level-0 molecule-0 starts only;
+    start_game calls compose_molecule_view with the default index 0,
+    byte-identical to the retired inline sequence).
    cmd.zoom is a pure dolly/re-aim: it preserves the rotation matrix
    exactly (headless probe: element delta 0.0) and therefore the roll
    composition and every relative camera-space depth established by
@@ -178,7 +184,7 @@ _FRONT_LEAD = 5.0
 _last_start = None
 
 
-def _active_molecule_selection(registry):
+def _active_molecule_selection(registry, molecule_index=0):
     """Selection expression naming EVERY object of the ACTIVE molecule
     (molecule 0 in the Phase-3 loop): its ligand object plus all of its
     grid slot objects, taken from the materialize registry output.
@@ -189,16 +195,19 @@ def _active_molecule_selection(registry):
     never match, and -- unlike the retired whole-scene ``segi AAM``
     selection -- the INACTIVE molecule's objects are not named, so they
     stay out of the initial frame.
+
+    ``molecule_index`` defaults to 0 (the start path); the Phase-6
+    lifecycle passes the advanced index.
     """
-    molecule = registry['molecules'][0]
+    molecule = registry['molecules'][molecule_index]
     names = [molecule['ligand'][0]]
     names.extend(entry[0] for entry in molecule['slots'].values())
     return ' or '.join(names)
 
 
-def _frame_ligand_above_grid(registry):
-    """Roll the camera so molecule 0's ligand sits ABOVE its own AA
-    grid.
+def _frame_ligand_above_grid(registry, molecule_index=0):
+    """Roll the camera so the ACTIVE molecule's ligand sits ABOVE its
+    own AA grid.
 
     Camera composition only (03-06 human preference) -- no game object
     moves. ``view`` per cmd.get_view(): view[0:9] = row-major world->cam
@@ -210,10 +219,13 @@ def _frame_ligand_above_grid(registry):
     registry slot objects): with the start view framing just that
     molecule (03-07 human decision), an out-of-frame inactive grid
     must never pull the roll alignment off the framed grid.
+
+    ``molecule_index`` defaults to 0 (the start path); the Phase-6
+    lifecycle passes the advanced index.
     """
     view = list(cmd.get_view())
     atoms = geometry.extract_game_atoms()
-    molecule = registry['molecules'][0]
+    molecule = registry['molecules'][molecule_index]
     lig_name = molecule['ligand'][0]
     lig = [a for a in atoms
            if a['side'] == 'lig' and a['object'] == lig_name]
@@ -254,10 +266,13 @@ def _frame_ligand_above_grid(registry):
     cmd.set_view(view)
 
 
-def _move_ligand_in_front(registry):
-    """Translate molecule 0's ligand toward the CAMERA in WORLD space so
-    its centroid leads every atom of its own AA grid by at least
-    _FRONT_LEAD (03-07 human decision 2026-09-10).
+def _move_ligand_in_front(registry, molecule_index=0):
+    """Translate the ACTIVE molecule's ligand toward the CAMERA in WORLD
+    space so its centroid leads every atom of its own AA grid by at
+    least _FRONT_LEAD (03-07 human decision 2026-09-10).
+
+    ``molecule_index`` defaults to 0 (the start path); the Phase-6
+    lifecycle passes the advanced index.
 
     GEOMETRY-SIDE composition (decision law, module docstring step 5):
     replaces the retired camera-only pitch, which regressed the start
@@ -293,7 +308,7 @@ def _move_ligand_in_front(registry):
     """
     view = list(cmd.get_view())
     atoms = geometry.extract_game_atoms()
-    molecule = registry['molecules'][0]
+    molecule = registry['molecules'][molecule_index]
     lig_name = molecule['ligand'][0]
     lig = [a for a in atoms
            if a['side'] == 'lig' and a['object'] == lig_name]
@@ -318,6 +333,33 @@ def _move_ligand_in_front(registry):
     # scene-to-camera world direction = R row 2 (unit, R orthonormal)
     cmd.translate([need * view[6], need * view[7], need * view[8]],
                   lig_name, state=1, camera=0)
+
+
+def compose_molecule_view(registry, molecule_index=0):
+    """Compose the camera + world geometry onto ONE molecule: the 03-07
+    framing laws, parameterized. GEOMETRY first -- move the molecule's
+    ligand IN FRONT of its own grid in world space (03-07 human
+    decision: the geometry-side offset replaced the camera-only pitch,
+    whose pivot regressed the frame blank; see _move_ligand_in_front)
+    -- then the 03-06 above-grid camera roll, then ONE final framing
+    zoom LAST over the molecule's own objects only (03-07 human
+    decision: frame the active molecule's grid + ligand so the view
+    matches the "molecule 1 of 2" panel notice; regression law: zoom
+    is a pure dolly/re-aim that preserves R, so every composition
+    depth survives while the origin + clip slab re-derive).
+
+    THE ONE compose home for starts AND Phase-6 molecule/level
+    advances (06-04; module docstring step 7's PHASE 5/6 NOTE):
+    ``start_game`` calls it with the default index 0 (byte-identical
+    to the pre-06-04 inline sequence); the Phase-6 wizard lifecycle
+    calls it with the advanced molecule index so a newly advanced
+    molecule is framed with exactly the same composition, no
+    duplicated logic.
+    """
+    _move_ligand_in_front(registry, molecule_index)
+    _frame_ligand_above_grid(registry, molecule_index)
+    cmd.zoom(_active_molecule_selection(registry, molecule_index),
+             buffer=5.0)
 
 
 def activate_game(wiz):
@@ -402,9 +444,7 @@ def start_game(setup=None, seed=42, candidates=None, ligand_content=None,
     # threw the whole scene out of frame; zoom-last is a pure dolly/
     # re-aim that preserves R -- both compositions and every relative
     # camera-space depth -- while re-deriving origin + clip slab).
-    _move_ligand_in_front(registry)
-    _frame_ligand_above_grid(registry)
-    cmd.zoom(_active_molecule_selection(registry), buffer=5.0)
+    compose_molecule_view(registry)
     # Capture the initial-state INPUT tuple AFTER new_game+materialize
     # (and the compose) SUCCEEDED and BEFORE any wizard mutation
     # (SETUP-11): the setup is DEEP-COPIED (allowed_interactions list

@@ -964,8 +964,20 @@ try:
     for _ in range(4):
         dlg.game_tab._countdown_tick()
     lines_i = dlg.game_tab._info_log.toPlainText().splitlines()
+    # 05-10 drive-contract evolution (the documented PART-letter
+    # precedent -- the GO step's content contract changed the same way
+    # PART G's did): _begin_play now OWNS the first level line, logged
+    # right after 'GO!' (instant, ordered, no poll race). The five
+    # start lines are still exact; the 6th must be the level line; the
+    # format itself is WSL-pinned in status_text/smoke_14.
     check("part I3: log stepped 'Get ready...' '3' '2' '1' 'GO!'",
-          lines_i == ['Get ready...', '3', '2', '1', 'GO!'],
+          lines_i[:5] == ['Get ready...', '3', '2', '1', 'GO!'],
+          'lines=%r' % (lines_i,))
+    check("part I3: 'GO!' is followed by the level line (05-10's "
+          "_begin_play owns the first observation)",
+          len(lines_i) == 6
+          and lines_i[5].startswith('Level 1, molecule 1 of ')
+          and lines_i[5].endswith('.'),
           'lines=%r' % (lines_i,))
     check('part I3: GO pushed THAT wizard, float anchor, 1 Hz on '
           '(P-1 closed)',

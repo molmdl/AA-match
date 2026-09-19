@@ -62,10 +62,21 @@ PART 4  mid-game restart WITHOUT Done (the replace=1 path, previously
         value (1 on stock), NOT a stale defensive 0 -- the assert that
         gives the 03-03 post-push snapshot ORDER LAW its regression
         teeth on the replace path.
-PART 5  determinism: all three starts used the same default seed ->
+PART 5  compose seam generalization (06-04): on a deferred
+        (activate=False -- the SMOKE-11 PART H shape) 2-molecule
+        sentinel game, compose_molecule_view(registry, 1) frames
+        molecule 1 ONLY (view changed vs pre-compose, the zoom-target
+        selection string names ONLY molecule-1 objects, molecule 0's
+        ligand position untouched by the index-1 compose), is
+        idempotent (a second index-1 compose is a geometry no-op via
+        the need<=0 early return), and the default-index call equals
+        the explicit compose_molecule_view(registry, 0) across FRESH
+        materializes (ligand centroid + view equality); restore =
+        prefix cleanup -> baseline EXACTLY + _last_start reset.
+PART 6  determinism: all three starts used the same default seed ->
         payload['seed'] equal and the level-0 molecule ligand files
         identical (read back through the returned wizards' _payload).
-PART 6  teardown: Done + placement.cleanup_game_objects() returns the
+PART 7  teardown: Done + placement.cleanup_game_objects() returns the
         scene to the pre-start snapshot EXACTLY.
 
 Conventions (frozen Phase 1, kept): anchor repo root via sys.argv
@@ -114,7 +125,8 @@ if _ROOT not in sys.path:
 from pymol import cmd  # noqa: E402
 
 import aamatch  # noqa: E402
-from aamatch import gamestart, geometry, placement, wizard_core  # noqa: E402
+from aamatch import (gamestart, geometry, placement,  # noqa: E402
+                     setup_state, wizard_core)
 from aamatch.wizard import GameWizard  # noqa: E402
 
 print('SMOKE-ENV pymol: %s' % (cmd.get_version()[0],), flush=True)
@@ -564,7 +576,107 @@ except Exception:
     wiz3 = None
 
 # ============================================================
-# PART 5: determinism (same default seed across all three starts)
+# PART 5: compose_molecule_view molecule_index proof (06-04) --
+# the generalized compose seam frames ANY molecule index, not only
+# molecule 0, while the start path stays byte-identical
+# ============================================================
+try:
+    sentinel5 = dict(setup_state.DEFAULTS)
+
+    # (a) deferred prepare (the SMOKE-11 PART H shape: activate=False
+    # prepares the full scene WITHOUT pushing the wizard) ------------
+    wiz5 = aamatch.gamestart.start_game(setup=sentinel5, seed=4242,
+                                        activate=False)
+    # NOTE: PART 4 left its game objects in the scene (Done does not
+    # delete them), so a fresh-start growth count against base5 reads
+    # 0 -- the new generation REUSES the same deterministic names once
+    # start_game's cleanup freed the old one. Prove freshness by the
+    # DERIVED count instead (one generation, nothing extra).
+    gen5_expected = _expected_count(wiz5)
+    check('part 5 prepare: 2-molecule scene, wizard-free',
+          isinstance(wiz5, GameWizard)
+          and cmd.get_wizard() is None
+          and len(_game_objects()) == gen5_expected,
+          'game objects=%d want %d top=%r'
+          % (len(_game_objects()), gen5_expected,
+             cmd.get_wizard()))
+    reg5 = wiz5._registry
+    mol0 = reg5['molecules'][0]
+    mol1 = reg5['molecules'][1]
+    names0 = [mol0['ligand'][0]]
+    names0.extend(entry[0] for entry in mol0['slots'].values())
+    names1 = [mol1['ligand'][0]]
+    names1.extend(entry[0] for entry in mol1['slots'].values())
+
+    # (b) compose molecule 1 EXPLICITLY ------------------------------
+    lig0_before = geometry.centroid_of(names0[0])
+    view_pre5 = list(cmd.get_view())
+    gamestart.compose_molecule_view(reg5, 1)
+    view_post5 = list(cmd.get_view())
+    check('part 5 index-1 compose ran a framing zoom (view changed)',
+          view_post5 != view_pre5,
+          '%d view elements compared' % (len(view_post5),))
+    sel1 = gamestart._active_molecule_selection(reg5, 1)
+    target1 = set(sel1.split(' or '))
+    check('part 5 index-1 zoom target names ONLY molecule-1 objects',
+          sel1 == ' or '.join(names1)
+          and not any(n in target1 for n in names0),
+          'target has %d objects, %d of them molecule-0'
+          % (len(target1),
+             len([n for n in names0 if n in target1])))
+    check('part 5 index-1 compose left molecule-0 ligand UNMOVED',
+          geometry.centroid_of(names0[0]) == lig0_before,
+          'the front offset is a molecule-index-scoped translate')
+
+    # (c) idempotence: a second index-1 compose moves nothing --------
+    lig1_before = geometry.centroid_of(names1[0])
+    gamestart.compose_molecule_view(reg5, 1)
+    check('part 5 second index-1 compose is a geometry no-op',
+          geometry.centroid_of(names1[0]) == lig1_before,
+          'the need<=0 early return (idempotent front offset)')
+
+    # (d) default-index equivalence across FRESH materializes --------
+    wiz5a = aamatch.gamestart.start_game(setup=sentinel5, seed=4242,
+                                         activate=False)
+    gamestart.compose_molecule_view(wiz5a._registry)
+    cen_a = geometry.centroid_of(
+        wiz5a._registry['molecules'][0]['ligand'][0])
+    view_a = list(cmd.get_view())
+    wiz5b = aamatch.gamestart.start_game(setup=sentinel5, seed=4242,
+                                         activate=False)
+    gamestart.compose_molecule_view(wiz5b._registry, 0)
+    cen_b = geometry.centroid_of(
+        wiz5b._registry['molecules'][0]['ligand'][0])
+    view_b = list(cmd.get_view())
+    cdrift = max(abs(cen_a[i] - cen_b[i]) for i in range(3))
+    vdrift = max(abs(view_a[i] - view_b[i]) for i in range(18))
+    check('part 5 default index == explicit 0 (fresh materializes)',
+          cdrift <= 1.0e-6 and vdrift <= 1.0e-6,
+          'centroid drift %.2e A, view drift %.2e (tolerance 1e-6)'
+          % (cdrift, vdrift))
+
+    # (e) restore: prefix cleanup -> the pre-start snapshot EXACTLY
+    # (the PART-4 generation still occupied the scene at part entry,
+    # so this part's baseline IS the PART-0 pre_names), store reset --
+    cleaned5 = placement.cleanup_game_objects()
+    check('part 5 restore: pre-start scene EXACTLY, stack untouched',
+          cleaned5['deleted'] > 0
+          and cmd.get_names('objects') == pre_names
+          and cmd.get_wizard() is None,
+          'deleted=%d after=%r'
+          % (cleaned5['deleted'], cmd.get_names('objects')))
+    gamestart._last_start = None     # later parts start clean
+    REC['part5_index1'] = ('zoom target molecule-1 only, molecule-0 '
+                           'isolated, idempotent, default==0')
+except Exception:
+    traceback.print_exc()
+    check('part 5 compose_molecule_view proof', False,
+          'raised (see traceback above)')
+    gamestart._last_start = None
+    placement.cleanup_game_objects()
+
+# ============================================================
+# PART 6: determinism (same default seed across all three starts)
 # ============================================================
 try:
     trio = [w for w in (wiz1, wiz2, wiz3) if w is not None]
@@ -582,7 +694,7 @@ except Exception:
     check('part 5 determinism', False, 'raised (see traceback above)')
 
 # ============================================================
-# PART 6: teardown -- scene back to the pre-start snapshot EXACTLY
+# PART 7: teardown -- scene back to the pre-start snapshot EXACTLY
 # ============================================================
 try:
     if cmd.get_wizard() is not None:
@@ -595,7 +707,7 @@ try:
                                   cmd.get_names('objects')))
 except Exception:
     traceback.print_exc()
-    check('part 6 teardown', False, 'raised (see traceback above)')
+    check('part 7 teardown', False, 'raised (see traceback above)')
     placement.cleanup_game_objects()
 
 # --- evidence summary -------------------------------------------------

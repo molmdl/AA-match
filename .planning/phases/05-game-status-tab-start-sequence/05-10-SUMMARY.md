@@ -117,7 +117,7 @@ zero Qt/wizard coupling, pickle-safe, module-identity-safe.**
    line** - `2ee6954` (fix)
 3. **Task 2: SMOKE-14 T1b status-surface extension** - `26c3cba` (test)
 
-**Plan metadata:** `<pending>` (docs: complete plan)
+**Plan metadata:** `0f01275` (docs: complete plan)
 
 ## Files Created/Modified
 

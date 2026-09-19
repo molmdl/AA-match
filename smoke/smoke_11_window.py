@@ -939,11 +939,17 @@ try:
           isinstance(dlg.game_tab._info_log, QtWidgets.QTextEdit)
           and dlg.game_tab._info_log.isReadOnly(),
           'type=%r' % (type(dlg.game_tab._info_log),))
+    # I2 label pins run on a FRESH GameTab (the SMOKE-14 standalone
+    # recipe): the singleton dlg is reused across PARTs, so after the
+    # merged deferred-start drive a prior GO legitimately leaves live
+    # status content on it. The placeholder contract belongs to fresh
+    # construction, not to a mid-session tab.
+    tab_fresh_i2 = game_window.GameTab(None)
     check("part I2: timer label '0:00' + required 'Required: -'",
-          dlg.game_tab._timer_label.text() == '0:00'
-          and dlg.game_tab._required_label.text() == 'Required: -',
-          'timer=%r required=%r' % (dlg.game_tab._timer_label.text(),
-                                    dlg.game_tab._required_label.text()))
+          tab_fresh_i2._timer_label.text() == '0:00'
+          and tab_fresh_i2._required_label.text() == 'Required: -',
+          'timer=%r required=%r' % (tab_fresh_i2._timer_label.text(),
+                                    tab_fresh_i2._required_label.text()))
     check("part I2: btn_hint exists with text 'Hint' (05-08 connected)",
           dlg.game_tab.btn_hint.text() == 'Hint',
           'text=%r' % (dlg.game_tab.btn_hint.text(),))

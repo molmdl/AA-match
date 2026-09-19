@@ -404,8 +404,12 @@ def derive_required(setup, ligand_profile, rng, n_required_types):
                    if not ligand_support(t, ligand_profile)]
         if missing:
             raise GenerationError(
-                "molecule cannot support required interaction(s): %s"
-                % ', '.join(missing))
+                "block_exclusive mode requires EVERY molecule of the "
+                "game to support ALL checked interaction(s); this "
+                "molecule cannot support: %s -- uncheck the unsupported "
+                "type(s) in Setup (or lower molecules_per_level / pick "
+                "a molecule set whose every member supports all checked "
+                "types)" % ', '.join(missing))
         return {'mode': 'list',
                 'items': [{'type': t, 'count': 1} for t in allowed]}
 

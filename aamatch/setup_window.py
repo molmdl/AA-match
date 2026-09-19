@@ -19,7 +19,7 @@ THE BINDING CONTRACTS:
    wraps the existing 7-field form + stretch + 7-button row (every
    attribute preserved), and 'Game status' hosts the GameTab from
    game_window.py (info box, timer label + 1 Hz tick, required label,
-   cancellable countdown, unconnected Hint button).
+   cancellable countdown, connected Hint button since 05-08).
    Modal .exec_()/static forms are allowed on CHILD dialogs only
    (QFileDialog/QMessageBox in later handler plans).
 
@@ -136,7 +136,8 @@ class SetupWindow(QtWidgets.QDialog):
     (05-06, SETUP-11 shell) -- the read-only rolling info box, the
     elapsed-timer label + 1 Hz live-anchor tick with modal-pause
     rebase, the required-interactions label, the cancellable 3-2-1
-    countdown, and the unconnected Hint button. spec.md:33: the Game
+    countdown, and the Hint button (connected by 05-08, its handler
+    plan). spec.md:33: the Game
     status tab of the SAME window -- never a second dialog.
     """
 
@@ -234,7 +235,7 @@ class SetupWindow(QtWidgets.QDialog):
         # The two tabs (SETUP-11, plan 05-06): 'Setup' holds everything
         # built above (the buttons stay here per spec.md:21); 'Game
         # status' hosts the GameTab shell -- info box, timer label,
-        # required label, cancellable countdown, unconnected Hint --
+        # required label, cancellable countdown, connected Hint --
         # from game_window.py (spec.md:33: the same window, not a
         # second dialog).
         self.tabs = QtWidgets.QTabWidget(self)
@@ -822,33 +823,56 @@ class SetupWindow(QtWidgets.QDialog):
 
     # ---- SETUP-09 cleanup (04-11) ----
 
+    def _pop_game_wizard(self):
+        """Pop a GameWizard iff it is top-of-stack; returns popped-bool.
+
+        The 04-11 isinstance-pop pattern, deletion excluded: canonical
+        cmd.set_wizard() None-pop -- the popped wizard's own cleanup
+        runs, the prior wizard (if any) auto-resumes, and a USER
+        wizard is never popped. Shared by _cleanup_now (where the
+        prefix-only deletion follows -- behavior byte-identical to the
+        04-11 inline form) and by _start_impl, where the pop happens
+        BEFORE the deferred prepare (pitfall P-3: the old wizard's slot
+        map points at objects start_game's cleanup-first step deletes,
+        so clicks during the countdown must never reach it) and
+        start_game's own cleanup-first law still does the deletion.
+        """
+        from . import wizard
+        prior = cmd.get_wizard()
+        if isinstance(prior, wizard.GameWizard):
+            cmd.set_wizard()
+            return True
+        return False
+
     def _cleanup_now(self):
         """Cleanup WITHOUT any dialog; returns the deleted-object count.
 
-        Pops a GameWizard FIRST iff it is top-of-stack (canonical
-        cmd.set_wizard() None-pop -- its own cleanup runs, prior wizard
-        auto-resumes; a USER wizard is never popped). Then the
-        prefix-only deletion (placement.cleanup_game_objects):
-        user molecules can never match the reserved _aam_ prefix.
+        Pops a GameWizard FIRST via _pop_game_wizard (canonical
+        None-pop, user wizards untouched), then the prefix-only
+        deletion (placement.cleanup_game_objects): user molecules can
+        never match the reserved _aam_ prefix.
 
         Adopted-ligand bookkeeping (placement.py:61-63 defers it here):
         ZERO v1 workload -- v1 never adopts user objects (fresh _aam_*
         names only), so prefix deletion IS the complete original-scene
         restore. Recorded reading; no machinery."""
-        from . import placement, wizard
-        prior = cmd.get_wizard()
-        if isinstance(prior, wizard.GameWizard):
-            cmd.set_wizard()
+        from . import placement
+        self._pop_game_wizard()
         result = placement.cleanup_game_objects()
         return result['deleted']
 
     def _on_cleanup(self):
-        """Cleanup model button (SETUP-09): pop-first cleanup via _guard.
+        """Cleanup model button (SETUP-09): cancel-first + pop-cleanup.
 
-        deleted == 0 is a LEGAL no-op (nothing on the scene) -- the
-        plan brief: the count is always surfaced, zero included; only
-        None (a _guard-caught refusal) means no box.
+        Cancels any pending countdown FIRST (pitfall P-2: a countdown
+        surviving the cleanup would fire a stale GO whose wizard
+        registry references the very objects this cleanup deletes).
+        Then the pop-first cleanup via _guard. deleted == 0 is a LEGAL
+        no-op (nothing on the scene) -- the plan brief: the count is
+        always surfaced, zero included; only None (a _guard-caught
+        refusal) means no box.
         """
+        self.game_tab.cancel_pending_start()
         deleted = self._guard(self._cleanup_now)
         if deleted is not None:
             QtWidgets.QMessageBox.information(
@@ -919,39 +943,59 @@ class SetupWindow(QtWidgets.QDialog):
 
     def _on_start(self):
         """Start the configured game (SETUP-10). THIN: build_state
-        pre-checks, seed policy, then the one-call seam. The wizard panel
-        is the success feedback (no dialog). The GameTab shell exists
-        (05-06: two-tab window; the initial-state store landed in
-        05-05); this handler's countdown / tab-switch rework is plan
-        05-09's, Import and the connected Hint in later plans."""
+        pre-checks + seed policy, then _start_impl's deferred sequence
+        (pop -> prepare unactivated -> tab switch -> countdown, SETUP-11,
+        05-09). The countdown log + the wizard panel after GO are the
+        success feedback (no dialog). Import and later game-lifecycle
+        buttons land in later plans."""
         self._guard(self._start_impl)
 
     def _start_impl(self):
-        """collect -> build_state -> seed policy -> start_game. NON-MODAL.
+        """collect -> build_state -> seed policy -> the DEFERRED start
+        sequence. NON-MODAL; returns the prepared (not yet activated)
+        GameWizard -- the smoke's assertion handle.
 
-        ORDERING LAW: setup_form.build_state raising is CAUGHT BY
-        _guard and the scene is then UNTOUCHED -- the pre-check's whole
-        point (start_game cleans first, so a post-cleanup refusal would
-        already have deleted the prior game objects; build_state's
-        three fatal refusals fire BEFORE anything scene-touching runs).
-        Upload mode without matching session content refuses inside
-        build_state (upload_ready False); upload mode WITH it reuses
-        the session rows + ligand_content (the synthetic upload keys
-        cannot be materialized from the bundled manifest). Seed policy
-        (Decision 4): when self._last_export exists and its stored
-        setup EQUALS the freshly built state (dict equality -- both
-        sides are validate_state-normalized), the whole exported tuple
-        (seed, candidates, ligand_content) is reused, so
-        Start-after-Generate replays the SHARED game; otherwise a fresh
-        random seed is drawn and candidates/content come from the
-        CURRENT form's source mode. NO success dialog (04-13 decision):
-        the materialized scene, the wizard panel and the gamestart
-        status print ARE the feedback -- a Start that opened a modal
-        would be noise. The GameTab shell landed in 05-06 (two-tab
-        window) and the initial-state store in 05-05; this impl's
-        countdown/deferred-activation rework is 05-09, Import and
-        connected Hint later plans. Every refusal is a ValueError/
+        ORDERING LAW (unchanged from 04-13): setup_form.build_state
+        raising is CAUGHT BY _guard and the scene is then UNTOUCHED --
+        the pre-check's whole point (start_game cleans first, so a
+        post-cleanup refusal would already have deleted the prior game
+        objects; build_state's three fatal refusals fire BEFORE
+        anything scene-touching runs). Upload mode without matching
+        session content refuses inside build_state (upload_ready
+        False); upload mode WITH it reuses the session rows +
+        ligand_content (the synthetic upload keys cannot be
+        materialized from the bundled manifest). Seed policy (Decision
+        4): when self._last_export exists and its stored setup EQUALS
+        the freshly built state (dict equality -- both sides are
+        validate_state-normalized), the whole exported tuple (seed,
+        candidates, ligand_content) is reused, so Start-after-Generate
+        replays the SHARED game; otherwise a fresh random seed is drawn
+        and candidates/content come from the CURRENT form's source
+        mode. NO success dialog (04-13 decision): the materialized
+        scene, the countdown log, the wizard panel after GO and the
+        gamestart status print ARE the feedback -- a Start that opened
+        a modal would be noise. Every refusal is a ValueError/
         OSError that _guard surfaces verbatim.
+
+        DEFERRED SEQUENCE (05-09, SETUP-11; the WINDOW is the
+        sequencer -- the cmd tier stays Qt-free and never learns about
+        tabs, research Q2 answer (c)):
+          1. _pop_game_wizard() -- the window pops the PRIOR GameWizard
+             itself BEFORE prepare (pitfall P-3: its slot map points at
+             objects start_game's cleanup-first step deletes, so clicks
+             during the countdown must never reach it; the 04-11
+             isinstance-pop pattern, deletion excluded -- start_game's
+             own cleanup still does the deleting). start_game's
+             internal conditional-replace stays untouched for direct
+             callers (SMOKE-08's ORDER-LAW teeth).
+          2. start_game(..., activate=False) -- prepare ONLY: the scene
+             is built, the wizard constructed but NOT pushed (P-1: the
+             countdown window is wizard-free).
+          3. tabs.setCurrentWidget(game_tab) -- the spec.md:33 'same
+             window' switch to the Game status tab.
+          4. game_tab.start_countdown(wiz) -- hands off to the
+             cancellable 3-2-1 countdown; only its GO step pushes and
+             anchors (gamestart.activate_game, Pattern 2).
         """
         from . import setup_form, gamestart
         form = self.collect_state()
@@ -973,9 +1017,14 @@ class SetupWindow(QtWidgets.QDialog):
             else:
                 candidates = None
                 ligand_content = None
-        gamestart.start_game(setup=state, seed=seed,
-                             candidates=candidates,
-                             ligand_content=ligand_content)
+        self._pop_game_wizard()
+        wiz = gamestart.start_game(setup=state, seed=seed,
+                                   candidates=candidates,
+                                   ligand_content=ligand_content,
+                                   activate=False)
+        self.tabs.setCurrentWidget(self.game_tab)
+        self.game_tab.start_countdown(wiz)
+        return wiz
 
     # NO closeEvent OVERRIDE -- on purpose: default close hides the
     # dialog, and the module-level _window singleton keeps the object

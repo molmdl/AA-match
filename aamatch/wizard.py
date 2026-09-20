@@ -314,6 +314,16 @@ class GameWizard(Wizard):
         slot_id = self._slot_by_object.get(rows[0][0])
         if slot_id is None:
             return
+        from . import engine
+        if engine.is_over():
+            # SOFT game-over gate (06-06): NEVER raise here -- an
+            # exception would propagate into the C-layer pick dispatch
+            # (this method is called from the mouse event loop). The
+            # refusal lands on the panel error line instead and the
+            # selection stays UNCHANGED.
+            self._error = 'The game is over.'
+            cmd.refresh_wizard()
+            return
         self._error = None
         self._select_slot(slot_id)
 
@@ -545,6 +555,19 @@ class GameWizard(Wizard):
             cmd.refresh_wizard()
             return None
 
+    def _require_playing(self):
+        """THE game-over gate (06-06): the FIRST line of every gameplay
+        impl (movement, hint, reset, confirm, skip, give-up). After
+        give_up/complete_game the wizard stays on the stack but INERT
+        -- 'inert-but-present until the tab's endgame sequence pops it'
+        (06-06 law): every op refuses with the pinned wording, which
+        lands on the panel error line via _guard. do_pick fails SOFT
+        instead (its own inline check -- NEVER raise into the C-layer
+        pick dispatch)."""
+        from . import engine
+        if engine.is_over():
+            raise WizardError('The game is over.')
+
     def nudge_cam(self, dx, dy, dz):
         """Camera-frame nudge of the selected AA:
         (dx, dy, dz) in {-1, 0, 1} is converted to the WORLD frame via
@@ -555,6 +578,7 @@ class GameWizard(Wizard):
                     float(dz))
 
     def _nudge_cam_impl(self, dx, dy, dz):
+        self._require_playing()
         obj = self._current_object()
         if obj is None:
             return
@@ -576,6 +600,7 @@ class GameWizard(Wizard):
         self._guard(self._rotate_axis_impl, axis, float(deg), origin)
 
     def _rotate_axis_impl(self, axis, deg, origin):
+        self._require_playing()
         obj = self._current_object()
         if obj is None:
             return
@@ -602,6 +627,7 @@ class GameWizard(Wizard):
         self._guard(self._step_to_ligand_impl)
 
     def _step_to_ligand_impl(self):
+        self._require_playing()
         obj = self._current_object()
         if obj is None:
             return
@@ -630,6 +656,7 @@ class GameWizard(Wizard):
         self._guard(self._move_to_impl, position)
 
     def _move_to_impl(self, position):
+        self._require_playing()
         obj = self._current_object()
         if obj is None:
             return
@@ -693,10 +720,7 @@ class GameWizard(Wizard):
 
     def _confirm_molecule_impl(self):
         from . import engine
-        if engine.is_over():
-            # Cheap plain-data gate (06-05; 06-06 hardens the rest of
-            # the lifecycle ops with the same shape).
-            raise WizardError('The game is over.')
+        self._require_playing()
         required = self._required()
         records = engine.detect_molecule(self._level_index,
                                          self._molecule_index)
@@ -792,6 +816,43 @@ class GameWizard(Wizard):
                 'summary': summary, 'level_pos': scored_level,
                 'molecule_pos': scored_pos}
 
+    def give_up(self):
+        """SCORE-06 Give Up (06-06): end the game AT THE CURRENT STAGE
+        (spec.md:44-45 -- the CURRENT molecule is NOT scored; the
+        partial-score store is Skip's only). engine.give_up freezes the
+        timer, counts the give-up, and ends the game; the summary
+        returns PLAIN through the _guard seam.
+
+        NO SELF-POP: the wizard does NOT pop itself -- the 06-07/06-09
+        tab's endgame sequence owns the pop ('AFTER the wizard pop's
+        color-restore burst'); between Give-Up-Yes and the pop the
+        _require_playing gates hold the wizard inert (and keep a dead
+        PANEL-era wizard inert too -- the panel carries no Give Up
+        button).
+
+        WARNING OWNERSHIP: this op is the Yes-branch ONLY; the
+        confirmation warning belongs to the 06-07 tab wrapper.
+
+        Returns {game_over: True, summary, level_pos, molecule_pos of
+        the position where the game ended} -- the tab's endgame
+        sequence consumes it; None on a guarded refusal."""
+        return self._guard(self._give_up_impl)
+
+    def _give_up_impl(self):
+        from . import engine
+        self._require_playing()
+        level_pos = self._level_index + 1
+        molecule_pos = self._molecule_index + 1
+        m_total = len(self._registry['molecules'])
+        summary = engine.give_up()
+        self._sync_end_state()
+        self._set_event('gave_up', total=float(summary['total']),
+                        molecule_pos=molecule_pos, molecule_total=m_total,
+                        level_pos=level_pos)
+        cmd.refresh_wizard()
+        return {'game_over': True, 'summary': summary,
+                'level_pos': level_pos, 'molecule_pos': molecule_pos}
+
     def reset_grid(self):
         """PLAY-03 Reset: engine.reset_to_grid() -- POSITION replay
         (RECORDED PLANNER DECISION: option a) -- every AA's centroid
@@ -812,10 +873,17 @@ class GameWizard(Wizard):
 
     def _reset_grid_impl(self):
         from . import engine
+        self._require_playing()
         engine.reset_to_grid()
         for obj in wizard_core.snapshot_objects(self._color_store):
             self._assert_identity(obj)
         self._result = None
+        # The reset marker (06-06): positions are INVISIBLE to the
+        # status poll's diff (_state_dict carries no pose keys and
+        # 'result' is never fingerprinted), so this event is the ONLY
+        # way the tab's poll can render the grid-reset line (the 06-02
+        # pinned 'game_reset' builder).
+        self._set_event('game_reset')
         cmd.refresh_wizard()
 
     def hint(self):
@@ -842,6 +910,7 @@ class GameWizard(Wizard):
 
     def _hint_impl(self):
         from . import capability, engine
+        self._require_playing()
         required = self._required()
         slots = self._payload['levels'][self._level_index] \
             ['molecules'][self._molecule_index]['grid']['slots']

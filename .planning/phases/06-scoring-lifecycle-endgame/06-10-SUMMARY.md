@@ -10,7 +10,7 @@ requires:
   - phase: 06-scoring-lifecycle-endgame
     provides: plans 06-01..06-09 (GameState lifecycle data layer, status_text Phase-6 surface, gamestart compose seam, engine lifecycle ops, wizard lifecycle core + skip/give-up half, tab lifecycle wiring — Confirm + Skip/Give-Up dropdown + _endgame_sequence, Restart _last_start replay + Reset wizard-public dispatch, endgame modal — all headlessly proven via SMOKE-15 A/B/C + SMOKE-16 A/B/C + the full six-smoke battery)
 provides:
-  - ROADMAP Phase-6 criterion 1 (SCORE-01/02 confirm + debrief + advance) [HUMAN] verdict recorded: defect-found-and-fixed (fix-batch item, step 1; re-verify pending)
+  - ROADMAP Phase-6 criterion 1 (SCORE-01/02 confirm + debrief + advance) [HUMAN] verdict recorded: defect-found-and-fixed (fix-batch item, step 1); step-1 re-verify RE-VERIFIED PASS (human, 2026-09-21)
   - ROADMAP Phase-6 criterion 2 (SCORE-03 level escalation, timer-continuous) [HUMAN] verdict recorded: PASS
   - ROADMAP Phase-6 criterion 3 (SCORE-05/06 skip/give-up + warning semantics) [HUMAN] verdict recorded: PASS
   - ROADMAP Phase-6 criterion 4 (SCORE-07 endgame screen, give-up + natural end) [HUMAN] verdict recorded: PASS
@@ -34,7 +34,7 @@ key-files:
     - "smoke/smoke_15_lifecycle.py"
 
 key-decisions:
-  - "06-10 checkpoint APPROVED-after-fix (human, 2026-09-21) with 1 fix-batch item (in-level molecule advance did not re-frame the camera), resolved in-session (commit ff4b519); step-1 re-verify pending with the orchestrator"
+  - "06-10 checkpoint APPROVED-after-fix (human, 2026-09-21) with 1 fix-batch item (in-level molecule advance did not re-frame the camera), resolved in-session (commit ff4b519); step-1 re-verify RE-VERIFIED PASS (human, 2026-09-21) — overall verdict APPROVED (human, 2026-09-21)"
   - "Advance-compose law (06-10 fix, commit ff4b519): the molecule branch of _advance_after_record runs the SAME _compose_active_molecule call as the level branch (wizard.py) — a newly advanced molecule is always camera-framed onto its own grid; regression teeth = SMOKE-15 PART B2 camera re-frame assert (75 checks)"
   - "All pinned Phase-6 wording CONFIRMED as-written (no amendments): 5 poll event lines, game_restarted, both warning boxes, endgame block/headline"
 
@@ -48,7 +48,7 @@ completed: 2026-09-21
 
 # Phase 6 Plan 10: Consolidated GUI Checkpoint — Full Scoring Lifecycle + Endgame Summary
 
-**06-10 checkpoint APPROVED-after-fix (human, 2026-09-21) with 1 fix-batch item: 8/9 steps PASS outright on a real Windows PyMOL 2.5.0 session — Confirm/debrief/advance semantics + wording, level escalation (new grids materialized and camera-framed, timer CONTINUOUS at 8:28 across all 3 levels), Skip warning + mercy-path semantics (0.00 partial, timer froze under the box), Give Up + endgame screen (frozen label, per-level scores, counts, on-top modal, wizard popped with colors restored), natural end with the winning headline, Restart (D7 after-the-arm log order, counters zeroed, timer from zero), Reset (grid restore, orientations kept, selection green, timer running), wording CONFIRMED (no amendments), console clean. Step 1 (SCORE-01/02) carried the ONE defect: after an in-level molecule advance the camera was NOT re-framed onto the next molecule's grid. Root cause: the molecule branch of `wizard._advance_after_record` never called `_compose_active_molecule`. Fixed in-session (commit ff4b519 — the SAME 06-04 compose seam the level branch already runs), with a RED-proven SMOKE-15 PART B2 regression assert and all gates re-green (826/826 WSL, SMOKE-15 75/75, SMOKE-07 56/56, SMOKE-16 67/67). Step-1 re-verify is PENDING with the orchestrator. All five ROADMAP Phase-6 criteria now carry [HUMAN] verdict coverage; Phase 6 is ready for the phase verifier.**
+**06-10 checkpoint APPROVED-after-fix (human, 2026-09-21) with 1 fix-batch item: 8/9 steps PASS outright on a real Windows PyMOL 2.5.0 session — Confirm/debrief/advance semantics + wording, level escalation (new grids materialized and camera-framed, timer CONTINUOUS at 8:28 across all 3 levels), Skip warning + mercy-path semantics (0.00 partial, timer froze under the box), Give Up + endgame screen (frozen label, per-level scores, counts, on-top modal, wizard popped with colors restored), natural end with the winning headline, Restart (D7 after-the-arm log order, counters zeroed, timer from zero), Reset (grid restore, orientations kept, selection green, timer running), wording CONFIRMED (no amendments), console clean. Step 1 (SCORE-01/02) carried the ONE defect: after an in-level molecule advance the camera was NOT re-framed onto the next molecule's grid. Root cause: the molecule branch of `wizard._advance_after_record` never called `_compose_active_molecule`. Fixed in-session (commit ff4b519 — the SAME 06-04 compose seam the level branch already runs), with a RED-proven SMOKE-15 PART B2 regression assert and all gates re-green (826/826 WSL, SMOKE-15 75/75, SMOKE-07 56/56, SMOKE-16 67/67). Step-1 re-verify is **RE-VERIFIED PASS (human, 2026-09-21)**: fresh games (molecules_per_level=1, then default 2) — after a level-1 molecule-1 Confirm the camera automatically re-framed/zoomed onto molecule 2's grid, fix ff4b519 confirmed working in the GUI. All five ROADMAP Phase-6 criteria now carry closed [HUMAN] verdicts; overall verdict is **APPROVED (human, 2026-09-21)**.**
 
 ## Performance
 
@@ -67,7 +67,7 @@ completed: 2026-09-21
 
 | Step | Requirement / ROADMAP criterion | Verdict | Notes |
 |------|--------------------------------|---------|-------|
-| 1 | SCORE-01/02 Confirm + debrief + advance | DEFECT FOUND → FIXED (fix-batch; re-verify pending) | Semantics + wording PASS (log evidence: `Molecule 1 of 2 scored 1.00 (total 1.00).` + Formed/Missing lines + next level line). The defect: after an in-level molecule advance the camera did NOT re-frame to the next molecule's grid, with no instruction how to get there. Human verdict verbatim: **"lv 1 after 1st mol not zooming to 2nd mol's grid and no instruction to do so"**. Fixed as commit ff4b519; human step-1 re-verify PENDING. |
+| 1 | SCORE-01/02 Confirm + debrief + advance | DEFECT FOUND → FIXED (fix-batch) → **RE-VERIFIED PASS (human, 2026-09-21)** | Semantics + wording PASS (log evidence: `Molecule 1 of 2 scored 1.00 (total 1.00).` + Formed/Missing lines + next level line). The defect: after an in-level molecule advance the camera did NOT re-frame to the next molecule's grid, with no instruction how to get there. Human verdict verbatim: **"lv 1 after 1st mol not zooming to 2nd mol's grid and no instruction to do so"**. Fixed as commit ff4b519; human step-1 re-verify PASS — camera automatically re-framed/zoomed onto molecule 2's grid after Confirm on molecule 1 (molecules_per_level=1 then default 2). |
 | 2 | SCORE-03 level escalation | PASS | `Level 2, molecule 1 of 2.` logged; new higher-difficulty grids materialized and camera-framed (the level-branch compose works); timer CONTINUOUS (final Time: 8:28 spanning all 3 levels, never reset). |
 | 3 | SCORE-05 Skip warning + semantics | PASS | Warning box shown; the timer FROZE while the box was open (human gave up within a few seconds after skip; the frozen label evidenced the freeze). Log: `Skipped molecule 1 of 2 (partial score 0.00, total 0.00).` then `Level 1, molecule 2 of 2.` — mercy path (nothing formed stores 0.00, no refusal) exercised. |
 | 4 | SCORE-06/07 Give Up + endgame | PASS | Warning; Yes → `Game ended at level 1, molecule 2 of 2 (total 0.00).` + full endgame block in the info box with the GIVE-UP headline `Game over -- gave up at level 1, molecule 2 of 2.`, per-level scores, Total, Time: 0:08 (label frozen), `Molecules completed: 1 of 6. Levels: 3.`, `Skips: 1. Give-ups: 1.`; wizard popped (colors restored); endgame modal appeared ABOVE the 3D viewer; `_aam_*` scene stayed for inspection. Note (human, verbatim): **"i do give up within few second after skip"** — the skip-then-immediate-give-up sequencing worked correctly. |
@@ -77,7 +77,7 @@ completed: 2026-09-21
 | 8 | Wording approval | CONFIRMED | Every logged string matches the `aamatch/status_text.py` pins; no amendments requested. See the Wording Verdicts section. |
 | 9 | Console | PASS | Only the recorded 04-14 stock-baseline plugin-init warnings; zero tracebacks; zero stray AA-match prints. |
 
-**Overall verdict: APPROVED-after-fix** — the one fix-batch item (step 1 molecule-advance camera re-frame) was applied as commit `ff4b519` with all gates re-green; step-1 visual re-verify is PENDING and routed through the orchestrator.
+**Overall verdict: APPROVED (human, 2026-09-21)** — approved-after-fix with the fix verified: the one fix-batch item (step 1 molecule-advance camera re-frame) was applied as commit `ff4b519` with all gates re-green, and the routed step-1 visual re-verify PASSED (human, 2026-09-21 — camera re-framed onto molecule 2's grid after the Confirm).
 
 ## Wording Verdicts (step 8 — permanent pins, human 2026-09-21)
 
@@ -119,7 +119,7 @@ completed: 2026-09-21
 - `bash smoke/run_smoke.sh smoke/smoke_07_wizard_loop.py` — **=== SMOKE-07 PASS ===** (56 `SMOKE-07 ... PASS` lines; regression battery)
 - `bash smoke/run_smoke.sh smoke/smoke_16_tab.py` — **=== SMOKE-16 PASS ===** (67 checks)
 
-**Step-1 re-verify obligation: PENDING.** The headless proof of the fix is the SMOKE-15 PART B2 assert above; the human's step-1 visual re-verify (camera re-frames onto molecule 2's grid after a level-1 molecule-1 Confirm) has NOT yet been run and is routed through the orchestrator as a re-verify obligation. This SUMMARY does NOT claim step 1 re-verified.
+**Step-1 re-verify obligation: RE-VERIFIED PASS (human, 2026-09-21).** The headless proof of the fix is the SMOKE-15 PART B2 assert above; the human's routed step-1 visual re-verify has now run: on real Windows PyMOL 2.5.0, fresh games were started (first with molecules_per_level=1 — 1 molecule, 9 slots — then default 2 molecules / 18 slots), AAs picked and molecule 1 Confirmed; the camera automatically re-framed/zoomed onto molecule 2's grid after the Confirm — fix `ff4b519` confirmed working in the GUI. Verdict: **RE-VERIFIED PASS**.
 
 ## Session Observations (human-volunteered; recorded, may matter later)
 
@@ -129,7 +129,7 @@ completed: 2026-09-21
 
 ## must_haves Check
 
-- ✅ **"A human has played a full lifecycle on real PyMOL: confirm/debrief/advance, level escalation, skip/give-up warnings, endgame screen, restart/reset — all five ROADMAP criteria carry [HUMAN] verdicts"** — all five criteria carry verdicts in the step table above (criterion 1 = fixed-after-defect with re-verify pending; criteria 2-5 PASS).
+- ✅ **"A human has played a full lifecycle on real PyMOL: confirm/debrief/advance, level escalation, skip/give-up warnings, endgame screen, restart/reset — all five ROADMAP criteria carry [HUMAN] verdicts"** — all five criteria carry verdicts in the step table above (criterion 1 = fixed-after-defect, **re-verify RE-VERIFIED PASS 2026-09-21**; criteria 2-5 PASS).
 - ✅ **"The pinned Phase-6 wording (event lines, warnings, endgame block) is human-CONFIRMED or amended in-session"** — CONFIRMED for every pinned string; zero amendments (Wording Verdicts section).
 - ✅ **"The timer freeze under the NEW warning modals is human-confirmed (P-5 class, new dialog instances)"** — CONFIRMED under the Skip warning box (step-3 frozen label evidence).
 - ✅ **Artifact:** this SUMMARY contains "APPROVED" (APPROVED-after-fix).
@@ -145,5 +145,5 @@ None.
 ## Next Phase Readiness
 
 - All five ROADMAP Phase-6 success criteria carry [HUMAN] verdict coverage — Phase 6 is ready for `/gsd-verify-phase`.
-- **Outstanding obligation:** the step-1 human re-verify (molecule-advance camera re-frame on the GUI) — routed through the orchestrator; the fix's headless proof (SMOKE-15 PART B2, 75/75) is already recorded here.
+- **Outstanding obligation: CLOSED (2026-09-21).** The routed step-1 human re-verify (molecule-advance camera re-frame on the GUI) RE-VERIFIED PASS — camera re-framed onto molecule 2's grid after the level-1 molecule-1 Confirm (fix ff4b519 verified in the GUI; headless proof = SMOKE-15 PART B2, 75/75).
 - Advance-compose law established for all later camera-touching work: ANY molecule/level advance re-frames through the ONE `_compose_active_molecule` seam (commit `ff4b519`).

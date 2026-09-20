@@ -52,16 +52,16 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Scoring & Game Lifecycle
 
-- [ ] **SCORE-01**: Confirm runs detection and shows the molecule score (fraction of required interactions formed, binary per interaction) plus running total, then advances to the next molecule
-- [ ] **SCORE-02**: After Confirm, a debrief shows which required interactions formed vs missed (numbers only — no geometry, respecting the no-helper rule)
-- [ ] **SCORE-03**: Finishing a level advances to the next level with higher difficulty
+- [x] **SCORE-01**: Confirm runs detection and shows the molecule score (fraction of required interactions formed, binary per interaction) plus running total, then advances to the next molecule
+- [x] **SCORE-02**: After Confirm, a debrief shows which required interactions formed vs missed (numbers only — no geometry, respecting the no-helper rule)
+- [x] **SCORE-03**: Finishing a level advances to the next level with higher difficulty
 - [x] **SCORE-04**: Game status tab shows a rolling info box, elapsed timer (outside the info box), and the type + number of required interactions (`any` or from the allowed list)
-- [ ] **SCORE-05**: Skip Molecule (with confirmation warning) stores the partial score and moves to the next molecule
-- [ ] **SCORE-06**: Give Up (with confirmation warning) ends the game at the current stage and shows the endgame screen
-- [ ] **SCORE-07**: After all levels: per-level scores + total score, stopped timer, and a winning message with time taken, total molecules and levels, and skip/give-up counts
+- [x] **SCORE-05**: Skip Molecule (with confirmation warning) stores the partial score and moves to the next molecule
+- [x] **SCORE-06**: Give Up (with confirmation warning) ends the game at the current stage and shows the endgame screen
+- [x] **SCORE-07**: After all levels: per-level scores + total score, stopped timer, and a winning message with time taken, total molecules and levels, and skip/give-up counts
 - [ ] **SCORE-08**: Save button checkpoints the game (PyMOL session + game-state sidecar) so the user can load/resume any time
-- [ ] **SCORE-09**: Restart button restarts the game from the stored initial state
-- [ ] **SCORE-10**: Reset button places all amino acids back to their grid positions
+- [x] **SCORE-09**: Restart button restarts the game from the stored initial state
+- [x] **SCORE-10**: Reset button places all amino acids back to their grid positions
 
 ### Persistence
 
@@ -143,16 +143,16 @@ Which phases cover which requirements. Updated during roadmap creation (2026-09-
 | DETECT-03 | Phase 2 | Complete |
 | DETECT-04 | Phase 2 | Complete |
 | DETECT-05 | Phase 2 | Complete |
-| SCORE-01 | Phase 6 | Pending |
-| SCORE-02 | Phase 6 | Pending |
-| SCORE-03 | Phase 6 | Pending |
+| SCORE-01 | Phase 6 | Complete |
+| SCORE-02 | Phase 6 | Complete |
+| SCORE-03 | Phase 6 | Complete |
 | SCORE-04 | Phase 5 | Complete |
-| SCORE-05 | Phase 6 | Pending |
-| SCORE-06 | Phase 6 | Pending |
-| SCORE-07 | Phase 6 | Pending |
+| SCORE-05 | Phase 6 | Complete |
+| SCORE-06 | Phase 6 | Complete |
+| SCORE-07 | Phase 6 | Complete |
 | SCORE-08 | Phase 7 | Pending |
-| SCORE-09 | Phase 6 | Pending |
-| SCORE-10 | Phase 6 | Pending |
+| SCORE-09 | Phase 6 | Complete |
+| SCORE-10 | Phase 6 | Complete |
 | PERSIST-01 | Phase 1 | Complete |
 | PERSIST-02 | Phase 7 | Pending |
 | PERSIST-03 | Phase 7 | Pending |
@@ -170,4 +170,4 @@ Which phases cover which requirements. Updated during roadmap creation (2026-09-
 
 ---
 *Requirements defined: 2026-09-05*
-*Last updated: 2026-09-20 — Phase 5 closed (SETUP-11, PLAY-05, SCORE-04 → Complete; 05-VERIFICATION.md passed 88/88)*
+*Last updated: 2026-09-21 — Phase 6 closed (SCORE-01/02/03/05/06/07/09/10 → Complete; 06-VERIFICATION.md passed 39/39, step-1 re-verify closed 2026-09-21)*

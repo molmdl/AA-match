@@ -22,7 +22,7 @@ AA-match ships as a standard PyMOL 2.5.0 plugin implementing an educational smal
 - [x] **Phase 3: Wizard Gameplay Loop** — click-to-select, move/rotate onto the ligand, Confirm; movement-model decision; no helper visuals
 - [x] **Phase 4: Qt Setup Window** — modeless setup window: demo dropdown, upload, params, the seven bottom buttons
 - [x] **Phase 5: Game Status Tab & Start Sequence** — start sequence, live status tab (info box / timer / required interactions), Hint
-- [ ] **Phase 6: Scoring Lifecycle & Endgame** — confirm/debrief/advance, skip/give-up, endgame screen, restart/reset
+- [x] **Phase 6: Scoring Lifecycle & Endgame** — confirm/debrief/advance, skip/give-up, endgame screen, restart/reset
 - [ ] **Phase 7: Checkpoint & Game-File Persistence** — save/restore round-trip, Import of exported games
 - [ ] **Phase 8: Demo Curation & Citations** — ~9 curated tier slots under propose → approve → fetch/commit; DATA_SOURCES.md
 - [ ] **Phase 9: Help, Docs & Release Audit** — in-game help, README, final docs audit, perf budgets
@@ -175,12 +175,12 @@ Plans:
 - [x] 06-02-PLAN.md — [TDD] status_text Phase-6 surface (6 event builders, last_event poll-diff, warning constants, endgame_lines, format_mss)
 - [x] 06-04-PLAN.md — gamestart compose seam: molecule_index params + public compose_molecule_view + SMOKE-08 PART 5 (D6 deviation recorded: no anchor_timer param — level advance rebinds the same wizard)
 - [x] 06-03-PLAN.md — engine lifecycle ops (guarded record_scored, skip_molecule, advance_level, give_up/complete_game, reads) + SMOKE-15 PART A
-- [ ] 06-05-PLAN.md — wizard confirm rework + atomic two-book advancement (molecule/level/complete) + event marker + _state_dict extension + SMOKE-15 PART B
-- [ ] 06-06-PLAN.md — wizard skip/give_up ops + game-over gating across all gameplay handlers + game_reset marker + SMOKE-15 PART C
-- [ ] 06-07-PLAN.md — Game tab: Confirm button + Skip/Give-Up dropdown with spec warnings + sync _refresh_status + stale-required-label fix + SMOKE-16 PART A
-- [ ] 06-08-PLAN.md — Game tab: Restart (_last_start replay through the deferred sequence) + Reset (wizard-owned grid replay) + SMOKE-16 PART B
-- [ ] 06-09-PLAN.md — endgame modal (v1 _finish_win pattern, ~100 ms after the pop burst) + wrapper scheduling tails + SMOKE-16 PART C + full six-smoke regression battery
-- [ ] 06-10-PLAN.md — [HUMAN] consolidated GUI checkpoint: ROADMAP criteria 1-5 + wording confirmation (one session, setenv.bat PyMOL)
+- [x] 06-05-PLAN.md — wizard confirm rework + atomic two-book advancement (molecule/level/complete) + event marker + _state_dict extension + SMOKE-15 PART B
+- [x] 06-06-PLAN.md — wizard skip/give_up ops + game-over gating across all gameplay handlers + game_reset marker + SMOKE-15 PART C
+- [x] 06-07-PLAN.md — Game tab: Confirm button + Skip/Give-Up dropdown with spec warnings + sync _refresh_status + stale-required-label fix + SMOKE-16 PART A
+- [x] 06-08-PLAN.md — Game tab: Restart (_last_start replay through the deferred sequence) + Reset (wizard-owned grid replay) + SMOKE-16 PART B
+- [x] 06-09-PLAN.md — endgame modal (v1 _finish_win pattern, ~100 ms after the pop burst) + wrapper scheduling tails + SMOKE-16 PART C + full six-smoke regression battery
+- [x] 06-10-PLAN.md — [HUMAN] consolidated GUI checkpoint: ROADMAP criteria 1-5 + wording confirmation (one session, setenv.bat PyMOL)
 
 ### Phase 7: Checkpoint & Game-File Persistence
 **Goal**: Games survive closing PyMOL: checkpoints fully reconstruct a running game (positions, scores, counters, timer), and exported game files load through the Game status tab's Import button.
@@ -259,7 +259,7 @@ Lifted from PITFALLS.md "Pitfall-to-Phase Mapping" (topic names → this roadmap
 | 3. Wizard Gameplay Loop | 7/7 | Complete (verified 2026-09-15 — 03-VERIFICATION.md passed 27/27) | 2026-09-15 |
 | 4. Qt Setup Window | 15/15 | Complete (verified 2026-09-16 — 04-VERIFICATION.md passed 58/58) | 2026-09-16 |
 | 5. Game Status Tab & Start Sequence | 11/11 | Complete (verified 2026-09-20 — 05-VERIFICATION.md passed 88/88) | 2026-09-20 |
-| 6. Scoring Lifecycle & Endgame | 0/TBD | Not started | - |
+| 6. Scoring Lifecycle & Endgame | 10/10 | Complete (verified 2026-09-21 — 06-VERIFICATION.md passed 39/39) | 2026-09-21 |
 | 7. Checkpoint & Game-File Persistence | 0/TBD | Not started | - |
 | 8. Demo Curation & Citations | 0/TBD | Not started | - |
 | 9. Help, Docs & Release Audit | 0/TBD | Not started | - |

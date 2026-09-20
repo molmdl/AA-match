@@ -1,4 +1,5 @@
-"""Headless SMOKE-16 - the Game tab lifecycle controls (plan 06-07, T1b).
+"""Headless SMOKE-16 - the Game tab lifecycle controls (plans
+06-07/06-08, T1b).
 
 Run (from WSL, repo root):
     bash smoke/run_smoke.sh smoke/smoke_16_tab.py 120
@@ -54,6 +55,39 @@ PART A  the tab drive:
         A9 restore - cancel + stop timers + done pop + prefix cleanup
         + gamestart._last_start reset -> the baseline scene EXACTLY.
 
+PART B  restart/reset (06-08, SCORE-09/10):
+        B1 construction - btn_restart ('Restart') + btn_reset_grid
+        ('Reset') land AFTER btn_skip_menu, tooltips non-empty, the
+        stretch stays LAST.
+        B2 live game - the countdown drive -> scripted move of one AA
+        -> confirm_molecule (a score exists) -> the SMOKE-08 :146-162
+        marker band stamped on the whole generation (INSTANCE
+        identity, never name sets).
+        B3 restart impl - _restart_now() returns True; the pending
+        wizard is armed and NOT on the stack; the info box is
+        ['Get ready...', 'Game restarted.'] in that order (restart-
+        reset D7 / the plan's must_haves sequence: the line logs
+        AFTER the countdown arm so the box clear cannot wipe it).
+        B4 GO - the REPLAY wizard pushed; float anchor; fresh zeros
+        (scores [], skips 0, give-ups 0, game_over False); marker
+        survivors 0 with exactly one fresh generation (derived count);
+        the moved slot re-baked to its effective_position target
+        (1e-6 + float32 ulp slack).
+        B5 refusal - with gamestart._last_start = None, _restart_now()
+        raises ValueError with the EXACT pinned message 'Restart: no
+        game has been started yet.'; scene/log/stack untouched
+        (fail-closed FIRST, restart-reset D1).
+        B6 reset impl - scripted move + 90 deg rotation about the AA
+        centroid (the SMOKE-06 camera=0 recipe); _reset_grid_now()
+        returns True; centroid back at the target (float32 slack);
+        detect() on-grid -> 0 records (the rotation PERSISTS); the
+        game_reset marker stamped; the pinned line in the info box;
+        GameState to_dict + timer anchor UNCHANGED (Q3b/Q7); the
+        selection key unchanged.
+        B7 the no-wizard gate - post-cleanup, _reset_grid_now()
+        returns None silently (H-8) with scene/log untouched, then
+        restore per A9.
+
 Conventions (frozen Phase 1, kept): anchor repo root via sys.argv
 first / cwd fallback (never __file__); import aamatch directly (module
 identity 'aamatch'); every print on ONE line and flushed; check details
@@ -102,8 +136,8 @@ if _ROOT not in sys.path:
     sys.path.insert(0, _ROOT)
 
 import aamatch  # noqa: E402
-from aamatch import engine, gamestart, placement, setup_state  # noqa: E402
-from aamatch import status_text  # noqa: E402
+from aamatch import engine, gamestart, geometry, placement  # noqa: E402
+from aamatch import setup_state, status_text  # noqa: E402
 
 print('SMOKE-ENV python: %s' % (sys.version.split()[0],), flush=True)
 
@@ -352,9 +386,323 @@ except Exception:
     except Exception:
         traceback.print_exc()
 
+# ============================================================
+# PART B (06-08): Restart / Reset through the tab impls (T1b; ZERO
+# modals -- the _X_impl drive, the same smoke-99 receipt as PART A).
+# ============================================================
+part_a_checks = REC['checks']
+
+# The SMOKE-08 :146-162 instance marker band: same-seed restarts
+# REBUILD the same _aam_* names, so NAME-set equality can never prove
+# the old generation is gone; stamp the live generation's b-factor
+# (game sentinels sit at b=-999.0, outside the band).
+MARK_LOW_B, MARK_HIGH_B = -2.0, -0.5
+
+
+def _game_objects_b():
+    """Sorted live scene objects carrying the reserved game prefix."""
+    return sorted(n for n in cmd.get_names('objects')
+                  if n.startswith(geometry.GAME_PREFIX))
+
+
+def _stamp_b(objects):
+    """Write the marker band onto every atom of ``objects``."""
+    for name in objects:
+        cmd.alter(name, 'b=-1.0', space={})
+
+
+def _marked_atoms_b():
+    """Atoms currently carrying the generation marker (0 post-clean)."""
+    return cmd.count_atoms('b > %f and b < %f'
+                           % (MARK_LOW_B, MARK_HIGH_B))
+
+
+def _expected_count_b(wiz):
+    """Whole-scene game-object count derived from a wizard's registry
+    + difficulty spec (1 + n*n per molecule) -- never hard-coded."""
+    n = int(wiz._payload['levels'][0]['difficulty']['grid_n'])
+    return len(wiz._registry['molecules']) * (1 + n * n)
+
+
+def _slot_geometry_b(slot_id):
+    """(object, effective_position target) for a molecule-0 slot,
+    derived from the LIVE payload/registry (seed-replay invariant)."""
+    mol = engine._registry['molecules'][0]
+    obj = mol['slots'][slot_id][0]
+    mol_payload = engine._payload['levels'][0]['molecules'][0]
+    slot_payload = None
+    for sp in mol_payload['grid']['slots']:
+        if sp['slot_id'] == slot_id:
+            slot_payload = sp
+            break
+    offset = (mol_payload.get('placement') or {}).get(
+        'offset', (0.0, 0.0, 0.0))
+    target = placement.effective_position(
+        slot_payload['grid_pose']['position'], offset)
+    return obj, target
+
+
+dlg2 = None
+try:
+    dlg2 = setup_window.SetupWindow()
+    tab2 = dlg2.game_tab
+    baseline_b = cmd.get_names('objects')
+
+    # ---- B1: construction inventory --------------------------------
+    btn_row_b = None
+    lay2 = tab2.layout()
+    for i in range(lay2.count()):
+        sub2 = lay2.itemAt(i).layout()
+        if sub2 is None:
+            continue
+        for j in range(sub2.count()):
+            if sub2.itemAt(j).widget() is tab2.btn_hint:
+                btn_row_b = sub2
+    row_b_ok = False
+    if btn_row_b is not None:
+        ws_b = [btn_row_b.itemAt(j).widget()
+                for j in range(btn_row_b.count())]
+        last_b = btn_row_b.itemAt(btn_row_b.count() - 1)
+        row_b_ok = (ws_b[:5] == [tab2.btn_hint, tab2.btn_confirm,
+                                 tab2.btn_skip_menu, tab2.btn_restart,
+                                 tab2.btn_reset_grid]
+                    and ws_b[-1] is None
+                    and last_b.spacerItem() is not None)
+    check("B1: btn_restart ('Restart') + btn_reset_grid ('Reset') "
+          'exist',
+          tab2.btn_restart.text() == 'Restart'
+          and tab2.btn_reset_grid.text() == 'Reset',
+          'texts=%r %r' % (tab2.btn_restart.text(),
+                           tab2.btn_reset_grid.text()))
+    check('B1: tooltips non-empty on the new buttons',
+          bool(tab2.btn_restart.toolTip())
+          and bool(tab2.btn_reset_grid.toolTip()), '')
+    check('B1: row order Hint/Confirm/Skip-GiveUp/Restart/Reset, '
+          'stretch LAST', row_b_ok, '')
+
+    # ---- B2: live game, move+confirm, stamp the generation ----------
+    wiz_b = gamestart.start_game(activate=False)
+    tab2.start_countdown(wiz_b)
+    for _ in range(4):
+        tab2._countdown_tick()
+    slot_b0 = sorted(engine._registry['molecules'][0]['slots'])[0]
+    obj_b0, target_b = _slot_geometry_b(slot_b0)
+    cmd.select('sele', '%s and name CA' % obj_b0)
+    wiz_b.do_select('sele')
+    wiz_b.move_to((target_b[0] + 3.0, target_b[1] + 5.0,
+                   target_b[2] - 2.0))
+    conf_b = wiz_b.confirm_molecule()
+    gen_b = _game_objects_b()
+    _stamp_b(gen_b)
+    check('B2: live game with a score recorded pre-restart',
+          cmd.get_wizard() is wiz_b
+          and isinstance(conf_b, dict)
+          and len(engine.game_status().get('molecule_scores')
+                  or []) == 1,
+          'scores=%r'
+          % (engine.game_status().get('molecule_scores'),))
+    check('B2: marker band stamped on the whole generation (> 0 '
+          'marked atoms over the derived object count)',
+          _marked_atoms_b() > 0
+          and len(gen_b) == _expected_count_b(wiz_b),
+          'marked=%d objects=%d expect=%d'
+          % (_marked_atoms_b(), len(gen_b), _expected_count_b(wiz_b)))
+
+    # ---- B3: the restart impl (arm + line placement) ----------------
+    r_restart = tab2._restart_now()
+    pending_b = tab2._pending_wizard
+    lines_b3 = tab2._info_log.toPlainText().splitlines()
+    check('B3: _restart_now returns True; the replay wizard is armed '
+          'and NOT on the stack (P-1)',
+          r_restart is True
+          and isinstance(pending_b, wizard.GameWizard)
+          and pending_b is not wiz_b
+          and cmd.get_wizard() is None,
+          'pending=%r top=%r' % (pending_b, cmd.get_wizard()))
+    check("B3: info box == ['Get ready...', 'Game restarted.'] (D7: "
+          'the line logs AFTER the countdown arm)',
+          lines_b3 == ['Get ready...', 'Game restarted.'],
+          'lines=%r' % (lines_b3,))
+
+    # ---- B4: GO on the replay (fresh game, fresh generation) --------
+    for _ in range(4):
+        tab2._countdown_tick()
+    gs_b = engine.game_status()
+    check('B4: GO pushed the REPLAY wizard; float anchor; fresh zeros '
+          '(scores [], skips 0, give-ups 0, game_over False)',
+          cmd.get_wizard() is pending_b
+          and isinstance(engine._current_game().timer_anchor, float)
+          and len(gs_b.get('molecule_scores') or []) == 0
+          and gs_b.get('skip_count') == 0
+          and gs_b.get('giveup_count') == 0
+          and gs_b.get('game_over') is False,
+          'anchor=%r scores=%r skip=%r giveup=%r over=%r'
+          % (engine._current_game().timer_anchor,
+             gs_b.get('molecule_scores'), gs_b.get('skip_count'),
+             gs_b.get('giveup_count'), gs_b.get('game_over')))
+    check('B4: marker-band survivors == 0 (old generation dead) with '
+          'exactly one fresh generation (derived count)',
+          _marked_atoms_b() == 0
+          and len(_game_objects_b()) == _expected_count_b(pending_b),
+          'marked=%d objects=%d expect=%d'
+          % (_marked_atoms_b(), len(_game_objects_b()),
+             _expected_count_b(pending_b)))
+    obj_b0_new, target_b_new = _slot_geometry_b(slot_b0)
+    cen_b = geometry.centroid_of(obj_b0_new)
+    dev_b = 0.0
+    tol_b = 0.0
+    for i in range(3):
+        dev_b = max(dev_b, abs(cen_b[i] - target_b_new[i]))
+        tol_b = max(tol_b,
+                    placement.POSE_TOLERANCE
+                    + placement.FLOAT32_ULP_REL
+                    * max(abs(cen_b[i]), abs(target_b_new[i])))
+    check('B4: the previously-moved slot re-bakes to the '
+          'effective_position target (1e-6 + ulp slack)',
+          dev_b <= tol_b, 'dev=%g tol=%g' % (dev_b, tol_b))
+
+    # ---- B5: the None refusal (house fail-closed FIRST) -------------
+    tab2._timer.stop()
+    cmd.set_wizard()
+    placement.cleanup_game_objects()
+    gamestart._last_start = None
+    names_pre5 = cmd.get_names('objects')
+    log_pre5 = tab2._info_log.toPlainText()
+    exc_b = None
+    try:
+        tab2._restart_now()
+    except ValueError as exc_caught:
+        exc_b = exc_caught
+    check('B5: _restart_now with _last_start None raises ValueError '
+          'with the EXACT pinned message',
+          exc_b is not None
+          and str(exc_b) == 'Restart: no game has been started yet.',
+          'exc=%r' % (exc_b,))
+    check('B5: the refusal leaves scene + log + stack untouched '
+          '(fail-closed FIRST)',
+          cmd.get_names('objects') == names_pre5
+          and tab2._info_log.toPlainText() == log_pre5
+          and cmd.get_wizard() is None, '')
+    gamestart._last_start = None    # restore per the plan's tail
+
+    # ---- B6: the reset impl (mechanism + invariants + marker) -------
+    wiz_r = gamestart.start_game(activate=False)
+    tab2.start_countdown(wiz_r)
+    for _ in range(4):
+        tab2._countdown_tick()
+    slot_r0 = sorted(engine._registry['molecules'][0]['slots'])[0]
+    obj_r0, target_r = _slot_geometry_b(slot_r0)
+    cmd.select('sele', '%s and name CA' % obj_r0)
+    wiz_r.do_select('sele')
+    sel_pre6 = wiz_r.get_status().get('selected') or {}
+    target_tuple = (target_r[0], target_r[1], target_r[2])
+    wiz_r.move_to((target_tuple[0] + 3.0, target_tuple[1] + 5.0,
+                   target_tuple[2] - 2.0))
+    # Scripted rotation (the SMOKE-06 recipe): selection-form
+    # cmd.rotate(camera=0) about the AA centroid -- bakes a real
+    # orientation residual the reset must PRESERVE.
+    cen_moved6 = geometry.centroid_of(obj_r0)
+    cmd.rotate([0.0, 1.0, 0.0], 90.0, obj_r0, camera=0,
+               origin=list(cen_moved6))
+    moved_dev6 = max(abs(geometry.centroid_of(obj_r0)[i]
+                         - target_tuple[i]) for i in range(3))
+    check('B6: scripted move lands the AA off-grid pre-reset (> 1 A)',
+          moved_dev6 > 1.0, 'dev=%g' % (moved_dev6,))
+    gs_pre6 = engine.game_status()
+    anchor_pre6 = engine._current_game().timer_anchor
+    r_reset = tab2._reset_grid_now()
+    check('B6: _reset_grid_now returns True (the dispatch fired)',
+          r_reset is True, 'ret=%r' % (r_reset,))
+    cen_post6 = geometry.centroid_of(obj_r0)
+    dev_r6 = 0.0
+    tol_r6 = 0.0
+    for i in range(3):
+        dev_r6 = max(dev_r6, abs(cen_post6[i] - target_tuple[i]))
+        tol_r6 = max(tol_r6,
+                     placement.POSE_TOLERANCE
+                     + placement.FLOAT32_ULP_REL
+                     * max(abs(cen_post6[i]), abs(target_tuple[i])))
+    check('B6: the moved AA centroid is back at the '
+          'effective_position target (float32 slack class)',
+          dev_r6 <= tol_r6, 'dev=%g tol=%g' % (dev_r6, tol_r6))
+    records_r6 = engine.detect()
+    check('B6: detect() on-grid -> 0 records (the 90 deg rotation '
+          'PERSISTS through the position replay)',
+          len(records_r6) == 0, 'records=%d' % (len(records_r6),))
+    st_r6 = wiz_r.get_status()
+    ev_r6 = st_r6.get('last_event') or {}
+    check("B6: last_event kind is 'game_reset' (int seq)",
+          ev_r6.get('kind') == 'game_reset'
+          and isinstance(ev_r6.get('seq'), int),
+          'kind=%r seq=%r' % (ev_r6.get('kind'), ev_r6.get('seq')))
+    check('B6: the info box carries the pinned reset line',
+          'Amino acids reset to grid positions (orientations kept).'
+          in tab2._info_log.toPlainText(), '')
+    gs_post6 = engine.game_status()
+    check('B6: GameState to_dict UNCHANGED (scores/counters/anchor '
+          'untouched -- Q3b)',
+          gs_post6 == gs_pre6,
+          'changed=%s'
+          % (sorted(k for k in gs_post6
+                    if gs_post6.get(k) != gs_pre6.get(k)),))
+    check('B6: timer anchor UNCHANGED float (Q7 -- the timer keeps '
+          'running)',
+          isinstance(engine._current_game().timer_anchor, float)
+          and engine._current_game().timer_anchor == anchor_pre6,
+          'anchor=%r pre=%r'
+          % (engine._current_game().timer_anchor, anchor_pre6))
+    sel_post6 = st_r6.get('selected') or {}
+    check('B6: the selection key is unchanged (selection persists '
+          'through the replay)',
+          sel_pre6.get('slot_id') == slot_r0
+          and sel_post6.get('slot_id') == sel_pre6.get('slot_id')
+          and sel_post6.get('object') == sel_pre6.get('object'),
+          'pre=%r post=%r'
+          % (sel_pre6.get('slot_id'), sel_post6.get('slot_id')))
+
+    # ---- B7: the no-wizard silent gate (H-8) + restore --------------
+    tab2.cancel_pending_start()
+    tab2._timer.stop()
+    cmd.set_wizard()
+    placement.cleanup_game_objects()
+    gamestart._last_start = None
+    names_pre7 = cmd.get_names('objects')
+    log_pre7 = tab2._info_log.toPlainText()
+    r_none = tab2._reset_grid_now()
+    check('B7: _reset_grid_now post-cleanup returns None silently '
+          '(H-8), scene + log untouched',
+          r_none is None
+          and cmd.get_wizard() is None
+          and cmd.get_names('objects') == names_pre7
+          and tab2._info_log.toPlainText() == log_pre7, '')
+    check('B7: teardown returns the baseline scene EXACTLY + stack '
+          'empty',
+          list(cmd.get_names('objects')) == list(baseline_b)
+          and cmd.get_wizard() is None
+          and gamestart._last_start is None,
+          'post=%r baseline=%r'
+          % (cmd.get_names('objects'), baseline_b))
+    app.processEvents()
+    dlg2.close()
+except Exception:
+    traceback.print_exc()
+    check('part B restart/reset drive', False,
+          'raised (see traceback above)')
+    try:
+        if dlg2 is not None:
+            dlg2.game_tab.cancel_pending_start()
+            dlg2.game_tab._timer.stop()
+        cmd.set_wizard()
+        placement.cleanup_game_objects()
+        gamestart._last_start = None
+    except Exception:
+        traceback.print_exc()
+
 # --- Verdict marker (the SOLE verdict carrier) ------------------------
-print('SMOKE-16 PART A: %d checks, %d failure(s)'
-      % (REC['checks'], len(failures)), flush=True)
+print('SMOKE-16 PART A: %d checks; PART B: %d checks; total %d, %d '
+      'failure(s)'
+      % (part_a_checks, REC['checks'] - part_a_checks, REC['checks'],
+         len(failures)), flush=True)
 print('=== SMOKE-16 %s ==='
       % ('FAIL: ' + ', '.join(failures) if failures else 'PASS'),
       flush=True)

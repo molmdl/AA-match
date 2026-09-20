@@ -1,5 +1,5 @@
 """Headless SMOKE-16 - the Game tab lifecycle controls (plans
-06-07/06-08, T1b).
+06-07/06-08/06-09, T1b).
 
 Run (from WSL, repo root):
     bash smoke/run_smoke.sh smoke/smoke_16_tab.py 120
@@ -87,6 +87,52 @@ PART B  restart/reset (06-08, SCORE-09/10):
         B7 the no-wizard gate - post-cleanup, _reset_grid_now()
         returns None silently (H-8) with scene/log untouched, then
         restore per A9.
+
+PART C  (06-09) the natural end + the final timer (SCORE-07's
+        headless-provable half):
+        C1 structural modal presence - hasattr(GameTab,
+        '_show_endgame_modal'): the method exists and is callable. The
+        wrapper singleShot tail is NOT source-scanned here (a plain
+        file scan inside a smoke is not house style): existence +
+        this comment are the structural pin; the real modal (exec_(),
+        WindowStaysOnTopHint, the 100 ms gap after the pop burst) is
+        the 06-10 [HUMAN] checkpoint's verification set -- smokes
+        NEVER fire it (the smoke-99 receipt).
+        C2 fresh game via the countdown drive -> GO (defaults = 3
+        levels x 2 molecules).
+        C3 drive EVERY molecule of EVERY level through the tab impls:
+        confirm, skip (the L1->L2 advance), confirm x3 (L2M1, L2M2 ->
+        L3, L3M1) -- ops 1-5 return dicts with game_over False.
+        Zero-score records are sufficient (documented): score
+        correctness is smoke_04's proven domain (the 06-03 PART-A
+        law); this PART proves only the natural-END state.
+        C4 the LAST confirm returns the endgame tuple (game_over
+        True, summary end_state 'completed').
+        C5-C7 the info box holds the final molecule's pinned scored
+        line, the win headline 'You win! All 3 level(s) finished in'
+        logged EXACTLY once (one transition home), and the full
+        endgame_lines block with the literal pins 'Level 1: 0.00' ..
+        'Level 3: 0.00', 'Total score: 0.00.', a 'Time:' line,
+        'Molecules completed: 6 of 6. Levels: 3.', 'Skips: 1.
+        Give-ups: 0.' matching the driven counts.
+        C8 the 1 Hz timer is STOPPED at the natural end and
+        _timer_label == status_text.format_mss(summary['final_time'])
+        (the EXACT final elapsed, not the <=1 s-stale tick).
+        C9 the wizard is POPPED and _last_status holds the game_over
+        state (the impl's SYNC refresh runs BEFORE the pop -- 06-07's
+        committed order, the same shapes PART A's A6 pins; the plan
+        text's "_last_status None (post-pop poll cleared)" note
+        reversed that order -- a stopped timer means no later poll,
+        so nothing ever clears it).
+        C10 post-endgame inertness: _confirm_now/_skip_now/
+        _giveup_now all return None behind the isinstance gate with
+        scene/log untouched; and the endgame state COMPOSES with
+        Restart -- _restart_now() (populated _last_start) arms a
+        fresh countdown (box == ['Get ready...', 'Game restarted.'],
+        restart-reset Q5/D7).
+        C11 GO on the post-endgame restart brings a fresh live game
+        (zeros, float anchor, 1 Hz running).
+        C12 restore per A9 -> the baseline scene EXACTLY.
 
 Conventions (frozen Phase 1, kept): anchor repo root via sys.argv
 first / cwd fallback (never __file__); import aamatch directly (module
@@ -698,11 +744,196 @@ except Exception:
     except Exception:
         traceback.print_exc()
 
+# ============================================================
+# PART C (06-09): the natural end + the final timer (SCORE-07's
+# headless-provable half; T1b, impl-driven -- the real modal exec_()
+# and the wrappers' refresh+singleShot tail are [HUMAN]-only, 06-10:
+# smokes NEVER fire the modal per the smoke-99 receipt).
+# ============================================================
+part_b_checks = REC['checks']
+
+dlg3 = None
+try:
+    dlg3 = setup_window.SetupWindow()
+    tab3 = dlg3.game_tab
+    baseline_c = cmd.get_names('objects')
+
+    # ---- C1: structural modal presence (no modal drive) -------------
+    # The wrapper singleShot tail is intentionally NOT source-scanned
+    # here (a plain file scan inside a smoke is not house style): the
+    # method's existence + the docstring note above are the structural
+    # pin; the real modal is the 06-10 [HUMAN] checkpoint's set.
+    check('C1: _show_endgame_modal exists and is callable on GameTab '
+          '(the exec_() drive is [HUMAN]-only, 06-10)',
+          hasattr(tab3, '_show_endgame_modal')
+          and callable(getattr(tab3, '_show_endgame_modal')), '')
+
+    # ---- C2: fresh game via the countdown drive -> GO ---------------
+    wiz_c = gamestart.start_game(activate=False)
+    tab3.start_countdown(wiz_c)
+    for _ in range(4):
+        tab3._countdown_tick()
+    check('C2: GO pushed THAT wizard; 1 Hz running (defaults = 3 '
+          'levels x 2 molecules = 6 molecules)',
+          cmd.get_wizard() is wiz_c and tab3._timer.isActive(), '')
+
+    # ---- C3: drive EVERY molecule of EVERY level --------------------
+    # Zero-score records are sufficient (documented in the docstring):
+    # smoke_04 owns score correctness; this PART proves the natural
+    # END only. Sequence: confirm (L1M1), skip (L1M2 -> L2M1),
+    # confirm (L2M1), confirm (L2M2 -> L3M1), confirm (L3M1) -- five
+    # confirms + one skip; the LAST op below completes the game.
+    ops_c = []
+    ops_c.append(('confirm L1M1', tab3._confirm_now()))
+    ops_c.append(('skip    L1M2', tab3._skip_now()))
+    ops_c.append(('confirm L2M1', tab3._confirm_now()))
+    ops_c.append(('confirm L2M2', tab3._confirm_now()))
+    ops_c.append(('confirm L3M1', tab3._confirm_now()))
+    mid_ok_c = all(isinstance(r, dict) and r.get('game_over') is False
+                   for _n, r in ops_c)
+    check('C3: confirm/skip through every molecule until the final '
+          'one -- ops 1-5 return dicts with game_over False',
+          mid_ok_c, 'flags=%r' % ([r.get('game_over') if isinstance(
+              r, dict) else r for _n, r in ops_c],))
+
+    # ---- C4: the LAST confirm returns game_over True ----------------
+    last_c = tab3._confirm_now()
+    summary_c = last_c.get('summary') if isinstance(last_c, dict) \
+        else None
+    check('C4: the LAST confirm returns the endgame tuple (game_over '
+          "True, summary end_state 'completed')",
+          isinstance(last_c, dict)
+          and last_c.get('game_over') is True
+          and isinstance(summary_c, dict)
+          and summary_c.get('end_state') == 'completed', '')
+
+    # ---- C5-C7: the info box at the natural end --------------------
+    text_c = tab3._info_log.toPlainText()
+    check("C5: the final molecule's pinned scored line ('Molecule 2 "
+          "of 2 scored 0.00 (total 0.00).')",
+          'Molecule 2 of 2 scored 0.00 (total 0.00).' in text_c, '')
+    check("C6: the win headline 'You win! All 3 level(s) finished in' "
+          'logged EXACTLY once (one transition home)',
+          text_c.count('You win! All 3 level(s) finished in') == 1,
+          'count=%d'
+          % (text_c.count('You win! All 3 level(s) finished in'),))
+    block_ok_c = False
+    if summary_c is not None:
+        block_ok_c = all(
+            line in text_c
+            for line in status_text.endgame_lines(summary_c))
+    check('C7: the full endgame_lines block present with the literal '
+          'pins (per-level x3, total, a Time: line, driven counts)',
+          block_ok_c
+          and 'Level 1: 0.00' in text_c
+          and 'Level 2: 0.00' in text_c
+          and 'Level 3: 0.00' in text_c
+          and 'Total score: 0.00.' in text_c
+          and 'Molecules completed: 6 of 6. Levels: 3.' in text_c
+          and 'Skips: 1. Give-ups: 0.' in text_c
+          and any(line.startswith('Time: ')
+                  for line in text_c.splitlines()), '')
+
+    # ---- C8: the stopped clock + the EXACT final M:SS ---------------
+    check('C8: the 1 Hz timer is STOPPED at the natural end (the tick '
+          'cannot stop the clock -- v1 _on_win precedent)',
+          not tab3._timer.isActive(), '')
+    label_ok_c = False
+    if summary_c is not None:
+        label_ok_c = (tab3._timer_label.text()
+                      == status_text.format_mss(
+                          summary_c['final_time']))
+    check('C8: _timer_label holds the EXACT final M:SS '
+          "format_mss(summary['final_time'])",
+          label_ok_c, 'label=%r' % (tab3._timer_label.text(),))
+
+    # ---- C9: the pop + the poll baseline at the end -----------------
+    check('C9: the wizard is POPPED; _last_status holds the game_over '
+          'state (the sync refresh runs BEFORE the pop -- the PART-A '
+          'A6 shape; docstring records the plan-text order mismatch)',
+          cmd.get_wizard() is None
+          and isinstance(tab3._last_status, dict)
+          and tab3._last_status.get('game_over') is True, '')
+
+    # ---- C10: post-endgame inertness + the Restart composition ------
+    log_pre_c10 = tab3._info_log.toPlainText()
+    names_pre_c10 = cmd.get_names('objects')
+    inert_c = (tab3._confirm_now() is None
+               and tab3._skip_now() is None
+               and tab3._giveup_now() is None)
+    check('C10: post-endgame inertness -- the impls return None '
+          'behind the isinstance gate (scene/log untouched)',
+          inert_c
+          and cmd.get_wizard() is None
+          and tab3._info_log.toPlainText() == log_pre_c10
+          and cmd.get_names('objects') == names_pre_c10, '')
+    r_restart_c = tab3._restart_now()
+    pending_c = tab3._pending_wizard
+    lines_c10 = tab3._info_log.toPlainText().splitlines()
+    check('C10: the endgame state COMPOSES with Restart -- '
+          "_restart_now() arms a fresh countdown (box == "
+          "['Get ready...', 'Game restarted.']; restart-reset Q5/D7)",
+          r_restart_c is True
+          and isinstance(pending_c, wizard.GameWizard)
+          and cmd.get_wizard() is None
+          and lines_c10 == ['Get ready...', 'Game restarted.'],
+          'lines=%r' % (lines_c10,))
+
+    # ---- C11: GO on the post-endgame restart ------------------------
+    for _ in range(4):
+        tab3._countdown_tick()
+    gs_c = engine.game_status()
+    check('C11: GO on the post-endgame restart brings a fresh live '
+          'game (zeros, float anchor, 1 Hz running)',
+          cmd.get_wizard() is pending_c
+          and isinstance(engine._current_game().timer_anchor, float)
+          and tab3._timer.isActive()
+          and len(gs_c.get('molecule_scores') or []) == 0
+          and gs_c.get('game_over') is False, '')
+
+    # ---- C12: restore -> the baseline scene EXACTLY -----------------
+    tab3.cancel_pending_start()
+    tab3._timer.stop()
+    cmd.set_wizard()
+    placement.cleanup_game_objects()
+    gamestart._last_start = None
+    check('C12: teardown returns the baseline scene EXACTLY + stack '
+          'empty',
+          list(cmd.get_names('objects')) == list(baseline_c)
+          and cmd.get_wizard() is None
+          and gamestart._last_start is None,
+          'post=%r baseline=%r'
+          % (cmd.get_names('objects'), baseline_c))
+    app.processEvents()
+    dlg3.close()
+except Exception:
+    traceback.print_exc()
+    check('part C natural-end drive', False,
+          'raised (see traceback above)')
+    try:
+        if dlg3 is not None:
+            dlg3.game_tab.cancel_pending_start()
+            dlg3.game_tab._timer.stop()
+        cmd.set_wizard()
+        placement.cleanup_game_objects()
+        gamestart._last_start = None
+    except Exception:
+        traceback.print_exc()
+
+# --- Phase regression record (the 06-09 contract): one 'SMOKE-0N:
+# PASS/NOT-RUN' line per smoke of the six-smoke battery for the
+# orchestrator to grep; a standalone run only knows its own verdict --
+# the full battery record lives in the 06-09 SUMMARY ------------------
+for _reg_id in ('04', '08', '11', '14', '15'):
+    print('SMOKE-%s: NOT-RUN' % _reg_id, flush=True)
+print('SMOKE-16: %s' % ('PASS' if not failures else 'FAIL'), flush=True)
+
 # --- Verdict marker (the SOLE verdict carrier) ------------------------
-print('SMOKE-16 PART A: %d checks; PART B: %d checks; total %d, %d '
-      'failure(s)'
-      % (part_a_checks, REC['checks'] - part_a_checks, REC['checks'],
-         len(failures)), flush=True)
+print('SMOKE-16 PART A: %d checks; PART B: %d checks; PART C: %d '
+      'checks; total %d, %d failure(s)'
+      % (part_a_checks, part_b_checks - part_a_checks,
+         REC['checks'] - part_b_checks, REC['checks'], len(failures)),
+      flush=True)
 print('=== SMOKE-16 %s ==='
       % ('FAIL: ' + ', '.join(failures) if failures else 'PASS'),
       flush=True)

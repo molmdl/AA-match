@@ -42,10 +42,22 @@ poll latency (no 1 Hz loss). A completed/given-up game runs
 ``_endgame_sequence``: stop the 1 Hz timer (v1 _on_win precedent --
 the tick cannot stop the clock), pin the timer label to the EXACT
 final elapsed, and pop the wizard via the local ``_pop_game_wizard``
-helper (the setup_window.py:826 seam shape). The poll owns ONE
-logging home for the game_over transition (tab-triggered ends via
-the sync refresh, panel-triggered ends via the 1 Hz tick -- the
-transition fires once).
+ helper (the setup_window.py:826 seam shape). The poll owns ONE
+ logging home for the game_over transition (tab-triggered ends via
+ the sync refresh, panel-triggered ends via the 1 Hz tick -- the
+ transition fires once). Plan 06-08 lands the restart/reset half:
+ Restart replays the stored ``gamestart._last_start`` INPUT tuple
+ verbatim through the 05-09 deferred start sequence (pop ->
+ start_game(activate=False) -> countdown; the pinned 'Game
+ restarted.' line logs AFTER the arm so the countdown's box clear
+ cannot wipe it -- restart-reset D7), fail-closed with a clear
+ refusal when nothing was ever started (house fail-closed). Reset
+ routes through the wizard's PUBLIC grid-replay op behind the SAME
+ isinstance gate (PITFALL 6 at the widget layer -- never the
+ engine's replay direct), the game_reset marker carrying the pinned
+ reset line through the SYNCHRONOUS poll while the timer keeps
+ running and NO GameState is touched (positions only; rotations
+ persist).
 
 LAWS this module enforces (05-RESEARCH-window-start-timer.md):
 
@@ -95,15 +107,18 @@ class GameTab(QtWidgets.QWidget):
 
     Layout (spec.md:36-40): a top row with the elapsed-timer label and
     the required-interactions reference label, the read-only rolling
-    info     box with stretch below, and the Hint button row at the
-    bottom. Button inventory (Phase 6, plan 06-07): 'Hint' (05-08),
-    'Confirm' (spec.md:41), and the 'Skip / Give Up' QToolButton+QMenu
-    dropdown (spec.md:42) with 'Skip Molecule' / 'Give Up...' actions.
-    The button row keeps its stretch LAST (insertions go BEFORE the
-    stretch) so the remaining later-phase slots (Restart/Reset/Save/
-    Import, Phases 6/7, research OQ-1 later-add recommendation) never
-    reflow the timer row.
-    """
+     info     box with stretch below, and the Hint button row at the
+     bottom. Button inventory (Phase 6, plans 06-07/06-08): 'Hint'
+     (05-08), 'Confirm' (spec.md:41), the 'Skip / Give Up'
+     QToolButton+QMenu dropdown (spec.md:42) with 'Skip Molecule' /
+     'Give Up...' actions, 'Restart' (06-08, SCORE-09), and 'Reset'
+     (06-08, SCORE-10 -- attribute ``btn_reset_grid``, DISTINCT from
+     the Setup tab's game-setup ``btn_reset`` per the restart-reset
+     D7 naming law). The button row keeps its stretch LAST
+     (insertions go BEFORE the stretch) so the remaining later-phase
+     slots (Save/Import, Phase 7, research OQ-1 later-add
+     recommendation) never reflow the timer row.
+     """
 
     def __init__(self, parent=None):
         super(GameTab, self).__init__(parent)
@@ -176,11 +191,22 @@ class GameTab(QtWidgets.QWidget):
             'confirmation.')
         self.btn_skip_menu.setMenu(menu)
         btn_row.insertWidget(btn_row.count() - 1, self.btn_skip_menu)
+        # Restart button (06-08, SCORE-09): verbatim replay of the
+        # stored initial-state INPUT tuple through the deferred start
+        # sequence (pop -> start_game -> countdown). NO confirmation
+        # warning (spec.md:43-45 requires warnings for Skip/Give Up
+        # only -- restart-reset D9).
+        self.btn_restart = QtWidgets.QPushButton('Restart', self)
+        self.btn_restart.setToolTip(
+            'Replay the stored initial state into a fresh game '
+            '(countdown, timer from zero, scores cleared).')
+        btn_row.insertWidget(btn_row.count() - 1, self.btn_restart)
         layout.addLayout(btn_row)
         self.btn_hint.clicked.connect(self._on_hint)
         self.btn_confirm.clicked.connect(self._on_confirm)
         self.act_skip.triggered.connect(self._on_skip)
         self.act_giveup.triggered.connect(self._on_giveup)
+        self.btn_restart.clicked.connect(self._on_restart)
 
         # The CANCELLABLE countdown: a reusable member QTimer stepping
         # 3 -> 2 -> 1 -> GO (P-2). Constructed here; started only by
@@ -577,6 +603,66 @@ class GameTab(QtWidgets.QWidget):
         if result.get('game_over'):
             self._endgame_sequence(result['summary'])
         return result
+
+    # ---- the Restart handler (06-08: SCORE-09) ----
+
+    def _on_restart(self):
+        """Restart button: replay the stored initial state via _guard.
+        NO confirmation warning (spec.md:43-45 requires warnings for
+        Skip/Give Up only -- restart-reset D9; the countdown log is the
+        feedback, the _on_start precedent)."""
+        self._guard(self._restart_now)
+
+    def _restart_now(self):
+        """The non-modal impl (06-08): the verbatim ``_last_start``
+        replay through the 05-09 deferred start sequence.
+
+        RESTART = spec replay of the ``gamestart._last_start`` INPUT
+        tuple (05-05) -- the PITFALL-9 mechanism; backup.py has NO
+        Phase-6 role (it remains the Phase-7 persistence policy home;
+        the module itself is never wired here). Steps: the fail-closed
+        None refusal FIRST (restart-reset D1 -- the '_last_start is
+        None' refusal surfaces via the wrapper's _guard box in the
+        GUI; headless smokes assert the raise on this impl directly);
+        the P-2 belt-and-braces pending-start cancel (the _on_cleanup
+        handler-top cancel precedent); the P-3 pop (the LIVE
+        GameWizard pops -- its cleanup restores msm/colors/pk1; a USER
+        wizard on top is never popped); then the replayed
+        ``gamestart.start_game(..., activate=False)`` over the tuple's
+        4 keys -- NO build_state pre-checks (the tuple was validated
+        at first start; the replay is deterministic; OSError/ValueError
+        e.g. a deleted fixture still surfaces through _guard -- the
+        04-13 clean-then-refuse residue law); then the countdown arms
+        (self-healing cancel + box clear + 'Get ready...'); ONLY THEN
+        is the pinned restart line logged (restart-reset D7: logging
+        it BEFORE the arm would let the countdown's box clear wipe it
+        -- the line must survive as the LAST pre-tick entry). At GO
+        the existing _begin_play re-anchors the timer from zero and
+        re-seeds _last_status -- a FRESH GameState by construction
+        (engine.new_game), correct for a NEW game.
+
+        The op is NOT gated behind an active wizard (restart-reset
+        D1): it works from the post-endgame popped state, and
+        mid-countdown too (the self-healing arm cancels the pending
+        one first). The pre-existing dormant-user-wizard stack-hole
+        (restart-reset D6) is documented-only -- NOT a Phase-6 fix.
+
+        Returns True on a successful arm; raises the ValueError family
+        on refusal (the wrapper maps it to the _guard box; the smoke
+        drives this impl directly)."""
+        from . import gamestart, status_text
+        ls = gamestart._last_start
+        if ls is None:
+            raise ValueError('Restart: no game has been started yet.')
+        self.cancel_pending_start()
+        self._pop_game_wizard()
+        wiz = gamestart.start_game(setup=ls['setup'], seed=ls['seed'],
+                                   candidates=ls['candidates'],
+                                   ligand_content=ls['ligand_content'],
+                                   activate=False)
+        self.start_countdown(wiz)
+        self._log(status_text.game_restarted_line())
+        return True
 
     # ---- the endgame sequence (06-07: the shared game-over tail) ----
 

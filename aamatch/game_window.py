@@ -57,7 +57,20 @@ final elapsed, and pop the wizard via the local ``_pop_game_wizard``
  engine's replay direct), the game_reset marker carrying the pinned
  reset line through the SYNCHRONOUS poll while the timer keeps
  running and NO GameState is touched (positions only; rotations
- persist).
+ persist). Plan 06-09 lands the endgame MODAL (SCORE-07's winning
+ message): the wrappers capture the guarded result and, on a truthy
+ ``game_over``, run ``cmd.refresh()`` + ``QtCore.QTimer.singleShot``
+ (the v1 _on_win mechanics -- the pop's color-restore burst paints
+ BEFORE the modal's exec_() blocks the event loop; the 100 ms figure
+ is the v1-shipped constant, no new constant) to schedule
+ ``_show_endgame_modal(summary)`` -- a child QMessageBox (parent
+ ``self.window()`` + WindowStaysOnTopHint, the v1 Bug-B fix) whose
+ headline + rich-text stats are EXACTLY the pure
+ ``status_text.endgame_lines`` block the info box also carries (two
+ surfaces, one wording home: the modal is the MOMENT, the info box
+ is the RECORD). The scheduling lives in the WRAPPERS ONLY (the
+ smoke-99 law -- impls and the tick never own boxes, so headless
+ smokes drive the impls and never fire the tail).
 
 LAWS this module enforces (05-RESEARCH-window-start-timer.md):
 
@@ -492,10 +505,21 @@ class GameTab(QtWidgets.QWidget):
     def _on_confirm(self):
         """Confirm button: the wizard's confirm op via _guard. NO
         confirmation warning (Confirm is the routine gameplay action,
-        not a destructive one); still NON-MODAL in the wrapper -- the
-        endgame MODAL tail is 06-09's addition, so this wrapper's
-        structure stays stable for that edit."""
-        self._guard(self._confirm_now)
+        not a destructive one). The 06-09 endgame tail: when the op
+        completed the game (truthy dict + game_over), ``cmd.refresh()``
+        fires a scene redraw NOW and ``_show_endgame_modal`` is
+        scheduled 100 ms out via ``QtCore.QTimer.singleShot`` (the v1
+        _on_win mechanics) so the pop's color-restore burst paints
+        BEFORE the modal's exec_() blocks the event loop (v1 Bug A).
+        A None result (guarded refusal, already surfaced) schedules
+        nothing."""
+        result = self._guard(self._confirm_now)
+        if result and result.get('game_over'):
+            from pymol import cmd
+            cmd.refresh()
+            summary = result['summary']
+            QtCore.QTimer.singleShot(
+                100, lambda: self._show_endgame_modal(summary))
 
     def _confirm_now(self):
         """The non-modal impl (06-07): dispatch to the live
@@ -533,12 +557,15 @@ class GameTab(QtWidgets.QWidget):
         modal over a wizard-free game. Then the spec-required
         QMessageBox.question Yes|No (the pinned 06-02 wording) as a
         modal CHILD of the window (PITFALL 4 legal; Escape reads as
-        No). YES routes the impl through _guard; No/Escape is a safe
+        No).         YES routes the impl through _guard; No/Escape is a safe
         no-op. NO rebase_timer here (the caller-owns-modal-detection
         law: the 1 Hz tick's activeModalWidget branch freezes the
-        clock over ANY real modal). The 06-09 plan adds ONLY the
-        endgame-modal scheduling tail here -- this structure stays
-        stable for that edit."""
+        clock over ANY real modal). The 06-09 endgame tail: when the
+        impl's op completed the game, the SAME refresh + singleShot
+        tail as _on_confirm schedules ``_show_endgame_modal`` 100 ms
+        after the pop's color-restore burst (a last-molecule skip of
+        the last level COMPLETES the game, 06-06). A None result
+        (guarded refusal, already surfaced) schedules nothing."""
         from pymol import cmd
         from . import status_text, wizard as wizard_mod
         if not isinstance(cmd.get_wizard(), wizard_mod.GameWizard):
@@ -548,13 +575,21 @@ class GameTab(QtWidgets.QWidget):
                 self.window(), status_text.SKIP_WARNING_TITLE,
                 status_text.SKIP_WARNING_TEXT,
                 btns) == QtWidgets.QMessageBox.Yes:
-            self._guard(self._skip_now)
+            result = self._guard(self._skip_now)
+            if result and result.get('game_over'):
+                cmd.refresh()
+                summary = result['summary']
+                QtCore.QTimer.singleShot(
+                    100, lambda: self._show_endgame_modal(summary))
 
     def _on_giveup(self):
         """'Give Up...' menu action: the MODAL warning wrapper -- the
         identical shape as _on_skip with the GIVEUP_ pinned strings
         routing to _giveup_now (YES = the wrapper's _guard call;
-        No/Escape safe)."""
+        No/Escape safe). A successful give-up is ALWAYS game-over
+        (06-06), so the 06-09 refresh + singleShot tail fires on every
+        truthy result here (the game_over key check stays, mirroring
+        _on_confirm/_on_skip verbatim)."""
         from pymol import cmd
         from . import status_text, wizard as wizard_mod
         if not isinstance(cmd.get_wizard(), wizard_mod.GameWizard):
@@ -564,7 +599,12 @@ class GameTab(QtWidgets.QWidget):
                 self.window(), status_text.GIVEUP_WARNING_TITLE,
                 status_text.GIVEUP_WARNING_TEXT,
                 btns) == QtWidgets.QMessageBox.Yes:
-            self._guard(self._giveup_now)
+            result = self._guard(self._giveup_now)
+            if result and result.get('game_over'):
+                cmd.refresh()
+                summary = result['summary']
+                QtCore.QTimer.singleShot(
+                    100, lambda: self._show_endgame_modal(summary))
 
     def _skip_now(self):
         """The non-modal Skip impl (06-07): defensive isinstance gate ->
@@ -731,19 +771,67 @@ class GameTab(QtWidgets.QWidget):
         the tick can never stop the clock on its own (the engine's
         GameState stays LIVE after the game ends, so a running tick
         would keep the label advancing forever over a finished
-        game); then pin
+         game); then pin
         ``_timer_label`` to the EXACT final elapsed from the summary
         (the live tick value can be up to 1 s stale); then the
         isinstance-gated pop (the pop's own cleanup fires the
-        color-restore burst that 06-09's refresh+singleShot modal
-        lands AFTER). No modal here (P-6/the smoke-99 law): 06-09 adds
-        ONLY the modal-scheduling tail on the WRAPPERS. Returns
+        color-restore burst that the 06-09 refresh+singleShot modal
+        lands AFTER). No modal here (P-6/the smoke-99 law): the
+        scheduling tail lives on the WRAPPERS only. Returns
         nothing."""
         from . import status_text
         self._timer.stop()
         self._timer_label.setText(
             status_text.format_mss(summary['final_time']))
         self._pop_game_wizard()
+
+    # ---- the endgame modal (06-09: SCORE-07's winning message) ----
+
+    def _show_endgame_modal(self, summary):
+        """The endgame MODAL: a child QMessageBox carrying the pure
+        ``status_text.endgame_lines`` block (SCORE-07; the v1
+        _finish_win precedent, gui_game.py:306-345).
+
+        WRAPPER-ONLY -- NEVER call from an impl or the tick (the
+        smoke-99 receipt: a static/modal box under platform=offscreen
+        blocks a headless smoke indefinitely; and a modal inside a
+        timer callback re-enters a modal loop, P-6). Only the
+        wrappers schedule it, via ``cmd.refresh()`` +
+        ``QtCore.QTimer.singleShot(100, ...)``, AFTER the endgame
+        sequence's pop has fired its color-restore burst.
+
+        Both v1 bug-fix rationales are retained verbatim. (Bug A --
+        the clobbered redraw): exec_() runs a nested event loop that
+        stops normal redraw servicing, so a modal shown in the same
+        event-loop turn as the pop's color restores would defer the
+        redraw until after dismissal; the 100 ms gap lets PyMOL paint
+        the restored scene FIRST (100 ms is the v1-shipped value --
+        kept verbatim, no new constant). (Bug B -- the hidden
+        dialog): the parent is ``self.window()`` (the top-level
+        modeless window) and ``Qt.WindowStaysOnTopHint`` keeps the box
+        ABOVE the PyMOL OpenGL viewer instead of landing behind it.
+
+        Content is EXACTLY the pure endgame block (the two-surface
+        discipline -- the modal is the MOMENT, the info box is the
+        RECORD): setText carries lines[0] (the headline -- 'You
+        win! ...' or 'Game over -- gave up ...', the block's pinned
+        first line) and setInformativeText carries the remaining lines
+        joined with '<br>' (Qt rich text -- the v1 stats shape
+        gui_game.py:341-343), so modal and info box show one wording
+        home. exec_() on a child QMessageBox is the sanctioned modal
+        class (PITFALLS.md:105); the 1 Hz timer is already STOPPED by
+        the endgame sequence before this fires, so the modal needs no
+        pause handling. Returns nothing."""
+        from . import status_text
+        lines = status_text.endgame_lines(summary)
+        msg = QtWidgets.QMessageBox(self.window())
+        msg.setIcon(QtWidgets.QMessageBox.Information)
+        msg.setWindowTitle('AA-match')
+        msg.setText(lines[0])
+        msg.setInformativeText('<br>'.join(lines[1:]))
+        msg.setWindowFlags(msg.windowFlags()
+                           | QtCore.Qt.WindowStaysOnTopHint)
+        msg.exec_()
 
     def _pop_game_wizard(self):
         """Pop a GameWizard iff it is top-of-stack; returns popped-bool.

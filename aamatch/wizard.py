@@ -700,16 +700,21 @@ class GameWizard(Wizard):
         within this ONE method -- they can never drift.
 
         Returns ('molecule', None) on an in-level advance (data-only
-        engine advance + wizard rebind), ('level', None) on a level
-        advance (engine scene rebuild + SAME-INSTANCE rebind -- the D6
-        timer anchor survives because activate_game is never called
-        mid-game -- + camera re-frame through the 06-04 seam), or
+        engine advance + wizard rebind + camera re-frame through the
+        06-04 seam -- 06-10 human-checkpoint fix: the molecule branch
+        runs the SAME ONE compose call as the level branch, so an
+        in-level advance frames the NEW molecule's grid instead of
+        leaving the camera on the completed one), ('level', None) on a
+        level advance (engine scene rebuild + SAME-INSTANCE rebind --
+        the D6 timer anchor survives because activate_game is never
+        called mid-game -- + camera re-frame through the 06-04 seam), or
         (None, summary) on natural completion (engine.complete_game;
         NO rebind -- the panel keeps its state, the game is over)."""
         from . import engine
         if self._molecule_index + 1 < len(self._registry['molecules']):
             engine.advance_molecule()
             self._rebind_molecule(self._molecule_index + 1)
+            self._compose_active_molecule()
             return ('molecule', None)
         if self._level_index + 1 < len(self._payload['levels']):
             new_registry = engine.advance_level()

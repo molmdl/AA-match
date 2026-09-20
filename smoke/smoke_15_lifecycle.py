@@ -60,7 +60,11 @@ PART B  the WIZARD-tier lifecycle E2E (06-05; drives the wizard's
         B2   MOLECULE advance: confirm_molecule() returns the plain
              dict; advanced 'molecule', mol 2 of the level, marker
              molecule_scored seq 1 molecule_pos 1, result cleared (D3),
-             selection cleared, required reflects molecule 2.
+             selection cleared, required reflects molecule 2, and the
+             camera RE-FRAMED onto the NEW molecule (06-10 human
+             checkpoint fix: the molecule branch runs the SAME 06-04
+             compose seam as the level branch -- the zoom target names
+             only the new molecule's objects).
         B3   LEVEL advance (the second confirm closes level 1):
              advanced 'level', level 2 mol 1, the SAME wizard instance
              still on the stack, the timer anchor UNCHANGED (the D6
@@ -496,6 +500,7 @@ except Exception:
 # PART B2: MOLECULE advance via Confirm (zero-score mechanics)
 # ============================================================
 try:
+    view_pre2 = [float(v) for v in cmd.get_view()]
     ret1 = wiz_b.confirm_molecule()
     st = wiz_b.get_status()
     ev = st.get('last_event') or {}
@@ -531,6 +536,23 @@ try:
     check('B2 required label data reflects molecule 2',
           st.get('required') == required_m1,
           'required=%r want=%r' % (st.get('required'), required_m1))
+    view_b2 = [float(v) for v in cmd.get_view()]
+    mol_b0 = wiz_b._registry['molecules'][0]
+    mol_b1 = wiz_b._registry['molecules'][wiz_b._molecule_index]
+    names_b0 = [mol_b0['ligand'][0]]
+    names_b0.extend(entry[0] for entry in mol_b0['slots'].values())
+    names_b1 = [mol_b1['ligand'][0]]
+    names_b1.extend(entry[0] for entry in mol_b1['slots'].values())
+    sel_b2 = gamestart._active_molecule_selection(
+        wiz_b._registry, wiz_b._molecule_index)
+    target_b2 = set(sel_b2.split(' or '))
+    check('B2 camera re-framed by the molecule advance (06-10 fix)',
+          view_pre2 != view_b2
+          and sel_b2 == ' or '.join(names_b1)
+          and not any(n in target_b2 for n in names_b0),
+          'zoom target has %d objects, %d of them molecule-1'
+          % (len(target_b2),
+             len([n for n in names_b1 if n in target_b2])))
 except Exception:
     traceback.print_exc()
     check('B2 molecule advance', False, 'raised (see traceback above)')

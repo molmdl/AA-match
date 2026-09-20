@@ -744,6 +744,54 @@ class GameWizard(Wizard):
                 'summary': summary, 'level_pos': scored_level,
                 'molecule_pos': scored_pos}
 
+    def skip_molecule(self):
+        """SCORE-05 Skip (06-06): record the detection-AT-SKIP-TIME
+        partial score via the SAME record path as Confirm
+        (engine.skip_molecule: record_scored + skip_count + 1 --
+        spec.md:44 'store only up to current score of the molecule',
+        the 02-10 sanctioned partial-score reading), then advance
+        EXACTLY like Confirm through the ONE shared advancement site
+        (_advance_after_record) -- so a skip on the LAST molecule of
+        the LAST level completes the game (end_state 'completed',
+        every molecule has a record).
+
+        WARNING OWNERSHIP: this op is the Yes-branch ONLY; the
+        confirmation warning ('This will skip the molecule -- are you
+        sure?') belongs to the 06-07 tab wrapper, never here.
+
+        Returns the plain-data result through the _guard seam -- the
+        SAME shape as confirm_molecule's ({score, total, advanced,
+        game_over, summary, level_pos, molecule_pos of the SKIPPED
+        molecule}) so the tab's code path stays uniform; None on a
+        guarded refusal."""
+        return self._guard(self._skip_molecule_impl)
+
+    def _skip_molecule_impl(self):
+        from . import engine
+        self._require_playing()
+        required = self._required()
+        score, formed = engine.skip_molecule(self._level_index,
+                                             self._molecule_index,
+                                             required)
+        total = engine.total_score()
+        self._error = None
+        # Capture the SKIPPED molecule's position BEFORE the advance
+        # mutates both books -- exactly as confirm does.
+        scored_level = self._level_index + 1
+        scored_pos = self._molecule_index + 1
+        scored_m_total = len(self._registry['molecules'])
+        advanced, summary = self._advance_after_record()
+        self._sync_end_state()
+        self._set_event('molecule_skipped',
+                        score=float(score), total=float(total),
+                        molecule_pos=scored_pos,
+                        molecule_total=scored_m_total)
+        cmd.refresh_wizard()
+        return {'score': float(score), 'total': float(total),
+                'advanced': advanced, 'game_over': self._game_over,
+                'summary': summary, 'level_pos': scored_level,
+                'molecule_pos': scored_pos}
+
     def reset_grid(self):
         """PLAY-03 Reset: engine.reset_to_grid() -- POSITION replay
         (RECORDED PLANNER DECISION: option a) -- every AA's centroid

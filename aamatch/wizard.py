@@ -119,8 +119,22 @@ class GameWizard(Wizard):
     - ``_color_store``    {object_name: [(ID, color), ...]} PLAY-01
                           pre-recolor snapshots (lazy, wizard_core
                           bookkeeping)
-    - ``_result``         last confirm result dict or None
+    - ``_result``         last confirm result dict or None (06-05/D3:
+                          Confirm NO LONGER stores a result -- the
+                          debrief rides the ``_last_event`` marker; the
+                          key stays for the text builders' .get path)
     - ``_error``          last visible error string or None
+    - ``_event_seq``      int event sequence counter (06-05; makes
+                          identical consecutive events distinct for the
+                          status tab's poll diff)
+    - ``_last_event``     last lifecycle event dict or None (06-05;
+                          plain data -- every successful lifecycle op
+                          stamps it via _set_event)
+    - ``_game_over`` / ``_end_state``  op-time mirrors of the live
+                          GameState's end fields (06-05; refreshed by
+                          _sync_end_state after every advancing op --
+                          the wizard ops are the ONLY mutation paths,
+                          so the mirror drifts by construction never)
     """
 
     def __init__(self, payload, registry, level_index=0, molecule_index=0):
@@ -141,6 +155,11 @@ class GameWizard(Wizard):
         self._color_store = {}
         self._result = None
         self._error = None
+        # 06-05 lifecycle marker machinery (plain data, contract 2).
+        self._event_seq = 0
+        self._last_event = None
+        self._game_over = False
+        self._end_state = None
 
     def get_event_mask(self):
         """pick(1) | select(2) | key(4) | special(8) = 15.
@@ -353,6 +372,12 @@ class GameWizard(Wizard):
             'selected': selected,
             'result': self._result,
             'error': self._error,
+            # 06-05 additive extension (the status tab's EVENT channel,
+            # status_text.status_events; consumers tolerate extras by
+            # construction):
+            'last_event': self._last_event,
+            'game_over': self._game_over,
+            'end_state': self._end_state,
         }
 
     def get_status(self):
@@ -360,6 +385,78 @@ class GameWizard(Wizard):
         poll (READ path; contract 2 -- plain data only, never Qt or
         callables). Returns _state_dict()."""
         return self._state_dict()
+
+    # -- Lifecycle event machinery (06-05) --------------------------------
+
+    def _set_event(self, kind, **payload):
+        """Stamp the last-event marker (06-05/Q7): plain-data dict
+        {'kind', 'seq', ...payload} carried on _state_dict['last_event']
+        for the status tab's poll diff. The seq counter makes two
+        identical consecutive events DISTINCT (whole-dict equality is
+        the tab's fingerprint, so a repeat must still read as new)."""
+        self._event_seq += 1
+        self._last_event = dict(kind=kind, seq=self._event_seq)
+        self._last_event.update(payload)
+
+    def _sync_end_state(self):
+        """Mirror the live GameState's end fields onto the wizard
+        (06-05): op-time mirroring -- GameState.game_over/end_state
+        change ONLY through wizard ops (the only callers of the engine
+        lifecycle ops), so refreshing HERE keeps the mirror drift-free
+        by construction; the tab poll reads plain wizard data, never
+        the engine."""
+        from . import engine
+        gs = engine._current_game()
+        self._game_over = bool(gs.game_over)
+        self._end_state = gs.end_state
+
+    def _rebind_maps(self, molecule_index):
+        """Rebuild the molecule-scoped books (06-05): the pick maps
+        (forward + reverse via wizard_core.build_slot_map over the
+        LIVE registry), the ligand handle, and the index/selection/
+        result books -- the full per-molecule view in ONE place so
+        _rebind_molecule and _rebind_level can never half-swap."""
+        self._slot_by_object = wizard_core.build_slot_map(
+            self._registry, molecule_index)
+        self._objects_by_slot = dict(
+            (slot_id, obj)
+            for obj, slot_id in self._slot_by_object.items())
+        self._ligand_object = \
+            self._registry['molecules'][molecule_index]['ligand'][0]
+        self._molecule_index = molecule_index
+        self._current_slot = None
+        self._result = None
+
+    def _rebind_molecule(self, molecule_index):
+        """In-level advance rebind (06-05): same-level objects all
+        still exist, so a live selection's colors are restored FIRST
+        (the _select_slot restore-FIRST pattern; the snapshot entry is
+        KEPT in the store -- cleanup still re-restores harmlessly),
+        then the books rebuild for the NEW molecule."""
+        if self._current_slot is not None:
+            self._restore_slot_colors(
+                self._objects_by_slot[self._current_slot])
+        self._rebind_maps(molecule_index)
+
+    def _rebind_level(self, new_registry, level_index):
+        """Level advance rebind (06-05/D3): the dying level's objects
+        were DELETED by engine.advance_level's scene rebuild, so the
+        color store is cleared WITHOUT restoring (nothing to restore
+        -- writing colors onto deleted objects would raise); the
+        registry + level index swap to the NEW registry, then the
+        molecule-0 books rebuild exactly like an in-level advance."""
+        self._registry = new_registry
+        self._level_index = level_index
+        self._color_store.clear()
+        self._rebind_maps(0)
+
+    def _compose_active_molecule(self):
+        """Camera re-frame onto the NEW molecule after a level advance
+        (06-05): the 06-04 public compose seam -- ONE call, no compose
+        logic duplicated here."""
+        from . import gamestart
+        gamestart.compose_molecule_view(self._registry,
+                                        self._molecule_index)
 
     def get_prompt(self):
         """List-of-strings prompt, built by the pure builder (the

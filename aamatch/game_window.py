@@ -30,7 +30,22 @@ dumb renderer (event log only: no wizard-panel mirroring, no
 movement lines, no timestamps, no score lines). ``_begin_play``
 owns the FIRST level line + first required label (instant, ordered
 right after 'GO!') and seeds ``_last_status`` so the poll's first
-observation is silent.
+observation is silent. Phase 6 (06-07) lands the tab's lifecycle
+CONTROLS: the Confirm button (spec.md:41) and the Skip/Give-Up
+dropdown (spec.md:42) with the spec-required confirmation warnings,
+both factored as thin MODAL wrapper -> NON-MODAL impl (the 04-09
+_X_impl law -- impls never own boxes, so headless smokes drive them
+directly), the impls dispatching to the live GameWizard's lifecycle
+ops behind the SAME isinstance gate and running the poll-diff
+SYNCHRONOUSLY right after the op so the event lines land with ZERO
+poll latency (no 1 Hz loss). A completed/given-up game runs
+``_endgame_sequence``: stop the 1 Hz timer (v1 _on_win precedent --
+the tick cannot stop the clock), pin the timer label to the EXACT
+final elapsed, and pop the wizard via the local ``_pop_game_wizard``
+helper (the setup_window.py:826 seam shape). The poll owns ONE
+logging home for the game_over transition (tab-triggered ends via
+the sync refresh, panel-triggered ends via the 1 Hz tick -- the
+transition fires once).
 
 LAWS this module enforces (05-RESEARCH-window-start-timer.md):
 
@@ -80,11 +95,14 @@ class GameTab(QtWidgets.QWidget):
 
     Layout (spec.md:36-40): a top row with the elapsed-timer label and
     the required-interactions reference label, the read-only rolling
-    info box with stretch below, and the Hint button row at the
-    bottom. The button row reserves its slot with a stretch so the
-    later phases' game-lifecycle button rows (Confirm/Skip/Save/
-    Restart/Reset/Import arrive with Phases 6/7, research OQ-1
-    later-add recommendation) never reflow the timer row.
+    info     box with stretch below, and the Hint button row at the
+    bottom. Button inventory (Phase 6, plan 06-07): 'Hint' (05-08),
+    'Confirm' (spec.md:41), and the 'Skip / Give Up' QToolButton+QMenu
+    dropdown (spec.md:42) with 'Skip Molecule' / 'Give Up...' actions.
+    The button row keeps its stretch LAST (insertions go BEFORE the
+    stretch) so the remaining later-phase slots (Restart/Reset/Save/
+    Import, Phases 6/7, research OQ-1 later-add recommendation) never
+    reflow the timer row.
     """
 
     def __init__(self, parent=None):
@@ -122,8 +140,20 @@ class GameTab(QtWidgets.QWidget):
             'required interaction (carbon recolor only).')
         btn_row.addWidget(self.btn_hint)
         btn_row.addStretch(1)
+        # Confirm button (06-07, SCORE-01/03 UI -- spec.md:41): the
+        # tab's lifecycle-op button, connected HERE by its handler plan
+        # (the 04-05 shell law). The stretch stays LAST in the row --
+        # every new button inserts BEFORE it via
+        # insertWidget(btn_row.count() - 1, ...) so the timer row never
+        # reflows (the 05-06 OQ-1 design).
+        self.btn_confirm = QtWidgets.QPushButton('Confirm', self)
+        self.btn_confirm.setToolTip(
+            'Finish this molecule: run detection, score it, and '
+            'advance.')
+        btn_row.insertWidget(btn_row.count() - 1, self.btn_confirm)
         layout.addLayout(btn_row)
         self.btn_hint.clicked.connect(self._on_hint)
+        self.btn_confirm.clicked.connect(self._on_confirm)
 
         # The CANCELLABLE countdown: a reusable member QTimer stepping
         # 3 -> 2 -> 1 -> GO (P-2). Constructed here; started only by
@@ -306,9 +336,14 @@ class GameTab(QtWidgets.QWidget):
         level change -> one level line, a selection change -> the
         'Selected:' line, a NEW error string -> the 'ERROR:' line with
         sticky dedupe (pitfall 3). The required label is reference
-        info (Pattern 3): refreshed on molecule change, never a log
-        line, never scrolled away -- rendered by the pure
-        ``status_text.required_display``.
+        info (Pattern 3): refreshed on molecule OR level change
+        (molecule_id repeats across levels -- the 06-07 fix), never a
+        log line, never scrolled away -- rendered by the pure
+        ``status_text.required_display``. 06-07: a game_over
+        TRANSITION additionally logs the pure
+        ``status_text.endgame_lines`` block over
+        ``engine.endgame_summary()`` (the sanctioned accessor CALL,
+        never attribute privates) -- one block per game end.
         """
         from pymol import cmd
         from . import status_text, wizard
@@ -321,10 +356,28 @@ class GameTab(QtWidgets.QWidget):
         for line in status_text.status_events(self._last_status, state):
             self._log(line)
         prev = self._last_status
-        if prev is None or prev.get('molecule_id') != state.get(
-                'molecule_id'):
+        # 06-07 stale-label fix: molecule_id repeats ACROSS levels
+        # ('mol-001' again on level 2 -- generator numbers molecules
+        # within each level), so keying the refresh on molecule_id
+        # alone left the LEVEL-2 requirement showing level 1's label.
+        # level_pos does not repeat; refresh when EITHER moved.
+        if (prev is None
+                or prev.get('molecule_id') != state.get('molecule_id')
+                or prev.get('level_pos') != state.get('level_pos')):
             self._required_label.setText(
                 status_text.required_display(state['required']))
+        # 06-07: the ONE logging home for the game_over TRANSITION --
+        # tab-triggered ends reach it via the lifecycle impls'
+        # SYNCHRONOUS refresh; panel-triggered ends (the wizard's own
+        # Confirm) reach it via the 1 Hz tick. Transition-only (prev
+        # game_over False -> curr True), so the block logs exactly once
+        # per game end with no double-log.
+        prev_go = bool(prev.get('game_over')) if prev else False
+        if state.get('game_over') and not prev_go:
+            from . import engine
+            for line in status_text.endgame_lines(
+                    engine.endgame_summary()):
+                self._log(line)
         self._last_status = state
 
     # ---- the Hint handler (05-08 PLAY-05) ----
@@ -369,3 +422,84 @@ class GameTab(QtWidgets.QWidget):
             self._log('Hint: %d eligible amino acid(s) highlighted.'
                       % result['count'])
         return result
+
+    # ---- the Confirm handler (06-07: SCORE-01/03 tab UI) ----
+
+    def _on_confirm(self):
+        """Confirm button: the wizard's confirm op via _guard. NO
+        confirmation warning (Confirm is the routine gameplay action,
+        not a destructive one); still NON-MODAL in the wrapper -- the
+        endgame MODAL tail is 06-09's addition, so this wrapper's
+        structure stays stable for that edit."""
+        self._guard(self._confirm_now)
+
+    def _confirm_now(self):
+        """The non-modal impl (06-07): dispatch to the live
+        GameWizard's confirm_molecule() behind the isinstance gate
+        (silent no-op pre-GO, the _hint_now shape), then run the poll
+        SYNCHRONOUSLY right after the op so the info box gets the
+        scored line + debrief + position line with ZERO poll latency
+        (no 1 Hz loss) -- and, when the op completed the game, the
+        game_over transition block in the same call. A None result
+        means the wizard _guard already surfaced the refusal on the
+        PANEL (the hint precedent); the tab stays silent. A completed
+        game runs _endgame_sequence. Returns the op's plain-data dict
+        (or None pre-GO / on refusal)."""
+        from pymol import cmd
+        from . import wizard as wizard_mod
+        prior = cmd.get_wizard()
+        if not isinstance(prior, wizard_mod.GameWizard):
+            return None
+        result = prior.confirm_molecule()
+        if result is None:
+            return None
+        self._refresh_status()
+        if result.get('game_over'):
+            self._endgame_sequence(result['summary'])
+        return result
+
+    # ---- the endgame sequence (06-07: the shared game-over tail) ----
+
+    def _endgame_sequence(self, summary):
+        """Stop the clock, pin the exact final time, pop the wizard.
+
+        Shared by every game-over path a tab impl can trigger
+        (_confirm_now / _skip_now / _giveup_now). ORDER (v1's _on_win
+        precedent, gui_game.py:301): ``self._timer.stop()`` FIRST --
+        the tick can never stop the clock on its own (the engine's
+        GameState stays LIVE after the game ends, so a running tick
+        would keep the label advancing forever over a finished
+        game); then pin
+        ``_timer_label`` to the EXACT final elapsed from the summary
+        (the live tick value can be up to 1 s stale); then the
+        isinstance-gated pop (the pop's own cleanup fires the
+        color-restore burst that 06-09's refresh+singleShot modal
+        lands AFTER). No modal here (P-6/the smoke-99 law): 06-09 adds
+        ONLY the modal-scheduling tail on the WRAPPERS. Returns
+        nothing."""
+        from . import status_text
+        self._timer.stop()
+        self._timer_label.setText(
+            status_text.format_mss(summary['final_time']))
+        self._pop_game_wizard()
+
+    def _pop_game_wizard(self):
+        """Pop a GameWizard iff it is top-of-stack; returns popped-bool.
+
+        The GameTab's OWN copy of the 04-11 isinstance-pop pattern
+        (setup_window.py:826-845 -- the dialog helper is not reachable
+        from the tab without crossing the composition root): lazy
+        cmd+wizard imports (the module-identity law), isinstance gate
+        (a USER wizard is never popped), canonical ``cmd.set_wizard()``
+        None-pop -- the popped wizard's own cleanup runs (msm restore
+        + color restores) and the prior wizard (if any) auto-resumes.
+        No deletion: the _aam_* game objects SURVIVE the pop (Done
+        semantics; Cleanup is the explicit removal op, endgame-ui
+        D6)."""
+        from pymol import cmd
+        from . import wizard as wizard_mod
+        prior = cmd.get_wizard()
+        if isinstance(prior, wizard_mod.GameWizard):
+            cmd.set_wizard()
+            return True
+        return False

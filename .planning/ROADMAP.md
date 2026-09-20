@@ -191,10 +191,21 @@ Plans:
   2. [HUMAN] The Game status tab's Import button loads a previously exported game file and reconstructs the initial game; stale or foreign files (wrong version / detector stamp) are refused with a clear message. (PERSIST-02)
   3. [GATE] Session-restore hygiene verified: the wizard pickles cleanly (no Qt/locks/controller on it), sentinel-first reconstruction reconciles sidecar vs loaded atoms, and restore works after a plugin reload — console clean during save/load. (PERSIST-03)
 **Research notes**: PITFALLS topic *persistence* — gate 1 is the `.pse` matrix round-trip smoke (run before trusting the movement model's persistence); sentinel-first reconstruction; magic+version headers; capture timer before modal file dialogs.
-**Plans**: TBD
+**Plans**: 12 plans in 8 waves (created by /gsd-plan-phase)
 
 Plans:
-- [ ] 07-01: (TBD)
+- [ ] 07-01-PLAN.md — Wizard argless `__reduce__` rebuilder + SMOKE-17 strict-restore flip (wave 1)
+- [ ] 07-02-PLAN.md — `checkpoint.py` pure module: schema + 4-gate parse + reconcile_registry + .aamz zip I/O (wave 1)
+- [ ] 07-03-PLAN.md — status_text handler-logged line-builders (saved/imported/resumed) (wave 1)
+- [ ] 07-04-PLAN.md — Save-side seams: wizard.snapshot_books + capture_checkpoint_snapshot + save_checkpoint + SMOKE-18 (wave 2)
+- [ ] 07-05-PLAN.md — Payload-direct seam: engine.adopt_game + start_game_from_payload + _last_start 'payload' + placement CmdException wrap (wave 3)
+- [ ] 07-06-PLAN.md — Game-tab Save button + wrapper/impl + SMOKE-16 save part (wave 3)
+- [ ] 07-07-PLAN.md — Game-tab Import button (game files) + Restart payload routing + SMOKE-19 refusal battery (wave 4)
+- [ ] 07-08-PLAN.md — Wizard reconstruction ops: identity-agnostic predicate + resume_from + SMOKE-07 books part (wave 4)
+- [ ] 07-09-PLAN.md — load_checkpoint sentinel-first orchestration + SMOKE-20 two-process E2E (wave 5)
+- [ ] 07-10-PLAN.md — Import kind-dispatch + checkpoint-resume tab re-arm + persistence.peek_kind (wave 6)
+- [ ] 07-11-PLAN.md — Full regression battery (WSL + smokes 01-20) + verdict recording (wave 7)
+- [ ] 07-12-PLAN.md — [HUMAN] consolidated GUI checkpoint (criteria 1-3) (wave 8)
 
 ### Phase 8: Demo Curation & Citations
 **Goal**: ~9 curated demo sets ship with full, human-verified provenance under the propose → human-approve → fetch/commit protocol — content is gated by truthfulness, not by code.

@@ -151,9 +151,36 @@ class GameTab(QtWidgets.QWidget):
             'Finish this molecule: run detection, score it, and '
             'advance.')
         btn_row.insertWidget(btn_row.count() - 1, self.btn_confirm)
+        # Skip/Give-Up dropdown (06-07, SCORE-05/06 UI -- spec.md:42's
+        # 'Skip Mol/give up dropdown button'): ONE QToolButton with a
+        # QMenu of two actions, InstantPopup so the whole button opens
+        # the menu (the endgame-ui sec 4 recommendation -- spec-literal
+        # and QAction.trigger()-driveable headlessly, unlike a real
+        # popup). BOTH actions ask the spec-required confirmation
+        # warning in their wrappers (endgame-ui sec 3). Inserted
+        # BEFORE the stretch, which stays LAST.
+        self.btn_skip_menu = QtWidgets.QToolButton(self)
+        self.btn_skip_menu.setText('Skip / Give Up')
+        self.btn_skip_menu.setToolTip(
+            'Skip the current molecule or give up the game (both ask '
+            'for confirmation).')
+        self.btn_skip_menu.setPopupMode(QtWidgets.QToolButton.InstantPopup)
+        menu = QtWidgets.QMenu(self.btn_skip_menu)
+        self.act_skip = menu.addAction('Skip Molecule')
+        self.act_skip.setToolTip(
+            'Store the partial score and move to the next molecule '
+            '(asks for confirmation).')
+        self.act_giveup = menu.addAction('Give Up...')
+        self.act_giveup.setToolTip(
+            'Ends the game at the current stage -- asks for '
+            'confirmation.')
+        self.btn_skip_menu.setMenu(menu)
+        btn_row.insertWidget(btn_row.count() - 1, self.btn_skip_menu)
         layout.addLayout(btn_row)
         self.btn_hint.clicked.connect(self._on_hint)
         self.btn_confirm.clicked.connect(self._on_confirm)
+        self.act_skip.triggered.connect(self._on_skip)
+        self.act_giveup.triggered.connect(self._on_giveup)
 
         # The CANCELLABLE countdown: a reusable member QTimer stepping
         # 3 -> 2 -> 1 -> GO (P-2). Constructed here; started only by
@@ -451,6 +478,99 @@ class GameTab(QtWidgets.QWidget):
         if not isinstance(prior, wizard_mod.GameWizard):
             return None
         result = prior.confirm_molecule()
+        if result is None:
+            return None
+        self._refresh_status()
+        if result.get('game_over'):
+            self._endgame_sequence(result['summary'])
+        return result
+
+    # ---- the Skip / Give-Up handlers (06-07: SCORE-05/06 tab UI) ----
+
+    def _on_skip(self):
+        """'Skip Molecule' menu action: the MODAL warning wrapper.
+
+        GATE FIRST (endgame-ui sec 5.4): a press with no live
+        GameWizard -- pre-GO (the countdown window is wizard-free,
+        P-1) or no game at all -- is a SILENT no-op BEFORE any box; no
+        modal over a wizard-free game. Then the spec-required
+        QMessageBox.question Yes|No (the pinned 06-02 wording) as a
+        modal CHILD of the window (PITFALL 4 legal; Escape reads as
+        No). YES routes the impl through _guard; No/Escape is a safe
+        no-op. NO rebase_timer here (the caller-owns-modal-detection
+        law: the 1 Hz tick's activeModalWidget branch freezes the
+        clock over ANY real modal). The 06-09 plan adds ONLY the
+        endgame-modal scheduling tail here -- this structure stays
+        stable for that edit."""
+        from pymol import cmd
+        from . import status_text, wizard as wizard_mod
+        if not isinstance(cmd.get_wizard(), wizard_mod.GameWizard):
+            return
+        btns = (QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No)
+        if QtWidgets.QMessageBox.question(
+                self.window(), status_text.SKIP_WARNING_TITLE,
+                status_text.SKIP_WARNING_TEXT,
+                btns) == QtWidgets.QMessageBox.Yes:
+            self._guard(self._skip_now)
+
+    def _on_giveup(self):
+        """'Give Up...' menu action: the MODAL warning wrapper -- the
+        identical shape as _on_skip with the GIVEUP_ pinned strings
+        routing to _giveup_now (YES = the wrapper's _guard call;
+        No/Escape safe)."""
+        from pymol import cmd
+        from . import status_text, wizard as wizard_mod
+        if not isinstance(cmd.get_wizard(), wizard_mod.GameWizard):
+            return
+        btns = (QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No)
+        if QtWidgets.QMessageBox.question(
+                self.window(), status_text.GIVEUP_WARNING_TITLE,
+                status_text.GIVEUP_WARNING_TEXT,
+                btns) == QtWidgets.QMessageBox.Yes:
+            self._guard(self._giveup_now)
+
+    def _skip_now(self):
+        """The non-modal Skip impl (06-07): defensive isinstance gate ->
+        GameWizard.skip_molecule() (partial score stored, then the
+        shared advancement site -- the op IS the Yes-branch; the
+        warning lives in the wrapper). None = a guarded refusal
+        already surfaced on the PANEL; the tab stays silent. The
+        SYNCHRONOUS poll then lands the skipped line + the new
+        position line with zero 1 Hz loss; a skip of the LAST
+        molecule of the last level completes the game (06-06), so
+        game_over runs the shared _endgame_sequence. NO boxes here
+        (the smoke-99 law -- headless smokes drive this directly).
+        Returns the op's plain-data dict (or None pre-GO / on
+        refusal)."""
+        from pymol import cmd
+        from . import wizard as wizard_mod
+        prior = cmd.get_wizard()
+        if not isinstance(prior, wizard_mod.GameWizard):
+            return None
+        result = prior.skip_molecule()
+        if result is None:
+            return None
+        self._refresh_status()
+        if result.get('game_over'):
+            self._endgame_sequence(result['summary'])
+        return result
+
+    def _giveup_now(self):
+        """The non-modal Give-Up impl (06-07): defensive isinstance gate
+        -> GameWizard.give_up() (ends the game AT THE CURRENT STAGE --
+        the current molecule is NOT scored, spec.md:44-45). Successful
+        give_up is ALWAYS game-over, so the sync poll lands the
+        'Game ended ...' line + the endgame block (via the game_over
+        transition, exactly once) and _endgame_sequence stops the
+        clock, pins the exact final time, and pops the wizard. NO
+        boxes here (the smoke-99 law). Returns the op's plain-data
+        dict (or None pre-GO / on refusal)."""
+        from pymol import cmd
+        from . import wizard as wizard_mod
+        prior = cmd.get_wizard()
+        if not isinstance(prior, wizard_mod.GameWizard):
+            return None
+        result = prior.give_up()
         if result is None:
             return None
         self._refresh_status()

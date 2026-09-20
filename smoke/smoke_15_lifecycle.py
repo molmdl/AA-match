@@ -5,10 +5,11 @@ Run (from WSL, repo root):
 Verdict is carried by the printed marker (exit codes cannot carry
 verdicts through the cmd.exe wrapper): grep '=== SMOKE-15 PASS ==='.
 
-Proves the 06-03 engine lifecycle ops (PART A) and the 06-05 wizard
-lifecycle core (PART B) headlessly in REAL PyMOL (cmd-tier E2E -- the
-always tier; PART letters stay appendable so 06-06 can grow PART C
-for the tab half):
+Proves the 06-03 engine lifecycle ops (PART A), the 06-05 wizard
+lifecycle core (PART B), and the 06-06 wizard skip/give-up half
+(PART C) headlessly in REAL PyMOL (cmd-tier E2E -- the always tier;
+PART letters stay appendable so 06-07's tab side can grow further
+letters):
 
 PART A  the pure cmd drive over the DEFAULT game (seed 42; 2
         molecules/level x 3 levels, frozen Phase-1 DEFAULTS):
@@ -80,6 +81,40 @@ PART B  the WIZARD-tier lifecycle E2E (06-05; drives the wizard's
         lands on the NEXT molecule, so a wizard-level double-Confirm
         refusal is unreachable by design.
 
+PART C  the 06-06 wizard skip/give-up half (SCORE-05/06 wizard ops,
+        game-over gating, reset marker; public wizard methods only):
+        C1   fresh start; confirm molecule 1 -> skip molecule 2 ->
+             advanced 'level', skip_count 1, two molecule_scores, the
+             molecule_skipped marker (pos 2 of 2, seq 2), status at
+             level 2 molecule 1 -- skip advances EXACTLY like Confirm
+             through the shared _advance_after_record.
+        C2   skip-COMPLETES-the-game: confirm/skip through to the
+             LAST molecule of the LAST level, then skip_molecule ->
+             advanced None, game_over True, summary end_state
+             'completed' (a skipped final molecule still finishes the
+             game -- every molecule has a record).
+        C3   full game-over LOCKDOWN: fresh game, select a slot, then
+             give_up -> nudge_cam / rotate_view refused with the
+             pinned 'The game is over.' AND the pose unchanged; hint /
+             reset_grid / skip_molecule / confirm_molecule all refuse
+             (None through _guard); a scripted pick on a DIFFERENT
+             slot is a SOFT no-op (selection unchanged -- never raise
+             into the C-layer pick dispatch).
+        C4   give_up data: the return carries game_over True + the
+             exact 06-01 summary keys; the wizard marker is gave_up
+             (level/molecule position of the end); game_status shows
+             giveup_count 1, end_state 'gave_up', a frozen float
+             final_time; get_status()['end_state'] 'gave_up'.
+        C5   reset marker: fresh game, select + move_to one AA far
+             off-grid, then reset_grid -> the last_event marker kind
+             is 'game_reset'; the AA's centroid is back at the
+             effective_position target (1e-6 tolerance + float32 ulp
+             slack); game_status to_dict UNCHANGED (reset touches NO
+             GameState data -- the marker is the ONLY channel the
+             poll sees the reset through).
+        C6   restore: Done pop + prefix cleanup -> baseline EXACTLY;
+             gamestart._last_start reset.
+
 Conventions (frozen Phase 1, kept): anchor repo root via sys.argv
 first / cwd fallback (never __file__); import aamatch directly (module
 identity 'aamatch'); every print on ONE line and flushed; check details
@@ -123,7 +158,7 @@ if _ROOT not in sys.path:
 
 from pymol import cmd  # noqa: E402
 
-from aamatch import engine, gamestart, placement  # noqa: E402
+from aamatch import engine, gamestart, geometry, placement  # noqa: E402,E501
 from aamatch.wizard import GameWizard  # noqa: E402
 
 print('SMOKE-ENV pymol: %s' % (cmd.get_version()[0],), flush=True)
@@ -636,11 +671,283 @@ except Exception:
     check('B6 teardown', False, 'raised (see traceback above)')
     placement.cleanup_game_objects()
 
+# ============================================================
+# PART C (06-06): wizard skip / give-up / game-over gating /
+# game_reset marker -- through the wizard's PUBLIC methods.
+# ============================================================
+part_b_checks = REC['checks']
+
+# ============================================================
+# PART C1: skip advances EXACTLY like Confirm (shared site)
+# ============================================================
+wiz_c = None
+try:
+    wiz_c = gamestart.start_game(activate=True)
+    check('C1 fresh start returns the stacked GameWizard',
+          isinstance(wiz_c, GameWizard) and cmd.get_wizard() is wiz_c,
+          'type=%r' % (type(wiz_c),))
+    r_conf = wiz_c.confirm_molecule()
+    check('C1 confirm on molecule 1 advances molecule',
+          isinstance(r_conf, dict) and r_conf.get('advanced')
+          == 'molecule',
+          'advanced=%r'
+          % (r_conf.get('advanced') if isinstance(r_conf, dict)
+             else r_conf,))
+    r_skip = wiz_c.skip_molecule()
+    gs = engine.game_status()
+    st = wiz_c.get_status()
+    ev = st.get('last_event') or {}
+    check('C1 skip return contract (same shape as confirm)',
+          isinstance(r_skip, dict) and r_skip.get('advanced') == 'level'
+          and isinstance(r_skip.get('score'), float)
+          and isinstance(r_skip.get('total'), float)
+          and r_skip.get('game_over') is False
+          and r_skip.get('summary') is None,
+          'advanced=%r score=%r total=%r'
+          % (r_skip.get('advanced') if isinstance(r_skip, dict)
+             else r_skip,
+             r_skip.get('score') if isinstance(r_skip, dict) else None,
+             r_skip.get('total') if isinstance(r_skip, dict) else None))
+    check('C1 skip recorded via the same path + counted',
+          gs.get('skip_count') == 1
+          and len(gs.get('molecule_scores') or []) == 2,
+          'skip=%d scores=%r'
+          % (gs.get('skip_count'), gs.get('molecule_scores')))
+    check('C1 marker molecule_skipped pos 2 of 2 (seq 2)',
+          ev.get('kind') == 'molecule_skipped' and ev.get('seq') == 2
+          and ev.get('molecule_pos') == 2
+          and ev.get('molecule_total') == 2
+          and isinstance(ev.get('score'), float)
+          and isinstance(ev.get('total'), float),
+          'kind=%r seq=%r pos=%r total=%r'
+          % (ev.get('kind'), ev.get('seq'), ev.get('molecule_pos'),
+             ev.get('molecule_total')))
+    check('C1 skip advanced the level (status at level 2 mol 1)',
+          st.get('level_pos') == 2 and st.get('molecule_pos') == 1,
+          'level_pos=%r molecule_pos=%r'
+          % (st.get('level_pos'), st.get('molecule_pos')))
+except Exception:
+    traceback.print_exc()
+    check('C1 skip drive', False, 'raised (see traceback above)')
+
+# ============================================================
+# PART C2: skip-COMPLETES-the-game (last molecule, last level)
+# ============================================================
+try:
+    got = []
+    for _ in range(3):
+        r_mid = wiz_c.confirm_molecule()
+        got.append(r_mid.get('advanced')
+                   if isinstance(r_mid, dict) else r_mid)
+    r_final = wiz_c.skip_molecule()
+    check('C2 confirms walk molecule -> level -> molecule',
+          got == ['molecule', 'level', 'molecule'],
+          'advanced=%r' % (got,))
+    check('C2 skip on the LAST molecule completes the game',
+          isinstance(r_final, dict) and r_final.get('advanced') is None
+          and r_final.get('game_over') is True
+          and (r_final.get('summary') or {}).get('end_state')
+          == 'completed',
+          'advanced=%r game_over=%r end_state=%r'
+          % (r_final.get('advanced') if isinstance(r_final, dict)
+             else r_final,
+             r_final.get('game_over') if isinstance(r_final, dict)
+             else None,
+             (r_final.get('summary') or {}).get('end_state')
+             if isinstance(r_final, dict) else None))
+    st = wiz_c.get_status()
+    check('C2 status/engine mirror the completion (skip_count 2)',
+          st.get('game_over') is True
+          and st.get('end_state') == 'completed'
+          and engine.is_over() is True
+          and engine.game_status().get('skip_count') == 2,
+          'game_over=%r end_state=%r is_over=%r skip=%r'
+          % (st.get('game_over'), st.get('end_state'),
+             engine.is_over(), engine.game_status().get('skip_count')))
+except Exception:
+    traceback.print_exc()
+    check('C2 completion drive', False, 'raised (see traceback above)')
+
+# ============================================================
+# PART C4 (data) + C3 (lockdown): give_up, then EVERY gate refuses
+# ============================================================
+wiz_c2 = None
+try:
+    wiz_c2 = gamestart.start_game(activate=True)
+    mol_c = engine._registry['molecules'][0]
+    slots_c = sorted(mol_c['slots'])
+    obj_c0 = mol_c['slots'][slots_c[0]][0]
+    cmd.select('sele', '%s and name CA' % obj_c0)
+    wiz_c2.do_select('sele')
+    centroid_pre = geometry.centroid_of(obj_c0)
+    ret_g = wiz_c2.give_up()
+    st = wiz_c2.get_status()
+    gs = engine.game_status()
+    ev = st.get('last_event') or {}
+    check('C4 give_up return contract (endgame summary consumed)',
+          isinstance(ret_g, dict) and ret_g.get('game_over') is True
+          and isinstance(ret_g.get('summary'), dict)
+          and sorted(ret_g['summary']) == sorted(_SUMMARY_KEYS)
+          and ret_g.get('level_pos') == 1
+          and ret_g.get('molecule_pos') == 1,
+          'game_over=%r keys=%s'
+          % (ret_g.get('game_over') if isinstance(ret_g, dict)
+             else ret_g,
+             sorted(ret_g.get('summary') or {})
+             if isinstance(ret_g, dict) else type(ret_g)))
+    check('C4 gave_up marker at the end position + status mirrors',
+          ev.get('kind') == 'gave_up' and ev.get('level_pos') == 1
+          and ev.get('molecule_pos') == 1
+          and ev.get('molecule_total') == 2
+          and isinstance(ev.get('total'), float)
+          and st.get('game_over') is True
+          and st.get('end_state') == 'gave_up',
+          'kind=%r level=%r pos=%r end_state=%r'
+          % (ev.get('kind'), ev.get('level_pos'),
+             ev.get('molecule_pos'), st.get('end_state')))
+    check('C4 engine books: giveup 1, gave_up, frozen final_time',
+          gs.get('giveup_count') == 1
+          and gs.get('end_state') == 'gave_up'
+          and isinstance(gs.get('final_time'), float)
+          and gs.get('final_time') >= 0.0,
+          'giveup=%r end_state=%r final_time=%r'
+          % (gs.get('giveup_count'), gs.get('end_state'),
+             gs.get('final_time')))
+
+    wiz_c2.nudge_cam(1, 0, 0)
+    st = wiz_c2.get_status()
+    centroid_post = geometry.centroid_of(obj_c0)
+    dev_nudge = max(abs(centroid_post[i] - centroid_pre[i])
+                    for i in range(3))
+    check('C3 nudge refused with the pinned wording, pose UNCHANGED',
+          st.get('error') == 'The game is over.' and dev_nudge < 1e-9,
+          'error=%r dev=%g' % (st.get('error'), dev_nudge))
+    wiz_c2.rotate_view(10.0)
+    st = wiz_c2.get_status()
+    centroid_post2 = geometry.centroid_of(obj_c0)
+    dev_rot = max(abs(centroid_post2[i] - centroid_pre[i])
+                  for i in range(3))
+    check('C3 rotate refused with the pinned wording, pose UNCHANGED',
+          st.get('error') == 'The game is over.' and dev_rot < 1e-9,
+          'error=%r dev=%g' % (st.get('error'), dev_rot))
+    r_hint = wiz_c2.hint()
+    st = wiz_c2.get_status()
+    check('C3 hint returns None with the pinned wording',
+          r_hint is None and st.get('error') == 'The game is over.',
+          'hint=%r error=%r' % (r_hint, st.get('error')))
+    wiz_c2.reset_grid()
+    st = wiz_c2.get_status()
+    check('C3 reset refused with the pinned wording',
+          st.get('error') == 'The game is over.',
+          'error=%r' % (st.get('error'),))
+    obj_c1 = mol_c['slots'][slots_c[1]][0]
+    cmd.select('sele', '%s and name CA' % obj_c1)
+    wiz_c2.do_select('sele')
+    st = wiz_c2.get_status()
+    sel = st.get('selected') or {}
+    check('C3 scripted pick is a SOFT no-op (selection unchanged)',
+          sel.get('slot_id') == slots_c[0]
+          and st.get('error') == 'The game is over.',
+          'selected=%r error=%r' % (sel.get('slot_id'),
+                                    st.get('error')))
+    r_skip_g = wiz_c2.skip_molecule()
+    st = wiz_c2.get_status()
+    check('C3 skip refused post-game-over (None through _guard)',
+          r_skip_g is None and st.get('error') == 'The game is over.',
+          'skip=%r error=%r' % (r_skip_g, st.get('error')))
+    r_conf_g = wiz_c2.confirm_molecule()
+    st = wiz_c2.get_status()
+    check('C3 confirm refused post-game-over (None through _guard)',
+          r_conf_g is None and st.get('error') == 'The game is over.',
+          'confirm=%r error=%r' % (r_conf_g, st.get('error')))
+except Exception:
+    traceback.print_exc()
+    check('C3/C4 give-up + lockdown drive', False,
+          'raised (see traceback above)')
+
+# ============================================================
+# PART C5: reset marker + pose replay + NO GameState touch
+# ============================================================
+wiz_c3 = None
+try:
+    wiz_c3 = gamestart.start_game(activate=True)
+    gs_before = engine.game_status()
+    mol_d = engine._registry['molecules'][0]
+    slots_d = sorted(mol_d['slots'])
+    slot_d0 = slots_d[0]
+    obj_d0 = mol_d['slots'][slot_d0][0]
+    cmd.select('sele', '%s and name CA' % obj_d0)
+    wiz_c3.do_select('sele')
+    mol_payload = engine._payload['levels'][0]['molecules'][0]
+    slot_payload = None
+    for sp in mol_payload['grid']['slots']:
+        if sp['slot_id'] == slot_d0:
+            slot_payload = sp
+            break
+    offset = (mol_payload.get('placement') or {}).get(
+        'offset', (0.0, 0.0, 0.0))
+    target = placement.effective_position(
+        slot_payload['grid_pose']['position'], offset)
+    moved = (target[0] + 3.0, target[1] + 5.0, target[2] - 2.0)
+    wiz_c3.move_to(moved)
+    after_move = geometry.centroid_of(obj_d0)
+    dev_move = max(abs(after_move[i] - target[i]) for i in range(3))
+    check('C5 move_to genuinely displaced the AA (> 1 A off target)',
+          dev_move > 1.0, 'dev=%g target=%r after=%r'
+          % (dev_move, target, after_move))
+    wiz_c3.reset_grid()
+    st = wiz_c3.get_status()
+    ev = st.get('last_event') or {}
+    check('C5 reset stamps the game_reset marker',
+          ev.get('kind') == 'game_reset'
+          and isinstance(ev.get('seq'), int),
+          'kind=%r seq=%r' % (ev.get('kind'), ev.get('seq')))
+    after_reset = geometry.centroid_of(obj_d0)
+    dev_reset = 0.0
+    tol_reset = 0.0
+    for i in range(3):
+        dev_reset = max(dev_reset, abs(after_reset[i] - target[i]))
+        tol_reset = max(tol_reset,
+                        placement.POSE_TOLERANCE
+                        + placement.FLOAT32_ULP_REL
+                        * max(abs(after_reset[i]), abs(target[i])))
+    check('C5 pose back at the effective_position target (float32 ulp)',
+          dev_reset <= tol_reset,
+          'dev=%g tol=%g target=%r after=%r'
+          % (dev_reset, tol_reset, target, after_reset))
+    gs_after = engine.game_status()
+    check('C5 reset touches NO GameState (to_dict equality)',
+          gs_after == gs_before,
+          'changed=%s' % (sorted(k for k in gs_after
+                                 if gs_after.get(k)
+                                 != gs_before.get(k)),))
+except Exception:
+    traceback.print_exc()
+    check('C5 reset-marker drive', False, 'raised (see traceback above)')
+
+# ============================================================
+# PART C6: restore -- scene back to the baseline EXACTLY
+# ============================================================
+try:
+    if cmd.get_wizard() is not None:
+        cmd.set_wizard()
+    cleaned = placement.cleanup_game_objects()
+    check('C6 teardown returns the scene to the baseline EXACTLY',
+          list(cmd.get_names('objects')) == pre_names,
+          'deleted=%d post=%s' % (cleaned['deleted'],
+                                  cmd.get_names('objects')))
+    gamestart._last_start = None
+except Exception:
+    traceback.print_exc()
+    check('C6 teardown', False, 'raised (see traceback above)')
+    placement.cleanup_game_objects()
+
 # --- Verdict marker (the SOLE verdict carrier) -------------------------------
-print('SMOKE-15 PART A: %d checks; PART B: %d checks; TOTAL %d, '
-      '%d failure(s)'
-      % (part_a_checks, REC['checks'] - part_a_checks, REC['checks'],
-         len(failures)), flush=True)
+print('SMOKE-15 PART A: %d checks; PART B: %d checks; PART C: %d '
+      'checks; TOTAL %d, %d failure(s)'
+      % (part_a_checks, part_b_checks - part_a_checks,
+         REC['checks'] - part_b_checks, REC['checks'], len(failures)),
+      flush=True)
 print('=== SMOKE-15 %s ==='
       % ('FAIL: ' + ', '.join(failures) if failures else 'PASS'),
       flush=True)

@@ -33,10 +33,17 @@ PART B  MOVEMENT + THE IDENTITY INVARIANT: wizard_core.
         centroid (rotation about the centroid) and move atoms;
         step_to_ligand lands exactly 1.0 A towards the ligand centroid.
 PART C  CONFIRM COMPOSITION (the PLAY-02 payoff, 06-05 ADVANCE
-        SEMANTICS): after the explicit baked ring-alignment step (02-14
-        decision -- a pure translate cannot fix ring orientation;
-        implemented via the wizard's own rotate_axis) and move_to so
-        the AA ring sits 4.5 A above the ligand ring center,
+        SEMANTICS) + the RESET proof (moved in from PART D at 06-06 --
+        the game-over lockdown law refuses every gameplay handler once
+        this one-molecule game's Confirm completes it, so the reset
+        drive now runs MID-GAME between the placed pose and the
+        completion Confirm): after the explicit baked ring-alignment
+        step (02-14 decision -- a pure translate cannot fix ring
+        orientation; implemented via the wizard's own rotate_axis) and
+        move_to so the AA ring sits 4.5 A above the ligand ring center,
+        reset_grid replays grid positions (rotations persist --
+        recorded 03-03 option a), re-detect is zero, selection +
+        recolor persist; a re-pose lands the ring again; then
         confirm_molecule scores 1.0 with pi_stacking formed and
         COMPLETES the one-molecule game; the debrief RIDES the
         last_event marker (D3: _result stays cleared, no panel/prompt
@@ -44,13 +51,11 @@ PART C  CONFIRM COMPOSITION (the PLAY-02 payoff, 06-05 ADVANCE
         result via the guarded record path (06-05: the Phase-3
         re-Confirm-accumulates caveat is CLOSED -- the 06-03 one-record
         guard owns score-once).
-PART D  RESET + RESTORE (PLAY-03/04): reset_grid replays grid positions
-        (rotations persist -- recorded 03-03 option a), re-detect is
-        zero, _result clears, selection + recolor persist; the panel
-        Done path (canonical cmd.set_wizard()) runs cleanup: msm back
-        to the pre-game snapshot, pk1 deleted, selected slot's colors
-        restored, game objects STILL PRESENT, get_wizard() None, stack
-        empty; cleanup() is idempotent.
+PART D  RESTORE (PLAY-03/04): the panel Done path (canonical
+        cmd.set_wizard()) runs cleanup: msm back to the pre-game
+        snapshot, pk1 deleted, selected slot's colors restored, game
+        objects STILL PRESENT, get_wizard() None, stack empty;
+        cleanup() is idempotent.
 PART E  MULTI-MOLECULE SCOPING: a second DEFAULTS-shaped 2-molecule
         game documents the molecule-0 scoping decision (a molecule-1 AA
         pick leaves _current_slot None); teardown returns the scene to
@@ -591,6 +596,62 @@ try:
           and wiz._error is None,
           'drift=%.2g' % drift_c)
 
+    # RESET DRIVE (moved OUT of PART D at 06-06, Rule 1 knock-on):
+    # the 06-06 game-over lockdown law makes EVERY gameplay handler
+    # refuse after the game ends ('The game is over.' -- SMOKE-15
+    # PART C), and this D 1 game's PART-C Confirm COMPLETES the game.
+    # The reset proof therefore runs while the game is STILL PLAYING:
+    # between the placed pose above and the completion Confirm below.
+    wiz.reset_grid()
+    molecule0 = registry['molecules'][0]
+    offset = molecule0['offset']
+    worst_reset = 0.0
+    reset_fail = []
+    for slot in mol_payload['grid']['slots']:
+        target = placement.effective_position(
+            slot['grid_pose']['position'], offset)
+        centroid = geometry.centroid_of(
+            molecule0['slots'][slot['slot_id']][0])
+        dev = _max_axis_dev(_tofloat(centroid), _tofloat(target))
+        tol = _max_axis_tol(_tofloat(centroid), _tofloat(target))
+        worst_reset = max(worst_reset, dev)
+        if dev > tol:
+            reset_fail.append('%s(%.2g)' % (slot['slot_id'], dev))
+    REC['reset_worst_dev'] = worst_reset
+    check('reset_grid replays grid positions', not reset_fail,
+          'worst=%.2g (02-15 pose tolerance)%s'
+          % (worst_reset,
+             ' FAIL: ' + ', '.join(reset_fail) if reset_fail else ''))
+    records_d = engine.detect()
+    pi_d = [r for r in records_d if r['type'] == 'pi_stacking']
+    check('reset clears the interaction', not pi_d,
+          'records=%d pi=%d' % (len(records_d), len(pi_d)))
+    mats_ok = all(_is_identity(_obj_matrix(ob))
+                  for ob in [e[0] for e in molecule0['slots'].values()])
+    check('all AA matrices identity after reset', mats_ok,
+          'checked %d objects' % len(molecule0['slots']))
+    check('reset clears the stale result, keeps selection + recolor',
+          wiz._result is None and wiz._current_slot == req_slot
+          and all(c == int(cmd.get_color_index(
+              wizard_core.HIGHLIGHT_COLOR))
+              for c in _color_map(req_obj).values()),
+          '_result=%r _current_slot=%r'
+          % (wiz._result, wiz._current_slot))
+
+    # RE-POSE before the completion Confirm: the reset replayed the
+    # CENTROID only (rotations persist -- the 03-03 decision), so the
+    # same placement vector lands the ring on the target again.
+    wiz.move_to(position)
+    records_live = geometry.extract_game_atoms()
+    features = extract_features(records_live, lig_remap)
+    placed_center = _tofloat(
+        features['aa'][req_obj]['rings'][0]['center'])
+    drift_c2 = _max_axis_dev(placed_center, ring_target)
+    check('re-pose after reset lands the ring again (rotations persist)',
+          drift_c2 < 1e-4 and _is_identity(_obj_matrix(req_obj))
+          and wiz._error is None,
+          'drift=%.2g' % drift_c2)
+
     # CONFIRM (06-05 ADVANCE SEMANTICS): record -> marker -> advance.
     # This is a ONE-molecule game (D 1), so the Confirm COMPLETES it;
     # the returned plain dict + the last_event marker carry the
@@ -634,47 +695,13 @@ except Exception:
     check('part C confirm composition', False, 'raised (see traceback)')
 
 # ============================================================
-# PART D: reset + the full cleanup restore table (Done path)
+# PART D: the full cleanup restore table (Done path). The RESET proof
+# moved INTO PART C at 06-06 (the game-over lockdown law refuses every
+# gameplay handler once this D 1 game's Confirm completes it).
 # ============================================================
 try:
     if registry is None:
         raise RuntimeError('part 0 failed')
-
-    wiz.reset_grid()
-    molecule0 = registry['molecules'][0]
-    offset = molecule0['offset']
-    worst_reset = 0.0
-    reset_fail = []
-    for slot in mol_payload['grid']['slots']:
-        target = placement.effective_position(
-            slot['grid_pose']['position'], offset)
-        centroid = geometry.centroid_of(
-            molecule0['slots'][slot['slot_id']][0])
-        dev = _max_axis_dev(_tofloat(centroid), _tofloat(target))
-        tol = _max_axis_tol(_tofloat(centroid), _tofloat(target))
-        worst_reset = max(worst_reset, dev)
-        if dev > tol:
-            reset_fail.append('%s(%.2g)' % (slot['slot_id'], dev))
-    REC['reset_worst_dev'] = worst_reset
-    check('reset_grid replays grid positions', not reset_fail,
-          'worst=%.2g (02-15 pose tolerance)%s'
-          % (worst_reset,
-             ' FAIL: ' + ', '.join(reset_fail) if reset_fail else ''))
-    records_d = engine.detect()
-    pi_d = [r for r in records_d if r['type'] == 'pi_stacking']
-    check('reset clears the interaction', not pi_d,
-          'records=%d pi=%d' % (len(records_d), len(pi_d)))
-    mats_ok = all(_is_identity(_obj_matrix(ob))
-                  for ob in [e[0] for e in molecule0['slots'].values()])
-    check('all AA matrices identity after reset', mats_ok,
-          'checked %d objects' % len(molecule0['slots']))
-    check('reset clears the stale result, keeps selection + recolor',
-          wiz._result is None and wiz._current_slot == req_slot
-          and all(c == int(cmd.get_color_index(
-              wizard_core.HIGHLIGHT_COLOR))
-              for c in _color_map(req_obj).values()),
-          '_result=%r _current_slot=%r'
-          % (wiz._result, wiz._current_slot))
 
     # ---- The Done path: canonical cmd.set_wizard() runs cleanup. ----
     game_names = sorted(set(cmd.get_names('objects')) - set(pre_names))

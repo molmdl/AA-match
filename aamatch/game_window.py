@@ -201,12 +201,23 @@ class GameTab(QtWidgets.QWidget):
             'Replay the stored initial state into a fresh game '
             '(countdown, timer from zero, scores cleared).')
         btn_row.insertWidget(btn_row.count() - 1, self.btn_restart)
+        # Reset button (06-08, SCORE-10): position-only grid replay
+        # through the wizard's PUBLIC op behind the isinstance gate
+        # (PITFALL 6 at the widget layer). Attribute name
+        # btn_reset_grid -- DISTINCT from the Setup tab's game-setup
+        # btn_reset (the restart-reset D7 naming law).
+        self.btn_reset_grid = QtWidgets.QPushButton('Reset', self)
+        self.btn_reset_grid.setToolTip(
+            'Place all amino acids back to their grid positions; '
+            'orientations are kept.')
+        btn_row.insertWidget(btn_row.count() - 1, self.btn_reset_grid)
         layout.addLayout(btn_row)
         self.btn_hint.clicked.connect(self._on_hint)
         self.btn_confirm.clicked.connect(self._on_confirm)
         self.act_skip.triggered.connect(self._on_skip)
         self.act_giveup.triggered.connect(self._on_giveup)
         self.btn_restart.clicked.connect(self._on_restart)
+        self.btn_reset_grid.clicked.connect(self._on_reset_grid)
 
         # The CANCELLABLE countdown: a reusable member QTimer stepping
         # 3 -> 2 -> 1 -> GO (P-2). Constructed here; started only by
@@ -662,6 +673,51 @@ class GameTab(QtWidgets.QWidget):
                                    activate=False)
         self.start_countdown(wiz)
         self._log(status_text.game_restarted_line())
+        return True
+
+    # ---- the Reset handler (06-08: SCORE-10) ----
+
+    def _on_reset_grid(self):
+        """Reset button: the wizard's grid replay via _guard. NO
+        confirmation warning and NO box in the wrapper -- the reset is
+        non-destructive (positions only; rotations persist); house
+        refusals land on the PANEL via the wizard's own _guard."""
+        self._guard(self._reset_grid_now)
+
+    def _reset_grid_now(self):
+        """The non-modal impl (06-08): the reset OWNER LAW (restart-
+        reset research sec 4) -- the tab calls the wizard's PUBLIC
+        reset op behind the isinstance gate (PITFALL 6 at the widget
+        layer). What this impl must NEVER do: dispatch the engine's
+        grid replay itself, reach the engine's module privates, touch
+        wizard privates (the color store / result clearing are
+        instance-internal), or add pose data to the poll.
+
+        Silent no-op (returns None) when no GameWizard is live --
+        pre-GO (the countdown window is wizard-free, P-1) or no game
+        (H-8); the AAs are already AT their grid poses in a fresh
+        game, so no countdown-state check is needed (restart-reset
+        D8). The op returns None always; a house refusal (e.g. 'The
+        game is over.') surfaces on the wizard PANEL through the
+        wizard's own _guard, and the tab stays silent.
+
+        The SYNCHRONOUS poll afterwards renders the pinned reset line:
+        positions are invisible to the poll's diff (_state_dict
+        carries no pose keys and 'result' is never fingerprinted), so
+        the game_reset marker (06-06) is the ONLY channel -- it flows
+        into the 06-02 pinned 'Amino acids reset to grid positions
+        (orientations kept).' line. The timer keeps running and NO
+        GameState is touched (positions only; rotations persist -- the
+        03-03 replay law).
+
+        Returns True on dispatch, None on the silent no-op gate."""
+        from pymol import cmd
+        from . import wizard as wizard_mod
+        prior = cmd.get_wizard()
+        if not isinstance(prior, wizard_mod.GameWizard):
+            return None
+        prior.reset_grid()
+        self._refresh_status()
         return True
 
     # ---- the endgame sequence (06-07: the shared game-over tail) ----

@@ -47,7 +47,7 @@ patterns-established:
   - "Warning wrappers hold ZERO timer code: the tick's activeModalWidget->rebase_timer branch freezes the clock over ANY real modal (caller-owns-modal-detection law), so wrappers never call rebase_timer"
 
 # Metrics
-duration: 25 min
+duration: 17 min
 completed: 2026-09-20
 ---
 
@@ -57,9 +57,9 @@ completed: 2026-09-20
 
 ## Performance
 
-- **Duration:** 25 min
+- **Duration:** 17 min
 - **Started:** 2026-09-20T14:10:08Z
-- **Completed:** 2026-09-20T14:35Z
+- **Completed:** 2026-09-20T14:26:44Z
 - **Tasks:** 3
 - **Files modified:** 2 (1 code + 1 smoke)
 

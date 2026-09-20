@@ -20,7 +20,7 @@ Progress: [███████░░░] 7/10 of Phase 6 · [█████�
 
 **Velocity:**
 - Total plans completed: 65 (Phase 1: 01-01…01-09; Phase 2: 02-01…02-15; Phase 3: 03-01…03-07; Phase 4: 04-01…04-15; Phase 5: 05-01…05-11; Phase 6 so far: 06-01…06-07)
-- Average duration: ~11 min (02-03); 6 min (02-04); ~29 min (02-05); 23 min (02-06); 4 min (02-09); 11 min (02-07); 17 min (02-08); ~20 min (02-13); ~27 min (02-11); 16 min (02-14); 29 min (02-15); ~15 min (03-01); ~55 min (03-02); ~14 min (03-03); ~27 min (03-04); ~14 min (03-05); ~10 min (04-01); ~8 min (04-02); 16 min (04-04); ~9 min (04-03); 17 min (04-05); ~15 min (04-06); 16 min (04-07); 23 min (04-08); ~49 min (04-09); ~7 min (04-10); ~16 min (04-11); ~10 min (04-12); ~6 min (04-13); ~5 min (04-14 docs-only checkpoint record); ~15 min (04-15 fix + re-verify + checkpoint record); ~7 min (05-02) + 3 min (05-04) + ~7 min (05-05) + 5 min (05-07) + ~17 min (05-08) + ~10 min (05-09) + ~13 min (05-10) + ~20 min (05-11 fix + record); phase-6: 47 min (06-01) + ~12 min (06-03) + 13 min (06-05) + 17 min (06-06) + ~25 min (06-07); 05-01/05-03/05-06 + 06-02/06-04 durations unrecorded (agent reports omitted them)
+- Average duration: ~11 min (02-03); 6 min (02-04); ~29 min (02-05); 23 min (02-06); 4 min (02-09); 11 min (02-07); 17 min (02-08); ~20 min (02-13); ~27 min (02-11); 16 min (02-14); 29 min (02-15); ~15 min (03-01); ~55 min (03-02); ~14 min (03-03); ~27 min (03-04); ~14 min (03-05); ~10 min (04-01); ~8 min (04-02); 16 min (04-04); ~9 min (04-03); 17 min (04-05); ~15 min (04-06); 16 min (04-07); 23 min (04-08); ~49 min (04-09); ~7 min (04-10); ~16 min (04-11); ~10 min (04-12); ~6 min (04-13); ~5 min (04-14 docs-only checkpoint record); ~15 min (04-15 fix + re-verify + checkpoint record); ~7 min (05-02) + 3 min (05-04) + ~7 min (05-05) + 5 min (05-07) + ~17 min (05-08) + ~10 min (05-09) + ~13 min (05-10) + ~20 min (05-11 fix + record); phase-6: 47 min (06-01) + ~12 min (06-03) + 13 min (06-05) + 17 min (06-06) + ~17 min (06-07); 05-01/05-03/05-06 + 06-02/06-04 durations unrecorded (agent reports omitted them)
 - Total execution time: —
 
 **By Phase:**
@@ -32,7 +32,7 @@ Progress: [███████░░░] 7/10 of Phase 6 · [█████�
 | 3 | 7/7 ✓ | ~15 min (03-01) + ~55 min (03-02) + ~14 min (03-03) + ~27 min (03-04) + ~14 min (03-05) + 2d checkpoint incl. debug detour + fix batch (03-06) + 4d checkpoint incl. framing chain (03-07) | — |
 | 4 | 15/15 ✓ | ~10 min (04-01) + ~8 min (04-02) + 16 min (04-04) + ~9 min (04-03) + 17 min (04-05) + ~15 min (04-06) + 16 min (04-07) + 23 min (04-08) + ~49 min (04-09) + ~7 min (04-10) + ~16 min (04-11) + ~10 min (04-12) + ~6 min (04-13) + ~5 min (04-14 docs-only) + ~15 min (04-15 fix+record) | — |
 | 5 | 11/11 ✓ | ~7 min (05-02) + 3 min (05-04) + ~7 min (05-05) + 5 min (05-07) [wave 1: 6 parallel] + ~20 min (05-06) + ~17 min (05-08) + ~10 min (05-09) + ~13 min (05-10) [wave 4: 2 parallel] + ~20 min (05-11) | — |
-| 6 | 7/10 | 47 min (06-01) + ~12 min (06-03) + 13 min (06-05) + 17 min (06-06) + ~25 min (06-07); 06-02/06-04 durations unrecorded (wave-1 agent reports omitted them) | — |
+| 6 | 7/10 | 47 min (06-01) + ~12 min (06-03) + 13 min (06-05) + 17 min (06-06) + ~17 min (06-07); 06-02/06-04 durations unrecorded (wave-1 agent reports omitted them) | — |
 
 **Recent Trend:**
 - Last 5 plans: 05-07 (5 min), 05-08 (~17 min), 05-09 (~10 min), 05-10 (~13 min), 05-11 (~20 min)

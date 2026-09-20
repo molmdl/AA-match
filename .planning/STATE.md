@@ -5,22 +5,22 @@
 See: .planning/PROJECT.md (updated 2026-09-05)
 
 **Core value:** The player can place amino acids onto a small molecule in the PyMOL 3D viewer and the game correctly detects and scores the interactions they form — turning unguided 3D manipulation practice into a scored game.
-**Current focus:** Phase 6 — Scoring Lifecycle & Endgame — **IN PROGRESS (9/10 plans done)**; next: 06-10 ([HUMAN] endgame checkpoint)
+**Current focus:** Phase 6 — Scoring Lifecycle & Endgame — **PLANS COMPLETE (10/10)**; 06-10 [HUMAN] checkpoint APPROVED-after-fix (1 fix-batch item, commit ff4b519); Phase 6 ready for verifier (step-1 re-verify pending)
 
 ## Current Position
 
 Phase: 6 of 9 (Scoring Lifecycle & Endgame)
-Plan: 9 of 10 complete — 06-01 (GameState lifecycle data layer, TDD) + 06-02 (status_text Phase-6 surface, TDD) + 06-04 (gamestart compose seam) [wave 1: parallel worktrees, merged] + 06-03 (engine lifecycle ops + SMOKE-15 PART A) + 06-05 (wizard lifecycle core) + 06-06 (wizard skip/give-up half — shared-advancement skip, one _require_playing gate, SMOKE-15 PART C 24/24) + 06-07 (tab lifecycle wiring part 1 — Confirm + Skip/Give-Up dropdown, _endgame_sequence, label fix) + 06-08 (tab lifecycle wiring part 2 — Restart _last_start replay + Reset wizard-public dispatch, D7 line placement, SMOKE-16 A+B 53/53) + 06-09 (endgame screen modal — _show_endgame_modal + wrapper singleShot tails, SMOKE-16 C 14/14, full six-smoke battery green) DONE
-Status: In progress — Phase 5 VERIFIED (88/88 must-haves, 2026-09-20); Phase 6 wave 7 (06-09) executed 2026-09-20: 826/826 WSL green, SMOKE-16 A+B+C 67/67 PASS (first run), ALL six smokes PASS (04 25/25, 08 41/41, 11 51/51, 14 29/29, 15 74/74, 16 67/67)
-Last activity: 2026-09-20 — Completed 06-09-PLAN.md (wave 7, single-plan)
+Plan: 10 of 10 complete — 06-01 (GameState lifecycle data layer, TDD) + 06-02 (status_text Phase-6 surface, TDD) + 06-04 (gamestart compose seam) [wave 1: parallel worktrees, merged] + 06-03 (engine lifecycle ops + SMOKE-15 PART A) + 06-05 (wizard lifecycle core) + 06-06 (wizard skip/give-up half — shared-advancement skip, one _require_playing gate, SMOKE-15 PART C 24/24) + 06-07 (tab lifecycle wiring part 1 — Confirm + Skip/Give-Up dropdown, _endgame_sequence, label fix) + 06-08 (tab lifecycle wiring part 2 — Restart _last_start replay + Reset wizard-public dispatch, D7 line placement, SMOKE-16 A+B 53/53) + 06-09 (endgame screen modal — _show_endgame_modal + wrapper singleShot tails, SMOKE-16 C 14/14, full six-smoke battery green) + 06-10 ([HUMAN] consolidated GUI checkpoint APPROVED-after-fix 2026-09-21 — steps 2-9 PASS, step 1 defect fixed in-session: molecule-advance camera re-frame, commit ff4b519, 826/826 WSL + SMOKE-15 75/75 + SMOKE-07 56 + SMOKE-16 67/67 re-green) DONE
+Status: Phase 5 VERIFIED (88/88 must-haves, 2026-09-20); Phase 6 ALL PLANS DONE — 06-10 verdict recorded (APPROVED-after-fix; step-1 human re-verify PENDING, routed via orchestrator) — ready for `/gsd-verify-phase`
+Last activity: 2026-09-21 — Completed 06-10-PLAN.md (checkpoint fix + record)
 
-Progress: [█████████░] 9/10 of Phase 6 · [██████████] 99% of planned plans (67/68; 5/9 phases done)
+Progress: [██████████] 10/10 of Phase 6 · [██████████] 100% of planned plans (68/68; 5/9 phases verified, Phase 6 verdict recorded — verifier pending)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 67 (Phase 1: 01-01…01-09; Phase 2: 02-01…02-15; Phase 3: 03-01…03-07; Phase 4: 04-01…04-15; Phase 5: 05-01…05-11; Phase 6 so far: 06-01…06-09)
-- Average duration: ~11 min (02-03); 6 min (02-04); ~29 min (02-05); 23 min (02-06); 4 min (02-09); 11 min (02-07); 17 min (02-08); ~20 min (02-13); ~27 min (02-11); 16 min (02-14); 29 min (02-15); ~15 min (03-01); ~55 min (03-02); ~14 min (03-03); ~27 min (03-04); ~14 min (03-05); ~10 min (04-01); ~8 min (04-02); 16 min (04-04); ~9 min (04-03); 17 min (04-05); ~15 min (04-06); 16 min (04-07); 23 min (04-08); ~49 min (04-09); ~7 min (04-10); ~16 min (04-11); ~10 min (04-12); ~6 min (04-13); ~5 min (04-14 docs-only checkpoint record); ~15 min (04-15 fix + re-verify + checkpoint record); ~7 min (05-02) + 3 min (05-04) + ~7 min (05-05) + 5 min (05-07) + ~17 min (05-08) + ~10 min (05-09) + ~13 min (05-10) + ~20 min (05-11 fix + record); phase-6: 47 min (06-01) + ~12 min (06-03) + 13 min (06-05) + 17 min (06-06) + ~17 min (06-07) + 12 min (06-08) + 16 min (06-09); 05-01/05-03/05-06 + 06-02/06-04 durations unrecorded (agent reports omitted them)
+- Total plans completed: 68 (Phase 1: 01-01…01-09; Phase 2: 02-01…02-15; Phase 3: 03-01…03-07; Phase 4: 04-01…04-15; Phase 5: 05-01…05-11; Phase 6: 06-01…06-10)
+- Average duration: ~11 min (02-03); 6 min (02-04); ~29 min (02-05); 23 min (02-06); 4 min (02-09); 11 min (02-07); 17 min (02-08); ~20 min (02-13); ~27 min (02-11); 16 min (02-14); 29 min (02-15); ~15 min (03-01); ~55 min (03-02); ~14 min (03-03); ~27 min (03-04); ~14 min (03-05); ~10 min (04-01); ~8 min (04-02); 16 min (04-04); ~9 min (04-03); 17 min (04-05); ~15 min (04-06); 16 min (04-07); 23 min (04-08); ~49 min (04-09); ~7 min (04-10); ~16 min (04-11); ~10 min (04-12); ~6 min (04-13); ~5 min (04-14 docs-only checkpoint record); ~15 min (04-15 fix + re-verify + checkpoint record); ~7 min (05-02) + 3 min (05-04) + ~7 min (05-05) + 5 min (05-07) + ~17 min (05-08) + ~10 min (05-09) + ~13 min (05-10) + ~20 min (05-11 fix + record); phase-6: 47 min (06-01) + ~12 min (06-03) + 13 min (06-05) + 17 min (06-06) + ~17 min (06-07) + 12 min (06-08) + 16 min (06-09) + ~12 min (06-10 checkpoint fix + record); 05-01/05-03/05-06 + 06-02/06-04 durations unrecorded (agent reports omitted them)
 - Total execution time: —
 
 **By Phase:**
@@ -32,10 +32,10 @@ Progress: [█████████░] 9/10 of Phase 6 · [█████�
 | 3 | 7/7 ✓ | ~15 min (03-01) + ~55 min (03-02) + ~14 min (03-03) + ~27 min (03-04) + ~14 min (03-05) + 2d checkpoint incl. debug detour + fix batch (03-06) + 4d checkpoint incl. framing chain (03-07) | — |
 | 4 | 15/15 ✓ | ~10 min (04-01) + ~8 min (04-02) + 16 min (04-04) + ~9 min (04-03) + 17 min (04-05) + ~15 min (04-06) + 16 min (04-07) + 23 min (04-08) + ~49 min (04-09) + ~7 min (04-10) + ~16 min (04-11) + ~10 min (04-12) + ~6 min (04-13) + ~5 min (04-14 docs-only) + ~15 min (04-15 fix+record) | — |
 | 5 | 11/11 ✓ | ~7 min (05-02) + 3 min (05-04) + ~7 min (05-05) + 5 min (05-07) [wave 1: 6 parallel] + ~20 min (05-06) + ~17 min (05-08) + ~10 min (05-09) + ~13 min (05-10) [wave 4: 2 parallel] + ~20 min (05-11) | — |
-| 6 | 9/10 | 47 min (06-01) + ~12 min (06-03) + 13 min (06-05) + 17 min (06-06) + ~17 min (06-07) + 12 min (06-08) + 16 min (06-09); 06-02/06-04 durations unrecorded (wave-1 agent reports omitted them) | — |
+| 6 | 10/10 | 47 min (06-01) + ~12 min (06-03) + 13 min (06-05) + 17 min (06-06) + ~17 min (06-07) + 12 min (06-08) + 16 min (06-09) + ~12 min (06-10 checkpoint fix + record); 06-02/06-04 durations unrecorded (wave-1 agent reports omitted them) | — |
 
 **Recent Trend:**
-- Last 5 plans: 05-07 (5 min), 05-08 (~17 min), 05-09 (~10 min), 05-10 (~13 min), 05-11 (~20 min)
+- Last 5 plans: 06-06 (17 min), 06-07 (~17 min), 06-08 (12 min), 06-09 (16 min), 06-10 (~12 min checkpoint fix + record)
 - Trend: steady ~5-20 min per plan; parallel waves (wave 1: 6 plans, wave 4: 2 plans) via the AGENTS.md worktree protocol, zero merge conflicts
 
 *Updated after each plan completion*
@@ -225,12 +225,15 @@ Decisions are logged in PROJECT.md Key Decisions table. Seeded from PROJECT.md a
 - (06-09) **Two-surface discipline for the SCORE-07 block:** the modal is the MOMENT, the info box is the RECORD — both render status_text.endgame_lines verbatim (setText = lines[0] headline, setInformativeText = '<br>'.join(lines[1:]) rich-text stats); ZERO hand-authored strings; the human wording re-confirmation (D10) is the 06-10 confirm-step, not a blocking gate.
 - (06-09) **Smoke structural pin for an undriveable member:** hasattr + callable + docstring comment (never a source scan inside a smoke); the real exec_() drive stays [HUMAN]-only (06-10). Natural-end proof shape: impl-driven confirm/skip through EVERY molecule of EVERY level (zero-score records sufficient — smoke_04 owns score correctness) -> endgame tuple on the LAST op -> the four-part state pin (block lines / stopped timer / EXACT label / popped wizard) -> post-endgame inertness + the Restart composition (the endgame state is never a dead end).
 - (06-09, Rule-1 plan-text reconciliation) The plan's "`_last_status` None (post-pop poll cleared)" natural-end assert reversed the committed 06-07 order: the impl's sync _refresh_status() runs BEFORE the pop (the game_over transition logs the block and _last_status becomes the final game_over state); the poll-clear can only fire on a LATER refresh, and the stopped timer means none ever runs — PART C's C9 pins _last_status = game_over state, same holds-last-value shape as A6. SMOKE-16 A+B+C 67/67 PASS first run; FULL battery green: 04 25/25, 08 41/41, 11 51/51, 14 29/29, 15 74/74, 16 67/67; 826/826 WSL.
+- (06-10, HUMAN verdicts 2026-09-21) Checkpoint APPROVED-after-fix with 1 fix-batch item resolved in-session: steps 2-9 PASS (level escalation with camera frame + CONTINUOUS timer 8:28; Skip warning + mercy path 0.00 + timer freeze under the new modal human-confirmed, P-5; Give Up + endgame block/headline + frozen label + on-top modal + scene kept; natural end 'You win! All 3 level(s) finished in 8:28.'; Restart D7 after-the-arm order + zeroed counters; Reset positions with orientations kept; wording ALL CONFIRMED no amendments; console = 04-14 baseline only). Step 1 (SCORE-01/02): semantics/wording PASS but the camera did NOT re-frame on an in-level molecule advance (human verbatim: "lv 1 after 1st mol not zooming to 2nd mol's grid and no instruction to do so"). Human-volunteered observations recorded: skip-then-immediate-give-up sequencing correct ("i do give up within few second after skip"); Hint + 'Formed (not required)' extras exercised in-session.
+- (06-10, fix-batch ff4b519) **Advance-compose law:** EVERY advance (molecule OR level) re-frames the camera through `_compose_active_molecule` — the ONE 06-04 compose seam; the molecule branch of `_advance_after_record` previously returned without composing (root cause of the step-1 defect). One added statement; regression teeth = SMOKE-15 PART B2 camera re-frame assert (RED-proven pre-fix — exactly one expected failure; 75/75 after). Re-green: py_compile OK, 826/826 WSL, SMOKE-15 75/75, SMOKE-07 56 PASS lines, SMOKE-16 67/67. Step-1 human re-verify PENDING (routed via orchestrator; headless proof recorded in 06-10-SUMMARY).
 
 
 ### Pending Todos
 
 - Keep `aamatch/` pycache-free (live plugin-path loading runs from the repo; human cleans after local test runs).
 - (05-11) Human visual re-confirm of the new block_exclusive refusal wording (b749135) rides any later GUI session (wording-only fix, headless-proven).
+- (06-10) **Step-1 human re-verify PENDING** — molecule-advance camera re-frame (fix commit ff4b519; headless proof = SMOKE-15 PART B2 75/75): route a short GUI session via the orchestrator to confirm the camera re-frames onto molecule 2's grid after a level-1 molecule-1 Confirm.
 - (Optional) Annotate 01-RESEARCH-plugin-install.md §1.3/§3.1: `load()` return ≠ `loaded` property; `__file__` unusable in `-cq` scripts.
 
 ### 03-06 Checkpoint Verdicts (FINAL — human, 2026-09-10 both sessions; re-test approved 2026-09-11)
@@ -288,8 +291,8 @@ Decisions are logged in PROJECT.md Key Decisions table. Seeded from PROJECT.md a
 
 ## Session Continuity
 
-Last session: 2026-09-20 (06-09 executed: endgame screen modal — _show_endgame_modal (v1 _finish_win pattern) + wrapper refresh+singleShot(100) tails + SMOKE-16 PART C 14/14 (A+B+C 67/67) + FULL six-smoke battery green; 826/826 WSL)
-Stopped at: Completed 06-09-PLAN.md (Phase 6 wave 7, 9/10 done — 06-01…06-09) — next: **06-10 ([HUMAN] endgame checkpoint; the mechanical proof is complete — the checkpoint verifies only the not-headlessly-provable set: the modal itself, the wrapper tails on all three triggers, the stopped-timer hold, warning-box feel + timer freeze, post-endgame state, wording re-confirm)**
+Last session: 2026-09-21 (06-10 executed: [HUMAN] checkpoint APPROVED-after-fix — 8/9 PASS, step-1 defect root-caused (molecule branch never composed) and fixed in-session (ff4b519), RED-proven SMOKE-15 B2 assert, all gates re-green; full verdict table + wording pins recorded in 06-10-SUMMARY)
+Stopped at: Completed 06-10-PLAN.md (Phase 6 ALL 10 plans done; 06-10 verdict recorded) — next: **/gsd-verify-phase on Phase 6 + the routed step-1 human re-verify (molecule-advance camera re-frame, ff4b519)**
 Resume file: None
 
 ## Next Actions

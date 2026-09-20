@@ -639,23 +639,71 @@ class GameWizard(Wizard):
         cmd.refresh_wizard()
 
     def confirm_molecule(self):
-        """PLAY-03 Confirm: the engine.confirm wrapper VERBATIM
-        (binding STATE.md decision) -- detect + score composition ->
-        (records, score, formed_types); the result is rendered as
-        panel/prompt TEXT (wizard_text; no result geometry, PLAY-04).
+        """PLAY-03 Confirm, the 06-05 lifecycle form (SCORE-01/03):
+        record -> event marker -> ADVANCE in ONE op. Renders through
+        panel/prompt TEXT built from the plain-data state (wizard_text;
+        no result geometry, PLAY-04).
 
-        CAVEAT (documented): repeated Confirm appends to the engine
-        GameState's molecule_scores -- score-history semantics are
-        Phase 6's lifecycle; Phase 3 allows re-Confirm for
-        verification."""
-        self._guard(self._confirm_molecule_impl)
+        The Phase-3 re-Confirm caveat is CLOSED: the record routes
+        through engine.record_scored, whose one-record guard refuses a
+        second Confirm of an already-recorded molecule (the pinned
+        'This molecule already has a recorded result ...' message lands
+        on the panel error line via _guard). Unreachable after a real
+        advance anyway -- Confirm always lands on the NEXT molecule.
+
+        D3 (recorded 06-05): Confirm advances IMMEDIATELY -- the
+        score/total debrief lives in the info box via the last-event
+        marker, NOT in the prompt; the panel shows the NEXT molecule
+        and self._result is CLEARED by every advance (shift from the
+        04-15 clarification, rationale recorded in 06-05-SUMMARY).
+
+        Returns the plain-data result through the _guard seam (score,
+        total, advanced 'molecule'|'level'|None, game_over, summary,
+        level_pos, molecule_pos of the COMPLETED molecule) -- the
+        06-07 tab consumes game_over/summary; None on a guarded
+        refusal."""
+        return self._guard(self._confirm_molecule_impl)
+
+    def _advance_after_record(self):
+        """THE advancement decision site (06-05): called AFTER a
+        successful record and BEFORE the event is set, so the marker
+        is stamped LAST (on level advance the poll sees marker + new
+        position in ONE diff). The two position books (GameState via
+        the engine op, wizard indexes via the rebind) move atomically
+        within this ONE method -- they can never drift.
+
+        Returns ('molecule', None) on an in-level advance (data-only
+        engine advance + wizard rebind), ('level', None) on a level
+        advance (engine scene rebuild + SAME-INSTANCE rebind -- the D6
+        timer anchor survives because activate_game is never called
+        mid-game -- + camera re-frame through the 06-04 seam), or
+        (None, summary) on natural completion (engine.complete_game;
+        NO rebind -- the panel keeps its state, the game is over)."""
+        from . import engine
+        if self._molecule_index + 1 < len(self._registry['molecules']):
+            engine.advance_molecule()
+            self._rebind_molecule(self._molecule_index + 1)
+            return ('molecule', None)
+        if self._level_index + 1 < len(self._payload['levels']):
+            new_registry = engine.advance_level()
+            self._rebind_level(new_registry, self._level_index + 1)
+            self._compose_active_molecule()
+            return ('level', None)
+        return (None, engine.complete_game())
 
     def _confirm_molecule_impl(self):
         from . import engine
+        if engine.is_over():
+            # Cheap plain-data gate (06-05; 06-06 hardens the rest of
+            # the lifecycle ops with the same shape).
+            raise WizardError('The game is over.')
         required = self._required()
-        records, score, formed = engine.confirm(self._level_index,
-                                                self._molecule_index,
-                                                required)
+        records = engine.detect_molecule(self._level_index,
+                                         self._molecule_index)
+        score, formed = engine.record_scored(self._level_index,
+                                             self._molecule_index,
+                                             required, records=records)
+        total = engine.total_score()
         # 03-06 UX addition: records whose type is NOT required still
         # happened on screen -- surface them as 'Formed (not required)'
         # counts (plan's invisible-pi-stacking bug). 'any' mode has no
@@ -675,10 +723,26 @@ class GameWizard(Wizard):
                     counts[rtype] = counts.get(rtype, 0) + 1
             extras = [(t, counts[t])
                       for t in sorted(counts, key=order.get)]
-        self._result = {'score': float(score), 'formed': list(formed),
-                        'required': required, 'extras': extras}
         self._error = None
+        # Capture the COMPLETED molecule's position BEFORE the advance
+        # mutates both books -- the marker debriefs what was scored,
+        # not where the player now stands.
+        scored_level = self._level_index + 1
+        scored_pos = self._molecule_index + 1
+        scored_m_total = len(self._registry['molecules'])
+        advanced, summary = self._advance_after_record()
+        self._sync_end_state()
+        self._set_event('molecule_scored',
+                        score=float(score), total=float(total),
+                        molecule_pos=scored_pos,
+                        molecule_total=scored_m_total,
+                        formed=list(formed), required=required,
+                        extras=extras)
         cmd.refresh_wizard()
+        return {'score': float(score), 'total': float(total),
+                'advanced': advanced, 'game_over': self._game_over,
+                'summary': summary, 'level_pos': scored_level,
+                'molecule_pos': scored_pos}
 
     def reset_grid(self):
         """PLAY-03 Reset: engine.reset_to_grid() -- POSITION replay

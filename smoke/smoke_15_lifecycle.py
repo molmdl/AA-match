@@ -5,9 +5,10 @@ Run (from WSL, repo root):
 Verdict is carried by the printed marker (exit codes cannot carry
 verdicts through the cmd.exe wrapper): grep '=== SMOKE-15 PASS ==='.
 
-Proves the 06-03 engine lifecycle ops headlessly in REAL PyMOL
-(cmd-tier E2E -- the always tier; PART letters stay appendable so
-06-05/06-06 can grow PART B/C for the wizard/tab halves):
+Proves the 06-03 engine lifecycle ops (PART A) and the 06-05 wizard
+lifecycle core (PART B) headlessly in REAL PyMOL (cmd-tier E2E -- the
+always tier; PART letters stay appendable so 06-06 can grow PART C
+for the tab half):
 
 PART A  the pure cmd drive over the DEFAULT game (seed 42; 2
         molecules/level x 3 levels, frozen Phase-1 DEFAULTS):
@@ -49,6 +50,35 @@ PART A  the pure cmd drive over the DEFAULT game (seed 42; 2
              total == sum(level_scores).
         A8   restore: Done pop + prefix cleanup -> baseline EXACTLY;
              gamestart._last_start reset (SMOKE-08 store hygiene).
+
+PART B  the WIZARD-tier lifecycle E2E (06-05; drives the wizard's
+        PUBLIC methods only -- no modals anywhere):
+        B1   fresh default start: cmd.get_wizard() IS the returned
+             GameWizard; the timer anchor is captured; the initial
+             status shows level 1 mol 1 with a None marker.
+        B2   MOLECULE advance: confirm_molecule() returns the plain
+             dict; advanced 'molecule', mol 2 of the level, marker
+             molecule_scored seq 1 molecule_pos 1, result cleared (D3),
+             selection cleared, required reflects molecule 2.
+        B3   LEVEL advance (the second confirm closes level 1):
+             advanced 'level', level 2 mol 1, the SAME wizard instance
+             still on the stack, the timer anchor UNCHANGED (the D6
+             intent assert), a fresh scene at the derived object count,
+             selection/result cleared, marker seq 2 molecule_pos 2, and
+             the camera view CHANGED (the 06-04 compose running).
+        B4   rebind proof: the SMOKE-07 scripted-pick recipe on a slot
+             of the NEW molecule resolves slot identity through the
+             rebuilt maps.
+        B5   completion drive: four more confirms walk molecule ->
+             level -> molecule -> None; the last returns game_over True
+             + the 06-01 summary keys, status shows game_over/
+             'completed', engine.is_over() True.
+        B6   restore: Done pop + prefix cleanup -> baseline EXACTLY;
+             gamestart._last_start reset.
+        NOTE: the re-Confirm REFUSAL is proven at the engine level in
+        PART A only -- after a real advance a second Confirm always
+        lands on the NEXT molecule, so a wizard-level double-Confirm
+        refusal is unreachable by design.
 
 Conventions (frozen Phase 1, kept): anchor repo root via sys.argv
 first / cwd fallback (never __file__); import aamatch directly (module
@@ -393,9 +423,224 @@ except Exception:
     check('A8 teardown', False, 'raised (see traceback above)')
     placement.cleanup_game_objects()
 
+# ============================================================
+# PART B (06-05): the WIZARD lifecycle core -- confirm -> event
+# marker -> atomic advance, through the wizard's PUBLIC methods.
+# ============================================================
+part_a_checks = REC['checks']
+
+# ============================================================
+# PART B1: default start + anchor capture
+# ============================================================
+wiz_b = None
+anchor0 = None
+try:
+    wiz_b = gamestart.start_game(activate=True)
+    check('B1 start_game returns the stacked GameWizard',
+          isinstance(wiz_b, GameWizard) and cmd.get_wizard() is wiz_b,
+          'type=%r' % (type(wiz_b),))
+    anchor0 = engine.game_status().get('timer_anchor')
+    check('B1 timer anchor captured (float)',
+          isinstance(anchor0, float), 'anchor0=%r' % (anchor0,))
+    st = wiz_b.get_status()
+    check('B1 initial status: level 1 mol 1, no marker, not over',
+          st.get('level_pos') == 1 and st.get('molecule_pos') == 1
+          and st.get('molecule_total') == 2
+          and st.get('level_total') == 3
+          and st.get('last_event') is None
+          and st.get('game_over') is False
+          and st.get('end_state') is None,
+          'level_pos=%r molecule_pos=%r last_event=%r game_over=%r'
+          % (st.get('level_pos'), st.get('molecule_pos'),
+             st.get('last_event'), st.get('game_over')))
+except Exception:
+    traceback.print_exc()
+    check('B1 start', False, 'raised (see traceback above)')
+
+# ============================================================
+# PART B2: MOLECULE advance via Confirm (zero-score mechanics)
+# ============================================================
+try:
+    ret1 = wiz_b.confirm_molecule()
+    st = wiz_b.get_status()
+    ev = st.get('last_event') or {}
+    check('B2 molecule advance return contract',
+          isinstance(ret1, dict)
+          and ret1.get('advanced') == 'molecule'
+          and isinstance(ret1.get('score'), float)
+          and isinstance(ret1.get('total'), float)
+          and ret1.get('game_over') is False,
+          'advanced=%r score=%r total=%r'
+          % (ret1.get('advanced') if isinstance(ret1, dict) else ret1,
+             ret1.get('score') if isinstance(ret1, dict) else None,
+             ret1.get('total') if isinstance(ret1, dict) else None))
+    check('B2 status moved to molecule 2 of level 1',
+          st.get('molecule_pos') == 2 and st.get('level_pos') == 1,
+          'molecule_pos=%r level_pos=%r'
+          % (st.get('molecule_pos'), st.get('level_pos')))
+    check('B2 marker: molecule_scored seq 1, completed pos 1 of 2',
+          ev.get('kind') == 'molecule_scored' and ev.get('seq') == 1
+          and ev.get('molecule_pos') == 1
+          and ev.get('molecule_total') == 2
+          and isinstance(ev.get('formed'), list)
+          and isinstance(ev.get('extras'), list),
+          'kind=%r seq=%r pos=%r total=%r'
+          % (ev.get('kind'), ev.get('seq'), ev.get('molecule_pos'),
+             ev.get('molecule_total')))
+    check('B2 D3: result + selection cleared on advance',
+          st.get('result') is None and st.get('selected') is None,
+          'result=%r selected=%r'
+          % (st.get('result'), st.get('selected')))
+    required_m1 = engine._payload['levels'][0]['molecules'][1] \
+        ['required']
+    check('B2 required label data reflects molecule 2',
+          st.get('required') == required_m1,
+          'required=%r want=%r' % (st.get('required'), required_m1))
+except Exception:
+    traceback.print_exc()
+    check('B2 molecule advance', False, 'raised (see traceback above)')
+
+# ============================================================
+# PART B3+B6: LEVEL advance -- same instance, anchor untouched,
+# scene rebuilt, camera re-framed
+# ============================================================
+try:
+    view_pre = [float(v) for v in cmd.get_view()]
+    ret2 = wiz_b.confirm_molecule()
+    st = wiz_b.get_status()
+    ev = st.get('last_event') or {}
+    check('B3 level advance return contract',
+          isinstance(ret2, dict) and ret2.get('advanced') == 'level',
+          'advanced=%r'
+          % (ret2.get('advanced') if isinstance(ret2, dict) else ret2,))
+    check('B3 status: level 2 molecule 1',
+          st.get('level_pos') == 2 and st.get('molecule_pos') == 1,
+          'level_pos=%r molecule_pos=%r'
+          % (st.get('level_pos'), st.get('molecule_pos')))
+    check('B3 SAME wizard instance still stacked (D6 rebind)',
+          cmd.get_wizard() is wiz_b, '')
+    check('B3 timer anchor UNCHANGED by the level advance (D6)',
+          engine.game_status().get('timer_anchor') == anchor0,
+          'before=%r after=%r'
+          % (anchor0, engine.game_status().get('timer_anchor')))
+    registry_b = engine._registry
+    expected_b = sum(1 + len(mol['slots'])
+                     for mol in registry_b['molecules'])
+    aam_b = [n for n in cmd.get_names('objects')
+             if n.startswith('_aam_')]
+    check('B3 fresh level-2 scene at the derived object count',
+          registry_b.get('level_index') == 1
+          and len(aam_b) == expected_b,
+          'level_index=%r objects=%d expected=%d'
+          % (registry_b.get('level_index'), len(aam_b), expected_b))
+    check('B3 selection + result cleared through the rebind',
+          st.get('selected') is None and st.get('result') is None,
+          'selected=%r result=%r'
+          % (st.get('selected'), st.get('result')))
+    check('B3 marker: seq 2, completed level-1 final molecule (pos 2)',
+          ev.get('kind') == 'molecule_scored' and ev.get('seq') == 2
+          and ev.get('molecule_pos') == 2
+          and ev.get('molecule_total') == 2,
+          'kind=%r seq=%r pos=%r'
+          % (ev.get('kind'), ev.get('seq'), ev.get('molecule_pos')))
+    view_post = [float(v) for v in cmd.get_view()]
+    check('B6 camera re-framed by the level advance (compose ran)',
+          view_pre != view_post,
+          'pre=%s...' % (['%.3f' % v for v in view_pre[:3]],))
+except Exception:
+    traceback.print_exc()
+    check('B3 level advance', False, 'raised (see traceback above)')
+
+# ============================================================
+# PART B4: rebind proof -- a pick on the NEW molecule resolves
+# ============================================================
+try:
+    mol_b = engine._registry['molecules'][0]
+    slot_b = sorted(mol_b['slots'])
+    slot0 = slot_b[0] if slot_b else None
+    obj0 = mol_b['slots'][slot0][0] if slot0 is not None else None
+    cmd.select('sele', '%s and name CA' % obj0)
+    wiz_b.do_select('sele')
+    st = wiz_b.get_status()
+    check('B4 scripted pick resolves a slot via the rebuilt maps',
+          isinstance(st.get('selected'), dict)
+          and st['selected'].get('slot_id') == slot0,
+          'slot_id=%r (object %r)' % (slot0, obj0))
+except Exception:
+    traceback.print_exc()
+    check('B4 pick drive', False, 'raised (see traceback above)')
+
+# ============================================================
+# PART B5: completion drive -- four confirms close the game
+# ============================================================
+try:
+    got = []
+    for _ in range(3):
+        r_mid = wiz_b.confirm_molecule()
+        got.append(r_mid.get('advanced')
+                   if isinstance(r_mid, dict) else r_mid)
+    final = wiz_b.confirm_molecule()
+    check('B5 intermediate advances walk molecule -> level -> molecule',
+          got == ['molecule', 'level', 'molecule'],
+          'advanced=%r' % (got,))
+    check('B5 final confirm: advanced None, game_over, summary keys',
+          isinstance(final, dict) and final.get('advanced') is None
+          and final.get('game_over') is True
+          and isinstance(final.get('summary'), dict)
+          and sorted(final['summary']) == sorted(_SUMMARY_KEYS),
+          'advanced=%r game_over=%r keys=%s'
+          % (final.get('advanced') if isinstance(final, dict)
+             else final,
+             final.get('game_over') if isinstance(final, dict)
+             else None,
+             sorted(final.get('summary') or {})
+             if isinstance(final, dict) else type(final)))
+    st = wiz_b.get_status()
+    check('B5 status mirrors the completed end state',
+          st.get('game_over') is True
+          and st.get('end_state') == 'completed',
+          'game_over=%r end_state=%r'
+          % (st.get('game_over'), st.get('end_state')))
+    check('B5 engine agrees: is_over True, summary completed',
+          engine.is_over() is True
+          and isinstance(final, dict)
+          and (final.get('summary') or {}).get('end_state')
+          == 'completed'
+          and (final.get('summary') or {})
+          .get('molecules_completed') == 6
+          and (final.get('summary') or {}).get('molecules') == 6,
+          'is_over=%r completed=%r of %r'
+          % (engine.is_over(),
+             (final.get('summary') or {}).get('molecules_completed')
+             if isinstance(final, dict) else None,
+             (final.get('summary') or {}).get('molecules')
+             if isinstance(final, dict) else None))
+except Exception:
+    traceback.print_exc()
+    check('B5 completion drive', False, 'raised (see traceback above)')
+
+# ============================================================
+# PART B6: restore -- scene back to the baseline EXACTLY
+# ============================================================
+try:
+    if cmd.get_wizard() is not None:
+        cmd.set_wizard()
+    cleaned = placement.cleanup_game_objects()
+    check('B6 teardown returns the scene to the baseline EXACTLY',
+          list(cmd.get_names('objects')) == pre_names,
+          'deleted=%d post=%s' % (cleaned['deleted'],
+                                  cmd.get_names('objects')))
+    gamestart._last_start = None
+except Exception:
+    traceback.print_exc()
+    check('B6 teardown', False, 'raised (see traceback above)')
+    placement.cleanup_game_objects()
+
 # --- Verdict marker (the SOLE verdict carrier) -------------------------------
-print('SMOKE-15 PART A: %d checks, %d failure(s)'
-      % (REC['checks'], len(failures)), flush=True)
+print('SMOKE-15 PART A: %d checks; PART B: %d checks; TOTAL %d, '
+      '%d failure(s)'
+      % (part_a_checks, REC['checks'] - part_a_checks, REC['checks'],
+         len(failures)), flush=True)
 print('=== SMOKE-15 %s ==='
       % ('FAIL: ' + ', '.join(failures) if failures else 'PASS'),
       flush=True)

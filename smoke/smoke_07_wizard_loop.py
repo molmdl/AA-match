@@ -10,7 +10,7 @@ human checkpoints, plans 03-06/03-07). Proves the 03-03 GameWizard
 end-to-end in REAL headless PyMOL:
 
 PART 0  env + the deterministic SMOKE-04 game (block_exclusive
-        [pi_stacking], molecules 1, D 3, seed 42, benzamide candidate)
+        [pi_stacking], molecules 1, D 1, seed 42, benzamide candidate)
         + mouse-mode baseline (button_mode 0, mouse_selection_mode 1 on
         stock).
 PART A  ACTIVATION + ROUTING + RECOLOR: activate() pushes the wizard,
@@ -32,15 +32,18 @@ PART B  MOVEMENT + THE IDENTITY INVARIANT: wizard_core.
         identity after every press; rotate_view / rotate_axis keep the
         centroid (rotation about the centroid) and move atoms;
         step_to_ligand lands exactly 1.0 A towards the ligand centroid.
-PART C  CONFIRM COMPOSITION (the PLAY-02 payoff): after the explicit
-        baked ring-alignment step (02-14 decision -- a pure translate
-        cannot fix ring orientation; implemented via the wizard's own
-        rotate_axis) and move_to so the AA ring sits 4.5 A above the
-        ligand ring center, confirm_molecule scores 1.0 with
-        pi_stacking formed, the result text renders in the live wizard
-        panel + prompt, and the engine GameState recorded the result
-        (re-Confirm-accumulates caveat documented -- Phase 6 owns
-        score-once).
+PART C  CONFIRM COMPOSITION (the PLAY-02 payoff, 06-05 ADVANCE
+        SEMANTICS): after the explicit baked ring-alignment step (02-14
+        decision -- a pure translate cannot fix ring orientation;
+        implemented via the wizard's own rotate_axis) and move_to so
+        the AA ring sits 4.5 A above the ligand ring center,
+        confirm_molecule scores 1.0 with pi_stacking formed and
+        COMPLETES the one-molecule game; the debrief RIDES the
+        last_event marker (D3: _result stays cleared, no panel/prompt
+        result text), and the engine GameState recorded exactly one
+        result via the guarded record path (06-05: the Phase-3
+        re-Confirm-accumulates caveat is CLOSED -- the 06-03 one-record
+        guard owns score-once).
 PART D  RESET + RESTORE (PLAY-03/04): reset_grid replays grid positions
         (rotations persist -- recorded 03-03 option a), re-detect is
         zero, _result clears, selection + recolor persist; the panel
@@ -279,7 +282,7 @@ try:
     setup = validate_state({'interaction_mode': 'block_exclusive',
                             'allowed_interactions': ['pi_stacking'],
                             'molecules_per_level': 1,
-                            'difficulty_levels': 3})
+                            'difficulty_levels': 1})
     payload, rows = engine.new_game(setup, 42, candidates=[benz])
     check('new_game scene untouched',
           list(cmd.get_names('objects')) == pre_names,
@@ -588,32 +591,43 @@ try:
           and wiz._error is None,
           'drift=%.2g' % drift_c)
 
-    # CONFIRM: the engine.confirm composition scores the moved pose.
-    wiz.confirm_molecule()
-    res = wiz._result
-    check('confirm scores the placed pose 1.0',
-          res is not None and res['score'] == 1.0
-          and 'pi_stacking' in res['formed'] and wiz._error is None,
-          'result=%r error=%r' % (res, wiz._error))
+    # CONFIRM (06-05 ADVANCE SEMANTICS): record -> marker -> advance.
+    # This is a ONE-molecule game (D 1), so the Confirm COMPLETES it;
+    # the returned plain dict + the last_event marker carry the
+    # debrief (D3: _result stays cleared, no panel/prompt result text).
+    ret_c = wiz.confirm_molecule()
+    st_c = wiz.get_status()
+    ev_c = st_c['last_event'] or {}
+    check('confirm scores the placed pose 1.0 and completes the game',
+          isinstance(ret_c, dict) and ret_c['score'] == 1.0
+          and ret_c['advanced'] is None and ret_c['game_over'] is True
+          and ev_c.get('kind') == 'molecule_scored'
+          and ev_c.get('score') == 1.0
+          and 'pi_stacking' in (ev_c.get('formed') or [])
+          and wiz._error is None,
+          'result=%r error=%r' % (ret_c, wiz._error))
 
-    # The result text renders in the LIVE wizard (wizard_text output).
+    # D3: the debrief rides the last_event marker, NOT _result/panel
+    # result lines (the panel shows position, the info box shows the
+    # marker); the LIVE wizard still builds panel + prompt cleanly.
     panel_c = cmd.get_wizard().get_panel()
     prompt_c = cmd.get_wizard().get_prompt()
-    panel_lines = [e[1] for e in panel_c if e[0] == 1]
-    want_lines = ['1/1 required interactions formed (score 1.00)',
-                  'Formed: pi_stacking']
-    check('result lines in panel and prompt',
-          all(any(w in line for line in panel_lines) for w in want_lines)
-          and all(any(w in line for line in prompt_c)
-                  for w in want_lines),
-          'panel=%r prompt=%r' % (panel_lines, prompt_c))
+    check('debrief rides the last_event marker (D3, 06-05 shape)',
+          st_c['result'] is None and wiz._result is None
+          and ev_c.get('molecule_pos') == 1
+          and ev_c.get('molecule_total') == 1
+          and isinstance(ev_c.get('required'), dict)
+          and isinstance(ev_c.get('extras'), list)
+          and isinstance(panel_c, list) and isinstance(prompt_c, list),
+          'event=%r' % (ev_c,))
 
-    # Engine GameState recorded the result (re-Confirm-accumulates
-    # caveat: Phase 6 owns score-once semantics -- recorded behavior).
+    # Engine GameState recorded exactly the ONE result through the
+    # guarded record path (06-05: the 06-03 one-record guard owns
+    # score-once -- the Phase-3 re-Confirm-accumulates caveat closed).
     gs = engine._game
     scores = list(gs.molecule_scores) if gs is not None else []
     check('engine recorded the molecule score',
-          len(scores) >= 1 and scores[-1] == 1.0,
+          len(scores) == 1 and scores[-1] == 1.0,
           'molecule_scores=%r' % (scores,))
 except Exception:
     traceback.print_exc()

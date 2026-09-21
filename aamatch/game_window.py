@@ -70,7 +70,13 @@ final elapsed, and pop the wizard via the local ``_pop_game_wizard``
  surfaces, one wording home: the modal is the MOMENT, the info box
  is the RECORD). The scheduling lives in the WRAPPERS ONLY (the
  smoke-99 law -- impls and the tick never own boxes, so headless
- smokes drive the impls and never fire the tail).
+ smokes drive the impls and never fire the tail). Plan 07-06 lands
+ the Save button (SCORE-08): a gate-first wrapper (silent no-op
+ pre-GO/no-game/post-endgame, pre-dialog elapsed capture, the
+ '.aamz' default+auto-append, NO success box -- the info-box 'Game
+ saved to <path>.' line IS the feedback) driving the box-free
+ ``_save_game_to(path, elapsed)`` impl over the 07-04 gamestart
+ capture/save seams.
 
 LAWS this module enforces (05-RESEARCH-window-start-timer.md):
 
@@ -125,13 +131,15 @@ class GameTab(QtWidgets.QWidget):
      (05-08), 'Confirm' (spec.md:41), the 'Skip / Give Up'
      QToolButton+QMenu dropdown (spec.md:42) with 'Skip Molecule' /
      'Give Up...' actions, 'Restart' (06-08, SCORE-09), and 'Reset'
-     (06-08, SCORE-10 -- attribute ``btn_reset_grid``, DISTINCT from
-     the Setup tab's game-setup ``btn_reset`` per the restart-reset
-     D7 naming law). The button row keeps its stretch LAST
-     (insertions go BEFORE the stretch) so the remaining later-phase
-     slots (Save/Import, Phase 7, research OQ-1 later-add
-     recommendation) never reflow the timer row.
-     """
+         (06-08, SCORE-10 -- attribute ``btn_reset_grid``, DISTINCT from
+         the Setup tab's game-setup ``btn_reset`` per the restart-reset
+         D7 naming law), and 'Save' (07-06, SCORE-08 -- checkpoint the
+         running game to an .aamz archive; wrapper+impl factored per the
+         04-09 _X_impl law). The button row keeps its stretch LAST
+         (insertions go BEFORE the stretch) so the remaining later-phase
+         slot (Import, Phase 7, research OQ-1 later-add
+         recommendation) never reflows the timer row.
+         """
 
     def __init__(self, parent=None):
         super(GameTab, self).__init__(parent)
@@ -224,6 +232,16 @@ class GameTab(QtWidgets.QWidget):
             'Place all amino acids back to their grid positions; '
             'orientations are kept.')
         btn_row.insertWidget(btn_row.count() - 1, self.btn_reset_grid)
+        # Save button (07-06, SCORE-08): one-click .aamz checkpoint of
+        # the running game (PyMOL session + game state) through the
+        # 07-04 gamestart seams. Inserted BEFORE the stretch, which
+        # stays LAST (the 05-06 OQ-1 no-reflow law; this is the slot
+        # the class docstring reserved for Phase 7).
+        self.btn_save_game = QtWidgets.QPushButton('Save', self)
+        self.btn_save_game.setToolTip(
+            'Save the running game (PyMOL session + game state) to a '
+            'checkpoint file.')
+        btn_row.insertWidget(btn_row.count() - 1, self.btn_save_game)
         layout.addLayout(btn_row)
         self.btn_hint.clicked.connect(self._on_hint)
         self.btn_confirm.clicked.connect(self._on_confirm)
@@ -231,6 +249,7 @@ class GameTab(QtWidgets.QWidget):
         self.act_giveup.triggered.connect(self._on_giveup)
         self.btn_restart.clicked.connect(self._on_restart)
         self.btn_reset_grid.clicked.connect(self._on_reset_grid)
+        self.btn_save_game.clicked.connect(self._on_save_game)
 
         # The CANCELLABLE countdown: a reusable member QTimer stepping
         # 3 -> 2 -> 1 -> GO (P-2). Constructed here; started only by
@@ -759,6 +778,73 @@ class GameTab(QtWidgets.QWidget):
         prior.reset_grid()
         self._refresh_status()
         return True
+
+    # ---- the Save handler (07-06: SCORE-08 save half) ----
+
+    def _on_save_game(self):
+        """Save button: checkpoint the running game via _guard. The
+        THIN wrapper owns the ONLY modal (the file dialog); the impl is
+        box-free (the 04-09 _X_impl law, the 06-07/06-09 shape).
+
+        GATE FIRST (the 06-07 gate-first law): a press with no live
+        GameWizard -- pre-GO (the countdown window is wizard-free,
+        P-1), no game at all, or the post-endgame popped state -- is a
+        SILENT no-op BEFORE any dialog. NO game_over refusal (07-04
+        Recorded Decision 3 -- a panel-ended-but-live wizard saves
+        losslessly; game_over/end_state/final_time round-trip in the
+        game_state block). NO rebase_timer here (the
+        caller-owns-modal-detection law: the tick's activeModalWidget
+        branch freezes the clock over ANY real modal, human-verified
+        05-11).
+
+        The elapsed is captured BEFORE the dialog opens (the v1
+        capture-before-dialog doctrine, PA-persistence.py:62-68): the
+        sidecar's elapsed_at_save must not depend on whether a 1 Hz
+        tick fired while the dialog was open. The default filename is
+        'game.aamz' with the '.aamz' extension auto-appended (the 04-09
+        Decision-2 law); the filter is 'AA-match Checkpoint (*.aamz);;
+        All Files (*)'. Cancel is a safe no-op (nothing to undo -- the
+        clock freeze is already handled by the tick branch).
+
+        A successful save logs 'Game saved to <path>.' via the pure
+        status_text builder AFTER the impl returns (the 07-03
+        handler-logged law) -- NO success box: the info-box line IS the
+        feedback (the v1 game-tab Save precedent,
+        PA-__init__:786-787)."""
+        from pymol import cmd
+        from . import status_text, wizard as wizard_mod
+        if not isinstance(cmd.get_wizard(), wizard_mod.GameWizard):
+            return
+        elapsed = self._compute_elapsed()
+        path, _filter = QtWidgets.QFileDialog.getSaveFileName(
+            self, 'Save AA-match Game', 'game.aamz',
+            'AA-match Checkpoint (*.aamz);;All Files (*)')
+        if not path:
+            return
+        if not path.endswith('.aamz'):
+            path += '.aamz'
+        final = self._guard(lambda: self._save_game_to(path, elapsed))
+        if final is not None:
+            self._log(status_text.game_saved_line(final))
+
+    def _save_game_to(self, path, elapsed):
+        """Non-modal save impl (Phase 7 SCORE-08). The elapsed arrives
+        PRE-DIALOG-captured (the v1 doctrine, PA-persistence.py:62-68):
+        the impl writes a value that does not depend on whether a 1 Hz
+        tick fired during the dialog. The clock itself needs NO manual
+        stop/rebase bracket -- the tick's activeModalWidget branch
+        freezes it under the dialog (human-verified 05-11).
+
+        A pure function of (path, elapsed): capture the live snapshot
+        through the 07-04 cmd-tier seam (scene-read-only) and write the
+        atomic .aamz archive -- the Qt tier never touches engine /
+        wizard privates (the 05-07/05-10 accessor law). NO boxes here
+        (the smoke-99 law -- headless smokes drive this directly).
+        Returns the final (Windows-converted) written path; failures
+        propagate to the wrapper's _guard (the 04-09 contract)."""
+        from . import gamestart
+        data = gamestart.capture_checkpoint_snapshot(elapsed)
+        return gamestart.save_checkpoint(path, data)
 
     # ---- the endgame sequence (06-07: the shared game-over tail) ----
 

@@ -1,8 +1,8 @@
 """Headless SMOKE-16 - the Game tab lifecycle controls (plans
-06-07/06-08/06-09, T1b).
+06-07/06-08/06-09) + the Save button (07-06, SCORE-08 UI), T1b.
 
 Run (from WSL, repo root):
-    bash smoke/run_smoke.sh smoke/smoke_16_tab.py 120
+    bash smoke/run_smoke.sh smoke/smoke_16_tab.py 240
 Verdict is carried by the printed marker (exit codes cannot carry
 verdicts through the cmd.exe wrapper): grep '=== SMOKE-16 PASS ==='.
 
@@ -133,6 +133,36 @@ PART C  (06-09) the natural end + the final timer (SCORE-07's
         C11 GO on the post-endgame restart brings a fresh live game
         (zeros, float anchor, 1 Hz running).
         C12 restore per A9 -> the baseline scene EXACTLY.
+
+PART D  (07-06, SCORE-08 UI): the Save button T1b drive:
+        D1 construction - FRESH GameTab (the SMOKE-14 standalone
+        recipe): btn_save_game ('Save') with a non-empty tooltip; the
+        button row is Hint/Confirm/Skip-GiveUp/Restart/Reset/Save and
+        the stretch stays LAST after the insertion (the 05-06 OQ-1
+        no-reflow law -- indexOf(stretch) == count-1).
+        D2 gate-first - with NO live GameWizard, the WRAPPER
+        _on_save_game() is a silent no-op: returns None, scene/log/
+        stack untouched -- and NO dialog fires (the gate returns BEFORE
+        QFileDialog, so headless driving is safe; a modal under
+        offscreen would hang per the smoke-99 receipt!). Driving the
+        wrapper's no-op path is ALSO the button-connected evidence:
+        the connected slot exists and runs.
+        D3 elapsed-capture - live game via the countdown drive; anchor
+        re-based 75 s in the past via the GameState public start_timer;
+        the NON-MODAL impl _save_game_to(tmp_path, 75.0) is a pure
+        function of its args: the written .aamz carries
+        elapsed_at_save == 75.0 VERBATIM (the capture-before-dialog
+        doctrine -- the sidecar value can never depend on whether a
+        1 Hz tick fired during the dialog). The written zip verifies
+        through checkpoint.read_checkpoint_zip (the real gates) and
+        carries BOTH members (game.pse + state.json).
+        D4 wrapper dialog path = [HUMAN]-only BY DOCUMENTATION: the
+        getSaveFileName drive (default 'game.aamz', the .aamz filter,
+        the extension auto-append, the success log line) is NEVER
+        driven headless (smoke-99). NO success box exists to verify
+        (Recorded Decision 3 -- the info-box line IS the feedback).
+        D5 restore - timers stopped, done pop, prefix cleanup,
+        gamestart._last_start = None -> the baseline scene EXACTLY.
 
 Conventions (frozen Phase 1, kept): anchor repo root via sys.argv
 first / cwd fallback (never __file__); import aamatch directly (module
@@ -920,6 +950,155 @@ except Exception:
     except Exception:
         traceback.print_exc()
 
+# ============================================================
+# PART D (07-06, SCORE-08 UI): the Save button T1b drive. ZERO modals:
+# the wrapper's dialog path is [HUMAN]-only (smoke-99 -- a static
+# getSaveFileName under offscreen blocks indefinitely); the smoke
+# drives the wrapper ONLY through its gate-first no-op (which returns
+# BEFORE any dialog) and the NON-MODAL impl _save_game_to directly.
+# ============================================================
+part_c_checks = REC['checks']
+
+dlg4 = None
+try:
+    import shutil
+    import tempfile
+    import time
+    import zipfile
+
+    from aamatch import checkpoint
+
+    dlg4 = setup_window.SetupWindow()
+    tab4 = dlg4.game_tab
+    baseline_d = cmd.get_names('objects')
+
+    # ---- D1: construction on a FRESH GameTab (SMOKE-14 recipe) ------
+    tab_d = game_window.GameTab(None)
+    check("D1: btn_save_game exists -- label 'Save', non-empty tooltip",
+          tab_d.btn_save_game.text() == 'Save'
+          and bool(tab_d.btn_save_game.toolTip()),
+          "text=%r tip=%r" % (tab_d.btn_save_game.text(),
+                              tab_d.btn_save_game.toolTip()))
+    btn_row_d = None
+    lay_d = tab_d.layout()
+    for i in range(lay_d.count()):
+        sub_d = lay_d.itemAt(i).layout()
+        if sub_d is None:
+            continue
+        for j in range(sub_d.count()):
+            if sub_d.itemAt(j).widget() is tab_d.btn_hint:
+                btn_row_d = sub_d
+    row_d_ok = False
+    if btn_row_d is not None:
+        ws_d = [btn_row_d.itemAt(j).widget()
+                for j in range(btn_row_d.count())]
+        last_d = btn_row_d.itemAt(btn_row_d.count() - 1)
+        row_d_ok = (ws_d[:6] == [tab_d.btn_hint, tab_d.btn_confirm,
+                                 tab_d.btn_skip_menu, tab_d.btn_restart,
+                                 tab_d.btn_reset_grid,
+                                 tab_d.btn_save_game]
+                    and ws_d[-1] is None
+                    and last_d.spacerItem() is not None)
+    check('D1: row order Hint/Confirm/Skip-GiveUp/Restart/Reset/Save, '
+          'stretch LAST (indexOf(stretch) == count-1)', row_d_ok, '')
+    check('D1: the connected slot exists and is callable (the shell '
+          'law -- each handler plan connects its own button)',
+          callable(getattr(tab_d, '_on_save_game', None)),
+          'slot=%r' % (getattr(tab_d, '_on_save_game', None),))
+
+    # ---- D2: the gate-first no-op (no live GameWizard) --------------
+    # SAFE headlessly only because the wrapper's gate returns BEFORE
+    # the QFileDialog -- the dialog path itself is [HUMAN]-only
+    # (smoke-99). This drive is ALSO the button-connected behavioral
+    # evidence: the connected slot exists and runs to its gate.
+    names_pre_d2 = cmd.get_names('objects')
+    log_pre_d2 = tab4._info_log.toPlainText()
+    r_d2 = tab4._on_save_game()
+    check('D2: wrapper with NO live GameWizard is a silent no-op '
+          '(returns None; scene/log/stack untouched; NO dialog)',
+          r_d2 is None
+          and cmd.get_wizard() is None
+          and cmd.get_names('objects') == names_pre_d2
+          and tab4._info_log.toPlainText() == log_pre_d2, '')
+
+    # ---- D3: elapsed-capture ordering (deterministic sidecar) -------
+    wiz_d = gamestart.start_game(activate=False)
+    tab4.start_countdown(wiz_d)
+    for _ in range(4):
+        tab4._countdown_tick()
+    check('D3: live game via the countdown drive (that wizard on the '
+          'stack, 1 Hz running)',
+          cmd.get_wizard() is wiz_d and tab4._timer.isActive(), '')
+    # anchor re-base through the GameState PUBLIC timer op (75 s ago).
+    engine._current_game().start_timer(time.time() - 75.0)
+    elapsed_live = tab4._compute_elapsed()
+    check('D3: the tab live read computes ~= 75.0 s elapsed (within '
+          'the <=1 s coarse tolerance)',
+          75.0 <= elapsed_live <= 77.0,
+          'computed=%.3f' % (elapsed_live,))
+    tmp_dir_d = tempfile.mkdtemp(prefix='aamatch_smoke16_save_')
+    path_d = os.path.join(tmp_dir_d, 'smoke16_save.aamz')
+    final_d = tab4._save_game_to(path_d, 75.0)
+    names_d3 = None
+    try:
+        check('D3: _save_game_to wrote the .aamz at the final path '
+              '(the impl is a pure function of (path, elapsed))',
+              isinstance(final_d, str) and os.path.exists(final_d),
+              'final=%r' % (final_d,))
+        names_d3 = zipfile.ZipFile(final_d).namelist()
+        check('D3: the archive carries BOTH members (game.pse + '
+              'state.json)',
+              sorted(names_d3) == ['game.pse', 'state.json'],
+              'members=%r' % (names_d3,))
+        pse_d, data_d = checkpoint.read_checkpoint_zip(final_d)
+        check('D3: read_checkpoint_zip verifies (real gates) and the '
+              'sidecar elapsed_at_save == 75.0 VERBATIM (capture-'
+              'before-dialog doctrine)',
+              pse_d.lower().endswith('game.pse')
+              and data_d.get('elapsed_at_save') == 75.0,
+              'elapsed_at_save=%r' % (data_d.get('elapsed_at_save'),))
+        shutil.rmtree(os.path.dirname(pse_d))
+    finally:
+        shutil.rmtree(tmp_dir_d, ignore_errors=True)
+
+    # ---- D4: the wrapper dialog path = [HUMAN]-only ------------------
+    # DOCUMENTATION PIN ONLY: getSaveFileName (default 'game.aamz', the
+    # 'AA-match Checkpoint (*.aamz);;All Files (*)' filter, the .aamz
+    # extension auto-append, and the 'Game saved to <path>.' success
+    # log) is never driven headless (smoke-99). NO success box exists
+    # (07-04/07-06 Recorded Decision -- the info-box line IS the
+    # feedback); the structures pinned above cover every headlessly-
+    # provable half.
+
+    # ---- D5: restore -> the baseline scene EXACTLY -------------------
+    tab4.cancel_pending_start()
+    tab4._timer.stop()            # the Rule-2 law (05-06)
+    cmd.set_wizard()              # done pop
+    placement.cleanup_game_objects()
+    gamestart._last_start = None
+    check('D5: teardown returns the baseline scene EXACTLY + stack '
+          'empty',
+          list(cmd.get_names('objects')) == list(baseline_d)
+          and cmd.get_wizard() is None
+          and gamestart._last_start is None,
+          'post=%r baseline=%r'
+          % (cmd.get_names('objects'), baseline_d))
+    app.processEvents()
+    dlg4.close()
+except Exception:
+    traceback.print_exc()
+    check('part D save-button drive', False,
+          'raised (see traceback above)')
+    try:
+        if dlg4 is not None:
+            dlg4.game_tab.cancel_pending_start()
+            dlg4.game_tab._timer.stop()
+        cmd.set_wizard()
+        placement.cleanup_game_objects()
+        gamestart._last_start = None
+    except Exception:
+        traceback.print_exc()
+
 # --- Phase regression record (the 06-09 contract): one 'SMOKE-0N:
 # PASS/NOT-RUN' line per smoke of the six-smoke battery for the
 # orchestrator to grep; a standalone run only knows its own verdict --
@@ -930,9 +1109,10 @@ print('SMOKE-16: %s' % ('PASS' if not failures else 'FAIL'), flush=True)
 
 # --- Verdict marker (the SOLE verdict carrier) ------------------------
 print('SMOKE-16 PART A: %d checks; PART B: %d checks; PART C: %d '
-      'checks; total %d, %d failure(s)'
+      'checks; PART D: %d checks; total %d, %d failure(s)'
       % (part_a_checks, part_b_checks - part_a_checks,
-         REC['checks'] - part_b_checks, REC['checks'], len(failures)),
+         part_c_checks - part_b_checks,
+         REC['checks'] - part_c_checks, REC['checks'], len(failures)),
       flush=True)
 print('=== SMOKE-16 %s ==='
       % ('FAIL: ' + ', '.join(failures) if failures else 'PASS'),

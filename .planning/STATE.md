@@ -5,22 +5,22 @@
 See: .planning/PROJECT.md (updated 2026-09-05)
 
 **Core value:** The player can place amino acids onto a small molecule in the PyMOL 3D viewer and the game correctly detects and scores the interactions they form — turning unguided 3D manipulation practice into a scored game.
-**Current focus:** Phase 7 — Checkpoint & Game-File Persistence — IN PROGRESS (4/12); wave 2 plan 07-04 DONE (save side: gamestart capture/save seams + GameWizard.snapshot_books + SMOKE-18 save E2E 31/31, REAL `__reduce__` restore proven in-process); wave 1 merged (07-01 wizard `.pse` restore fix; 07-02 pure checkpoint module; 07-03 handler-logged builders)
+**Current focus:** Phase 7 — Checkpoint & Game-File Persistence — IN PROGRESS; wave 3 plan 07-05 DONE (payload-direct seam: engine.adopt_game + gamestart.start_game_from_payload + 5-key `_last_start` + placement CmdException wrap (147(b) CLOSED); SMOKE-08 new part + SMOKE-11 PART-H 5-key pin evolution, all smokes green) + 07-06 in the same wave; wave 2 plan 07-04 DONE (save side: capture/save seams + snapshot_books + SMOKE-18 31/31); wave 1 merged (07-01 .pse restore; 07-02 pure checkpoint module; 07-03 handler-logged builders)
 
 ## Current Position
 
 Phase: 7 of 9 (Checkpoint & Game-File Persistence)
-Plan: 4 of 12 complete — 07-01 (GameWizard __reduce__ argless rebuilder — .pse wizard-drop landmine FIXED + SMOKE-17 phase-B flipped to strict restore compare PROVEN, zero Session-Warning) + 07-02 (pure checkpoint sidecar module — schema constants, four-gate parse chain replaying parse_game_data VERBATIM, sentinel-first reconcile_registry, .aamz zip I/O; 46-test battery, 873/873 suite green, PURE_MODULES = 19) + 07-03 (status_text Phase-7 handler-logged line builders: game_saved_line/game_imported_line/game_resumed_line, TDD RED 5b5feca → GREEN 548b82b, 834/834 WSL) + 07-04 (SAVE side — capture_checkpoint_snapshot + save_checkpoint cmd seams, FULL-session cmd.save → atomic .aamz {game.pse + state.json}, wizard books public snapshot, SMOKE-18 31/31 with REAL pickle-path wizard restore, 881/881 WSL, SMOKE-17 ×2 + SMOKE-08 regression PASS) DONE
-Status: In progress — wave 2 plan 07-04 DONE on main (single-plan wave, direct commits)
-Last activity: 2026-09-21 — Completed 07-04-PLAN.md (checkpoint SAVE seams + SMOKE-18)
+Plan: 5 of 12 complete — 07-01 (GameWizard __reduce__ argless rebuilder — .pse wizard-drop landmine FIXED + SMOKE-17 phase-B flipped to strict restore compare PROVEN, zero Session-Warning) + 07-02 (pure checkpoint sidecar module — schema constants, four-gate parse chain replaying parse_game_data VERBATIM, sentinel-first reconcile_registry, .aamz zip I/O; 46-test battery, 873/873 suite green, PURE_MODULES = 19) + 07-03 (status_text Phase-7 handler-logged line builders: game_saved_line/game_imported_line/game_resumed_line, TDD RED 5b5feca → GREEN 548b82b, 834/834 WSL) + 07-04 (SAVE side — capture_checkpoint_snapshot + save_checkpoint cmd seams, FULL-session cmd.save → atomic .aamz, SMOKE-18 31/31 REAL pickle-path wizard restore, 881/881 WSL) + 07-05 (payload-direct start seam — engine.adopt_game 4-global rebind + conditional P-4 rebase; gamestart.start_game_from_payload ZERO-generator start; `_last_start` additive 'payload' (5 keys, uniform payload-direct Restart); placement.materialize package-load CmdException → PlacementError naming the ligand (147(b) CLOSED); SMOKE-08 PART 7 12-check proof + SMOKE-11 PART-H deliberate 4→5 pin evolution; 881/881 WSL, SMOKE-08/11/04/15/16/18 PASS) DONE
+Status: In progress — wave 3 plan 07-05 DONE on branch exec/07-05 (worktree, await orchestrator merge)
+Last activity: 2026-09-22 — Completed 07-05-PLAN.md (payload-direct start seam + import/resume adopt contract)
 
-Progress: [████░░░░░░░░] 4/12 of Phase 7 · [█████████░] 90% of planned plans (72/80; 6/9 phases verified)
+Progress: [█████░░░░░░░] 5/12 of Phase 7 · [█████████░] 91% of planned plans (73/80; 6/9 phases verified)
 
 ## Performance Metrics
 
 **Velocity:**
 - Total plans completed: 72 (Phase 1: 01-01…01-09; Phase 2: 02-01…02-15; Phase 3: 03-01…03-07; Phase 4: 04-01…04-15; Phase 5: 05-01…05-11; Phase 6: 06-01…06-10; Phase 7: 07-01, 07-02, 07-03, 07-04)
-- Average duration: ~11 min (02-03); 6 min (02-04); ~29 min (02-05); 23 min (02-06); 4 min (02-09); 11 min (02-07); 17 min (02-08); ~20 min (02-13); ~27 min (02-11); 16 min (02-14); 29 min (02-15); ~15 min (03-01); ~55 min (03-02); ~14 min (03-03); ~27 min (03-04); ~14 min (03-05); ~10 min (04-01); ~8 min (04-02); 16 min (04-04); ~9 min (04-03); 17 min (04-05); ~15 min (04-06); 16 min (04-07); 23 min (04-08); ~49 min (04-09); ~7 min (04-10); ~16 min (04-11); ~10 min (04-12); ~6 min (04-13); ~5 min (04-14 docs-only checkpoint record); ~15 min (04-15 fix + re-verify + checkpoint record); ~7 min (05-02) + 3 min (05-04) + ~7 min (05-05) + 5 min (05-07) + ~17 min (05-08) + ~10 min (05-09) + ~13 min (05-10) + ~20 min (05-11 fix + record); phase-6: 47 min (06-01) + ~12 min (06-03) + 13 min (06-05) + 17 min (06-06) + ~17 min (06-07) + 12 min (06-08) + 16 min (06-09) + ~12 min (06-10 checkpoint fix + record); phase-7: 7 min (07-01) + ~11 min (07-02) + 3 min (07-03) + 13 min (07-04); 05-01/05-03/05-06 + 06-02/06-04 durations unrecorded (agent reports omitted them)
+- Average duration: ~11 min (02-03); 6 min (02-04); ~29 min (02-05); 23 min (02-06); 4 min (02-09); 11 min (02-07); 17 min (02-08); ~20 min (02-13); ~27 min (02-11); 16 min (02-14); 29 min (02-15); ~15 min (03-01); ~55 min (03-02); ~14 min (03-03); ~27 min (03-04); ~14 min (03-05); ~10 min (04-01); ~8 min (04-02); 16 min (04-04); ~9 min (04-03); 17 min (04-05); ~15 min (04-06); 16 min (04-07); 23 min (04-08); ~49 min (04-09); ~7 min (04-10); ~16 min (04-11); ~10 min (04-12); ~6 min (04-13); ~5 min (04-14 docs-only checkpoint record); ~15 min (04-15 fix + re-verify + checkpoint record); ~7 min (05-02) + 3 min (05-04) + ~7 min (05-05) + 5 min (05-07) + ~17 min (05-08) + ~10 min (05-09) + ~13 min (05-10) + ~20 min (05-11 fix + record); phase-6: 47 min (06-01) + ~12 min (06-03) + 13 min (06-05) + 17 min (06-06) + ~17 min (06-07) + 12 min (06-08) + 16 min (06-09) + ~12 min (06-10 checkpoint fix + record); phase-7: 7 min (07-01) + ~11 min (07-02) + 3 min (07-03) + 13 min (07-04) + ~40 min (07-05); 05-01/05-03/05-06 + 06-02/06-04 durations unrecorded (agent reports omitted them)
 - Total execution time: —
 
 **By Phase:**
@@ -33,10 +33,10 @@ Progress: [████░░░░░░░░] 4/12 of Phase 7 · [███�
 | 4 | 15/15 ✓ | ~10 min (04-01) + ~8 min (04-02) + 16 min (04-04) + ~9 min (04-03) + 17 min (04-05) + ~15 min (04-06) + 16 min (04-07) + 23 min (04-08) + ~49 min (04-09) + ~7 min (04-10) + ~16 min (04-11) + ~10 min (04-12) + ~6 min (04-13) + ~5 min (04-14 docs-only) + ~15 min (04-15 fix+record) | — |
 | 5 | 11/11 ✓ | ~7 min (05-02) + 3 min (05-04) + ~7 min (05-05) + 5 min (05-07) [wave 1: 6 parallel] + ~20 min (05-06) + ~17 min (05-08) + ~10 min (05-09) + ~13 min (05-10) [wave 4: 2 parallel] + ~20 min (05-11) | — |
 | 6 | 10/10 | 47 min (06-01) + ~12 min (06-03) + 13 min (06-05) + 17 min (06-06) + ~17 min (06-07) + 12 min (06-08) + 16 min (06-09) + ~12 min (06-10 checkpoint fix + record); 06-02/06-04 durations unrecorded (wave-1 agent reports omitted them) | — |
-| 7 | 4/12 | 7 min (07-01) + ~11 min (07-02) + 3 min (07-03) + 13 min (07-04) | — |
+| 7 | 5/12 | 7 min (07-01) + ~11 min (07-02) + 3 min (07-03) + 13 min (07-04) + ~40 min (07-05) | — |
 
 **Recent Trend:**
-- Last 5 plans: 06-10 (~12 min checkpoint fix + record), 07-01 (7 min), 07-02 (~11 min), 07-03 (3 min), 07-04 (13 min)
+- Last 5 plans: 07-01 (7 min), 07-02 (~11 min), 07-03 (3 min), 07-04 (13 min), 07-05 (~40 min, parallel wave 3 worktree)
 - Trend: steady ~5-20 min per plan; parallel waves via the AGENTS.md worktree protocol (phase 7 wave 1: 3 plans), STATE.md blended by the orchestrator on merge
 
 *Updated after each plan completion*
@@ -236,6 +236,11 @@ Decisions are logged in PROJECT.md Key Decisions table. Seeded from PROJECT.md a
 
 ### Phase 7 Decisions & Laws (Checkpoint & Game-File Persistence)
 
+- (07-05) **Payload-direct start law (embed-don't-regenerate at START):** Import must NOT ride `start_game` — setup+seed regeneration is manifest-content-dependent (Phase 8 will silently re-bucket the same seed) and IMPOSSIBLE for uploaded games on the importer machine. `gamestart.start_game_from_payload(payload, ligand_content, setup, candidates, activate=False)` mirrors start_game's cleanup-first ordering verbatim (cleanup → materialize(payload,0) → adopt_game(fresh GameState) → GameWizard(payload, registry, 0, 0) → compose → `_last_start` → optional activate); the embedded level_spec payload is THE TRUTH and is stored in `_last_start['payload']` BY IDENTITY (never re-serialized).
+- (07-05) **One adopt seam for both consumers:** `engine.adopt_game(payload, registry, game_state_dict, ligand_content, elapsed_at_save=None)` rebinds ALL FOUR engine globals; malformed state → EngineError naming the cause; the timer rebases via the P-4 `rebase_timer` single anchor iff `elapsed_at_save is not None and not game.game_over`. Import passes a fresh `GameState().to_dict()` + None (timer from zero at GO); resume passes the sidecar state + elapsed. The rebase path has NO headless exercise yet — 07-09's SMOKE-20 run 2 is its first proof; note the resumed game must NOT `start_timer` after the adopt or the rebase is lost.
+- (07-05) **`_last_start` = 5 keys uniformly (additive evolution):** `start_game` captures `'payload'` TOO — every Restart goes payload-direct (byte-identical for demos, CORRECT for uploads); pre-existing readers touch only the original 4 keys. DELIBERATE SMOKE-11 PART-H key-pin evolution 4 → 5 keys (plan-authorized, recorded here).
+- (07-05) **147(b) mirror-item CLOSED:** `placement.materialize`'s package-resolved `cmd.load` wraps `pymol.CmdException` into PlacementError ('could not load bundled ligand ... data files may be missing or corrupt') via the except-Exception engine.py:231-241 shape (placement binds only `from pymol import cmd` — no new `import pymol` needed). ONLY that branch is wrapped; the ligand_content string-load branches keep prior behavior. NOTE 07-07/07-09: resume flows restoring progress must NOT route through start_game_from_payload (it mints a FRESH GameState — use materialize + adopt_game with the sidecar game_state directly).
+
 - (07-03) **Handler-logged law for tab-side status lines:** Save/Import/Resume lines are DIRECT `_log` lines from Game-tab handlers, NEVER poll-emitted — the wizard is not the actor (for Import it does not exist yet) and the poll's fingerprint set has no key for them. The three builders (`game_saved_line`/`game_imported_line`/`game_resumed_line`) take exactly one `path` argument (never an event payload) and are EXCLUDED from `_EVENT_BUILDERS` (pinned by kind name AND by builder function, tests/test_status_text.py). Wording pins: `'Game saved to %s.'` (05-RESEARCH-status-surface.md:290) / `'Game imported: %s.'` (:291) / `'Game resumed from %s.'`.
 - (07-03) **EVENT_KINDS pinned at EXACTLY 15 for Phase 7:** the game_saved/game_imported reserved-note texts stay BYTE-UNCHANGED even after the builders landed (the Phase-6 precedent — the builders, not the dict, carry the final wording); there is NO reserved resume kind — the handler-logged pattern needs none.
 - (07-03) **Import line placement (the restart D2/D7 law verbatim):** `game_imported_line` MUST be logged AFTER `start_countdown` arms — the countdown's `_info_log.clear()` would wipe a pre-arm line. Bind 07-04's Import wrapper.
@@ -306,8 +311,8 @@ Decisions are logged in PROJECT.md Key Decisions table. Seeded from PROJECT.md a
 
 ## Session Continuity
 
-Last session: 2026-09-21 (Phase 7 wave 2 plan 07-04 DONE on main: save side landed — `capture_checkpoint_snapshot`/`save_checkpoint` cmd seams, `GameWizard.snapshot_books()`, SMOKE-18 save E2E 31/31 PASS incl. REAL `__reduce__` in-process wizard restore; 881/881 WSL; SMOKE-17 ×2 + SMOKE-08 regression PASS)
-Stopped at: Completed 07-04-PLAN.md — Phase 7 in progress (4/12); next: 07-05 (load/reconstruct side per the wave schedule)
+Last session: 2026-09-22 (Phase 7 wave 3 plan 07-05 DONE on branch exec/07-05 (worktree): payload-direct seam landed — `engine.adopt_game` (4 globals + conditional P-4 rebase) + `gamestart.start_game_from_payload` + 5-key `_last_start` + placement CmdException wrap (147(b) CLOSED); SMOKE-08 PART 7 12-check proof + SMOKE-11 PART-H 4→5 pin evolution; 881/881 WSL; SMOKE-08/11/04/15/16/18 PASS)
+Stopped at: Completed 07-05-PLAN.md — Phase 7 in progress (5/12 on exec/07-05, pending orchestrator merge); next: 07-06 (parallel sibling) then wave 4 (07-07 Import routing, 07-09 resume — the seam's consumers)
 Resume file: None
 
 ## Next Actions

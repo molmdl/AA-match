@@ -125,9 +125,16 @@ def _wizard_snapshot(wiz):
         'status': wiz.get_status(),
         'current_slot': wiz._current_slot,
         'event_seq': int(wiz._event_seq),
+        'last_event': wiz._last_event,
         'saved_msm': wiz._saved_msm,
         'payload_seed': wiz._payload['seed'],
         'color_store': sorted(wiz._color_store.keys()),
+        # 07-01 strict-compare addition: the FULL store, JSON-safe
+        # {object: [[ID, color], ...]} (the strict restore compare
+        # needs the snapshots, not just which objects were recolored).
+        'color_store_full': dict(
+            (obj, [[int(i), int(c)] for (i, c) in rows])
+            for obj, rows in wiz._color_store.items()),
     }
 
 
@@ -266,69 +273,11 @@ if PHASE == 'save':
         print('SMOKE-17 VERDICT wizard-attrs: %s'
               % (snap['wizard']['attrs'],), flush=True)
 
-        # -- PART C: the wizard-RESTORE fix prototype (probe-only) --------
-        # The base Wizard.__reduce__ reconstructs via GameWizard() with
-        # NO args (pymol/wizard/__init__.py __reduce__ =
-        # (self.__class__, (), self.__getstate__())) -- but
-        # GameWizard.__init__ REQUIRES payload+registry, so session
-        # restore raises TypeError (observed live in phase B: console
-        # '__init__() missing 2 required positional arguments' +
-        # 'Session-Warning: unable to restore wizard.'). Prototype the
-        # fix shape through the REAL task functions
-        # (wizarding.session_save_wizard -> pickle.loads -> cmd rebind
-        # -> cmd.set_wizard_stack) with an in-memory class patch;
-        # production files are untouched and the fixture .pse above was
-        # saved BEFORE the patch.
-        import pickle as _p
-        from pymol import wizarding as _wiz_mod
-        from pymol.wizard import Wizard as _BaseWizard
-        try:
-            _p.loads(_p.dumps(wiz, 1))
-            base_red = 'RESTORED (unexpected -- defect gone?)'
-        except Exception as exc:
-            base_red = '%s: %s' % (type(exc).__name__, exc)
-        print('SMOKE-17 NOTE base __reduce__ unpickle: %s' % (base_red,),
-              flush=True)
-
-        def _aam_rebuild():
-            """Argless reconstruction: __init__ never runs; state
-            arrives via __dict__.update(pickled state) (pickle applies
-            state when no __setstate__ exists); session_restore_wizard
-            then rebinds .cmd."""
-            return object.__new__(GameWizard)
-
-        GameWizard.__reduce__ = lambda self: (_aam_rebuild, (),
-                                              self.__getstate__())
-        try:
-            session = {}
-            _wiz_mod.session_save_wizard(session, cmd)
-            wizards = _p.loads(session['wizard'])
-            for w in wizards:
-                w.cmd = cmd          # session_restore_wizard's own rebind
-            cmd.set_wizard_stack(wizards)
-            w2 = cmd.get_wizard()
-            proto_ok = (isinstance(w2, GameWizard)
-                        and w2.get_status() == wiz.get_status()
-                        and w2._current_slot == wiz._current_slot
-                        and int(w2._event_seq) == int(wiz._event_seq)
-                        and sorted(w2._color_store.keys())
-                        == sorted(wiz._color_store.keys())
-                        and w2._payload['seed'] == wiz._payload['seed']
-                        and bool(w2.get_panel()))
-            check('C REAL-path wizard restore via argless __reduce__',
-                  proto_ok,
-                  'get_wizard()=%r panel=%d status-eq=%s -- THE FIX '
-                  'SHAPE IS PROVEN (module-level rebuilder in '
-                  'aamatch/wizard.py)'
-                  % (w2, len(w2.get_panel()) if w2 is not None else -1,
-                     proto_ok))
-        except Exception:
-            traceback.print_exc()
-            check('C REAL-path wizard restore via argless __reduce__',
-                  False, 'raised (see traceback above)')
-        finally:
-            GameWizard.__reduce__ = _BaseWizard.__reduce__   # un-patch
-            cmd.set_wizard()                                 # pop test wizard
+        # (07-01) the in-memory part-C monkey-patch prototype is GONE:
+        # production aamatch/wizard.py now carries the REAL module-level
+        # _rebuild_game_wizard rebuilder, so phase B's restore goes
+        # through the real class path (the probe's prototype evidence
+        # stays recorded in 07-RESEARCH-pse.md).
 
         # teardown A (fixtures STAY for phase B)
         cmd.set_wizard()
@@ -502,43 +451,75 @@ if PHASE == 'verify':
             check('B probe object survived the .pse', False,
                   '_aam_17probe missing after load')
 
-        # -- THE WIZARD ------------------------------------------------------
-        w2 = cmd.get_wizard()
-        wiz_kind = ('GameWizard' if isinstance(w2, GameWizard)
-                    else 'None' if w2 is None else str(type(w2)))
+        # -- THE WIZARD (07-01 STRICT restore compare; the documented-
+        # defect signature pin is REPLACED -- production wizard.py now
+        # carries the argless __reduce__ rebuilder) ----------------------
+        restored = cmd.get_wizard()
+        wiz_kind = ('GameWizard' if isinstance(restored, GameWizard)
+                    else 'None' if restored is None
+                    else str(type(restored)))
         REC['wizard_restore'] = wiz_kind
-        if isinstance(w2, GameWizard):
-            same = (w2._payload.get('seed') == snap['wizard']['payload_seed']
-                    and w2._current_slot == snap['wizard']['current_slot']
-                    and int(w2._event_seq) == snap['wizard']['event_seq']
-                    and w2._saved_msm == snap['wizard']['saved_msm']
-                    and sorted(w2._color_store.keys())
-                    == snap['wizard']['color_store'])
-            check('B GameWizard RESTORED from the session (pickle '
-                  'round-trip)', same,
-                  'class=%s seed=%r slot=%r seq=%r store=%s'
-                  % (wiz_kind, w2._payload.get('seed'), w2._current_slot,
-                     w2._event_seq, sorted(w2._color_store.keys())))
+        rig = snap['wizard']
+        is_gw = isinstance(restored, GameWizard)
+        check('B restored top-of-stack is a GameWizard (REAL __reduce__ '
+              'path)', is_gw,
+              'get_wizard()=%r -- the old defect dropped it (None); '
+              'a failed restore leaves the stack empty' % (restored,))
+        state_ok = False
+        got_store = {}
+        state_detail = 'no restored wizard to compare'
+        if is_gw:
+            got_store = dict(
+                (obj, [[int(i), int(c)] for (i, c) in rows])
+                for obj, rows in restored._color_store.items())
+            status_eq = restored.get_status() == rig['status']
+            store_eq = got_store == rig['color_store_full']
+            state_ok = (restored._current_slot == rig['current_slot']
+                        and int(restored._event_seq) == rig['event_seq']
+                        and restored._last_event == rig['last_event']
+                        and restored._saved_msm == rig['saved_msm']
+                        and restored._payload['seed'] == rig['payload_seed']
+                        and store_eq and status_eq)
+            state_detail = (
+                'seed=%r/%r slot=%r/%r seq=%r/%r msm=%r/%r '
+                'store-eq=%s status-eq=%s last_event=%r'
+                % (restored._payload['seed'], rig['payload_seed'],
+                   restored._current_slot, rig['current_slot'],
+                   int(restored._event_seq), rig['event_seq'],
+                   restored._saved_msm, rig['saved_msm'],
+                   store_eq, status_eq, restored._last_event))
+        check('B restored GameWizard books == the run-1 snapshot',
+              state_ok, state_detail)
+
+        # Console cleanliness (ROADMAP criterion 3): the smoke does NOT
+        # capture its own stdout, so cleanliness is proven by the
+        # positive restore: the defect path PRINTS 'Session-Warning:
+        # unable to restore wizard.' AND drops the wizard -- a restored
+        # GameWizard on the stack means zero plugin-caused warnings.
+        print('SMOKE-17 NOTE console: restored GameWizard on the stack '
+              'implies NO Session-Warning was printed during cmd.load '
+              '(criterion-3 console-clean claim recorded for the human '
+              'checkpoint)', flush=True)
+        if is_gw and state_ok:
+            print('SMOKE-17 VERDICT wizard: strict restore compare -> '
+                  'PROVEN', flush=True)
         else:
-            # The DOCUMENTED Phase-7 defect (probe-recorded 2026-09-21):
-            # base Wizard.__reduce__ reconstructs GameWizard() with no
-            # args -> TypeError -> 'Session-Warning: unable to restore
-            # wizard.' (printed above in this console) -> the wizard is
-            # DROPPED on session load. This check PINS the observed
-            # defect signature (it fails loud if the behavior CHANGES
-            # unexpectedly, e.g. after a PyMOL update); Phase 7's fix
-            # (argless reconstruction, prototype PROVEN in phase-A
-            # part C) flips this branch to the strict compare above.
-            observed = (w2 is None and snap['wizard']['pickle_ok'])
-            check('B wizard restore = DOCUMENTED defect signature '
-                  '(Phase 7 must fix)', observed,
-                  'get_wizard()=%r, save-side pickle_ok=%s -- the '
-                  'console Session-Warning above is the evidence; '
-                  'restored=%r is the Phase-7 target'
-                  % (w2, snap['wizard']['pickle_ok'], wiz_kind))
-        print('SMOKE-17 VERDICT wizard: restored=%s (save-side pickle_ok '
-              'was %s)' % (wiz_kind, snap['wizard']['pickle_ok']),
-              flush=True)
+            print('SMOKE-17 VERDICT wizard: strict restore compare -> '
+                  'REFUTED (restored=%r)' % (wiz_kind,), flush=True)
+
+        # -- post-load identity invariant (07-01 addition; the probe
+        # asserted _assert_identity pre-save only) ----------------------
+        ident_bad = []
+        if is_gw:
+            for obj in sorted(rig['color_store_full']):
+                try:
+                    restored._assert_identity(obj)
+                except Exception as exc:
+                    ident_bad.append('%s: %s' % (obj, exc))
+        check('B post-load identity invariant on recolored slot objects',
+              is_gw and not ident_bad,
+              'objects=%s bad=%s' % (sorted(rig['color_store_full']),
+                                     ident_bad[:2]))
 
         # -- sentinel-first reconciliation demo -------------------------------
         recon_bad = []

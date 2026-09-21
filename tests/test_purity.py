@@ -91,11 +91,16 @@ if REPO_ROOT not in sys.path:
 #                   persistence/level_spec/setup_state).
 # Phase 5 (05-01): status_text (pure tab-side text builders; imports only
 #                   .wizard_text).
+# Phase 7 (07-02): checkpoint (checkpoint sidecar schema + .aamz zip I/O:
+#                   CHECKPOINT_VERSION refuse-newer gate, four-gate parse
+#                   chain replaying parse_game_data VERBATIM, sentinel-first
+#                   reconcile_registry; stdlib json/os/tempfile/zipfile +
+#                   pure persistence/game_file ONLY).
 PURE_MODULES = ['setup_state', 'level_spec', 'persistence', 'backup',
                 'paths', 'vec3', 'spatial', 'manifest', 'capability',
                 'thresholds', 'detector', 'generator', 'game_state',
                 'wizard_core', 'wizard_text', 'setup_form', 'game_file',
-                'status_text']
+                'status_text', 'checkpoint']
 
 # Roots that must NEVER appear in any import of a pure module, in ANY
 # scope (module level or function body -- B7). dataclasses is 3.7+.
@@ -307,6 +312,17 @@ class TestGameStateRegistration(unittest.TestCase):
         self.assertIn(
             'game_state', PURE_MODULES,
             'aamatch/game_state.py must be registered in PURE_MODULES '
+            '(unregistered pure modules are silently ungated)')
+
+
+class TestCheckpointRegistration(unittest.TestCase):
+    """Plan 07-02 Task 3: the checkpoint sidecar module joins the gated
+    pure modules (same registration-pin pattern as the generator)."""
+
+    def test_checkpoint_registered_in_pure_modules(self):
+        self.assertIn(
+            'checkpoint', PURE_MODULES,
+            'aamatch/checkpoint.py must be registered in PURE_MODULES '
             '(unregistered pure modules are silently ungated)')
 
 

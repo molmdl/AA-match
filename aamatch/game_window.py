@@ -86,7 +86,11 @@ final elapsed, and pop the wizard via the local ``_pop_game_wizard``
     payload-direct ``gamestart.start_game_from_payload`` seam (the
     EMBEDDED payload is the truth -- never regenerated) -> countdown
     -> the 'Game imported: <path>.' line logged AFTER the arm (the
-    restart D7 law).
+    restart D7 law). 07-07 also routes Restart through the ADDITIVE
+    '_last_start['payload']' entry (the c2 decision): the replay goes
+    payload-direct whenever the store carries a payload, with the
+    legacy start_game call kept as the defensive fallback branch for
+    a payload-less direct-construction tuple.
 
 LAWS this module enforces (05-RESEARCH-window-start-timer.md):
 
@@ -720,12 +724,23 @@ class GameTab(QtWidgets.QWidget):
         the P-2 belt-and-braces pending-start cancel (the _on_cleanup
         handler-top cancel precedent); the P-3 pop (the LIVE
         GameWizard pops -- its cleanup restores msm/colors/pk1; a USER
-        wizard on top is never popped); then the replayed
-        ``gamestart.start_game(..., activate=False)`` over the tuple's
-        4 keys -- NO build_state pre-checks (the tuple was validated
-        at first start; the replay is deterministic; OSError/ValueError
-        e.g. a deleted fixture still surfaces through _guard -- the
-        04-13 clean-then-refuse residue law); then the countdown arms
+        wizard on top is never popped); then the replay over the tuple
+        -- 07-07 branches on the ADDITIVE 'payload' entry (the 07-07
+        Recorded Decision 3 / the research c2 recommendation:
+        ``_last_start['payload']`` present ->
+        ``gamestart.start_game_from_payload(...)``, replaying the
+        EMBEDDED payload DIRECTLY, never the bundled-manifest fallback
+        (engine.py:290-302) that a payload-less regeneration would
+        silently hit for imported uploaded games; the legacy
+        ``gamestart.start_game(setup/seed/candidates/ligand_content)``
+        call is kept as the DEFENSIVE fallback for a payload-less
+        tuple -- post-07-05 every real start captures a payload, but
+        direct test constructions of a 4-key tuple keep the 06-08
+        semantics) -- NO build_state pre-checks (the tuple was
+        validated at first start; the replay is payload-faithful;
+        OSError/ValueError e.g. a deleted fixture still surfaces
+        through _guard -- the 04-13 clean-then-refuse residue law);
+        then the countdown arms
         (self-healing cancel + box clear + 'Get ready...'); ONLY THEN
         is the pinned restart line logged (restart-reset D7: logging
         it BEFORE the arm would let the countdown's box clear wipe it
@@ -749,10 +764,16 @@ class GameTab(QtWidgets.QWidget):
             raise ValueError('Restart: no game has been started yet.')
         self.cancel_pending_start()
         self._pop_game_wizard()
-        wiz = gamestart.start_game(setup=ls['setup'], seed=ls['seed'],
-                                   candidates=ls['candidates'],
-                                   ligand_content=ls['ligand_content'],
-                                   activate=False)
+        if 'payload' in ls:
+            wiz = gamestart.start_game_from_payload(
+                ls['payload'], ligand_content=ls['ligand_content'],
+                setup=ls['setup'], candidates=ls['candidates'],
+                activate=False)
+        else:
+            wiz = gamestart.start_game(
+                setup=ls['setup'], seed=ls['seed'],
+                candidates=ls['candidates'],
+                ligand_content=ls['ligand_content'], activate=False)
         self.start_countdown(wiz)
         self._log(status_text.game_restarted_line())
         return True

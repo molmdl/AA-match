@@ -341,7 +341,23 @@ def materialize(payload, level_index=0, ligand_content=None):
         else:
             winpath = to_windows_path(
                 package_data_path('data', ligand['file']))
-            cmd.load(winpath, lig_name)
+            try:
+                cmd.load(winpath, lig_name)
+            except Exception as exc:
+                # 07-05 (STATE.md:147(b) mirror-item CLOSED): a
+                # missing/corrupt bundled fixture raises pymol's
+                # CmdException from cmd.load -- OUTSIDE the guarded
+                # ValueError family. The except-Exception shape (the
+                # engine.py:231-241 wrap precedent) maps it here
+                # without adding a new `import pymol`: PlacementError
+                # subclasses ValueError, so _guard surfaces it verbatim.
+                # Nothing else is wrapped.
+                raise PlacementError(
+                    'materialize: molecule %r could not load bundled '
+                    'ligand %r (%s: %s) -- the AA-match data files may '
+                    'be missing or corrupt'
+                    % (molecule_id, ligand['file'],
+                       type(exc).__name__, exc))
         n_lig = _assert_count(lig_name, 1,
                               'materialize ligand %s' % molecule_id)
         _sentinel_tag(lig_name)

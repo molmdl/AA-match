@@ -170,13 +170,19 @@ from .wizard import GameWizard
 # unambiguous parallax with zero occlusion).
 _FRONT_LEAD = 5.0
 
-# SETUP-11 initial-state store (plan 05-05): after every successful
-# start, start_game captures the materialization INPUT tuple here --
-# {'setup' (DEEP-COPIED so later widget/export mutation can never
-# corrupt the restart source), 'seed', 'candidates', 'ligand_content'}.
-# Phase 6 Restart replays the tuple verbatim through start_game
+# SETUP-11 initial-state store (plan 05-05, extended 07-05): after
+# every successful start, start_game captures the materialization
+# INPUT tuple here -- {'setup' (DEEP-COPIED so later widget/export
+# mutation can never corrupt the restart source), 'seed',
+# 'candidates', 'ligand_content', 'payload'}. start_game_from_payload
+# captures the same 5-key shape; the ADDITIVE 'payload' entry (07-05
+# Recorded Decision 1) lets Phase-6/7 Restart replay EVERY game
+# payload-direct through start_game_from_payload -- byte-identical for
+# demos, CORRECT for uploaded games whose bundled-manifest regeneration
+# is impossible. Existing readers look only at the original 4 keys
+# (additive-only evolution). Phase 6 Restart replays the tuple verbatim
 # (ROADMAP:159 -- the inputs fully regenerate the scene; this is NOT
-# a v1-style backup object). Set AFTER new_game + materialize (and the
+# a v1-style backup object). Set AFTER new_game/materialize (and the
 # compose) SUCCEED and BEFORE any wizard mutation: a failed start
 # leaves the store holding the last successfully BUILT game's tuple.
 # Lives in gamestart (never in the window's _last_export): a later
@@ -453,7 +459,8 @@ def start_game(setup=None, seed=42, candidates=None, ligand_content=None,
     global _last_start
     import copy
     _last_start = {'setup': copy.deepcopy(spec), 'seed': seed,
-                   'candidates': candidates, 'ligand_content': ligand_content}
+                   'candidates': candidates, 'ligand_content': ligand_content,
+                   'payload': payload}
     if activate:
         activate_game(wiz)
     slots = sum(len(mol['slots']) for mol in registry['molecules'])
@@ -461,6 +468,74 @@ def start_game(setup=None, seed=42, candidates=None, ligand_content=None,
           'slot(s), seed %d (        cleaned %d prior game object(s)).'
           % (__version__, len(registry['molecules']), slots,
              int(seed), cleaned['deleted']))
+    return wiz
+
+
+def start_game_from_payload(payload, ligand_content=None, setup=None,
+                            candidates=None, activate=False):
+    """Materialize the EMBEDDED payload DIRECTLY -- start_game minus
+    new_game (Phase 7: Import must not regenerate; the payload is
+    the truth).
+
+    Why not ride ``start_game``: regenerating from setup + seed is
+    manifest-content-dependent (a Phase-8 MANIFEST.json change would
+    silently re-bucket the same seed) and IMPOSSIBLE for uploaded
+    games on the importer machine (the bundled candidates never carry
+    the uploader's molecules). The embedded ``level_spec`` payload of
+    a game file / checkpoint sidecar is THE TRUTH
+    (embed-don't-regenerate, game_file.py:17-20) -- it rebuilds the
+    scene byte-for-byte with ZERO generator involvement. This seam
+    serves the Import button (07-07), Restart-after-import (the
+    ``_last_start['payload']`` entry lets Restart replay payload-
+    direct through this very function), and mirrors
+    ``engine.adopt_game``'s contract for the checkpoint resume
+    (07-09).
+
+    Ordering law (mirrors start_game:424-447): cleanup FIRST ->
+    ``engine.materialize(payload, 0)`` -> ``engine.adopt_game`` with a
+    FRESH GameState (timer from zero; ``activate_game`` anchors it at
+    activation) -> ``GameWizard(payload, registry, 0, 0)`` -> compose
+    -> ``_last_start`` capture (the ADDITIVE 'payload' entry, so every
+    Restart -- demo or imported -- goes payload-direct, byte-identical
+    for demos, CORRECT for uploads) -> optional activate.
+
+    ``setup``/``candidates`` feed ``_last_start`` bookkeeping ONLY --
+    the payload drives everything; ``setup`` None falls back to a copy
+    of setup_state.DEFAULTS. ``activate`` defaults False: the importer
+    prepares the scene and lets the countdown path own GO, exactly
+    like the window-driven start (05-09). Returns the wizard.
+
+    Fail-closed: malformed payloads surface through materialize's
+    PlacementError family; a failed start NEVER leaves a half-built
+    game silently (cleanup-then-refuse residue accepted, the 04-13
+    law).
+    """
+    from . import game_state
+    cleaned = placement.cleanup_game_objects()
+    spec = dict(setup_state.DEFAULTS if setup is None else setup)
+    registry = engine.materialize(payload, 0,
+                                  ligand_content=ligand_content)
+    engine.adopt_game(payload, registry,
+                      game_state.GameState().to_dict(), ligand_content)
+    wiz = GameWizard(payload, registry, 0, 0)
+    compose_molecule_view(registry)
+    # Capture AFTER materialize + compose SUCCEEDED and BEFORE any
+    # wizard mutation (same law as start_game): the payload is stored
+    # BY IDENTITY (the truth, never re-serialized) so Restart replay
+    # is byte-identical.
+    global _last_start
+    import copy
+    _last_start = {'setup': copy.deepcopy(spec), 'seed': payload['seed'],
+                   'candidates': candidates,
+                   'ligand_content': ligand_content, 'payload': payload}
+    if activate:
+        activate_game(wiz)
+    slots = sum(len(mol['slots']) for mol in registry['molecules'])
+    print('AA-match %s: game started from embedded payload -- %d '
+          'molecule(s), %d amino-acid slot(s), seed %d (cleaned %d '
+          'prior game object(s)).'
+          % (__version__, len(registry['molecules']), slots,
+             int(payload['seed']), cleaned['deleted']))
     return wiz
 
 

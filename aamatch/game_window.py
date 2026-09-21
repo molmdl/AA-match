@@ -70,13 +70,23 @@ final elapsed, and pop the wizard via the local ``_pop_game_wizard``
  surfaces, one wording home: the modal is the MOMENT, the info box
  is the RECORD). The scheduling lives in the WRAPPERS ONLY (the
  smoke-99 law -- impls and the tick never own boxes, so headless
- smokes drive the impls and never fire the tail). Plan 07-06 lands
- the Save button (SCORE-08): a gate-first wrapper (silent no-op
- pre-GO/no-game/post-endgame, pre-dialog elapsed capture, the
- '.aamz' default+auto-append, NO success box -- the info-box 'Game
- saved to <path>.' line IS the feedback) driving the box-free
- ``_save_game_to(path, elapsed)`` impl over the 07-04 gamestart
- capture/save seams.
+    smokes drive the impls and never fire the tail). Plan 07-06 lands
+    the Save button (SCORE-08): a gate-first wrapper (silent no-op
+    pre-GO/no-game/post-endgame, pre-dialog elapsed capture, the
+    '.aamz' default+auto-append, NO success box -- the info-box 'Game
+    saved to <path>.' line IS the feedback) driving the box-free
+    ``_save_game_to(path, elapsed)`` impl over the 07-04 gamestart
+    capture/save seams. Plan 07-07 lands the Import button
+    (PERSIST-02, spec.md:39): a GATE-FREE wrapper (Import is legal
+    with NO game live -- it CREATES one; NO confirmation warning
+    mid-game, the Start/Restart replacement semantics) driving the
+    refusal-first, box-free ``_import_game_from(path)`` impl -- parse
+    + gates BEFORE any scene touch (a foreign/corrupt file leaves the
+    session untouched), then cancel (P-2) -> pop (P-3) -> the 07-05
+    payload-direct ``gamestart.start_game_from_payload`` seam (the
+    EMBEDDED payload is the truth -- never regenerated) -> countdown
+    -> the 'Game imported: <path>.' line logged AFTER the arm (the
+    restart D7 law).
 
 LAWS this module enforces (05-RESEARCH-window-start-timer.md):
 
@@ -133,12 +143,14 @@ class GameTab(QtWidgets.QWidget):
      'Give Up...' actions, 'Restart' (06-08, SCORE-09), and 'Reset'
          (06-08, SCORE-10 -- attribute ``btn_reset_grid``, DISTINCT from
          the Setup tab's game-setup ``btn_reset`` per the restart-reset
-         D7 naming law), and 'Save' (07-06, SCORE-08 -- checkpoint the
+         D7 naming law), 'Save' (07-06, SCORE-08 -- checkpoint the
          running game to an .aamz archive; wrapper+impl factored per the
-         04-09 _X_impl law). The button row keeps its stretch LAST
-         (insertions go BEFORE the stretch) so the remaining later-phase
-         slot (Import, Phase 7, research OQ-1 later-add
-         recommendation) never reflows the timer row.
+         04-09 _X_impl law), and 'Import' (07-07, PERSIST-02 -- start a
+         game from an exported .aamatch.json game file; attribute
+         ``btn_import`` bare, no naming collision anywhere per the D7
+         logic that left ``btn_restart`` bare). The button row keeps
+         its stretch LAST (insertions go BEFORE the stretch) so a
+         new button never reflows the timer row.
          """
 
     def __init__(self, parent=None):
@@ -242,6 +254,16 @@ class GameTab(QtWidgets.QWidget):
             'Save the running game (PyMOL session + game state) to a '
             'checkpoint file.')
         btn_row.insertWidget(btn_row.count() - 1, self.btn_save_game)
+        # Import button (07-07, PERSIST-02 -- spec.md:39): start a game
+        # from an exported .aamatch.json game file (the 04-12 export's
+        # EXACT filter). Bare attribute -- no naming collision anywhere
+        # (the D7 logic that left btn_restart bare). Inserted BEFORE
+        # the stretch, which stays LAST.
+        self.btn_import = QtWidgets.QPushButton('Import', self)
+        self.btn_import.setToolTip(
+            'Load a game file exported by Generate and export and '
+            'start playing it.')
+        btn_row.insertWidget(btn_row.count() - 1, self.btn_import)
         layout.addLayout(btn_row)
         self.btn_hint.clicked.connect(self._on_hint)
         self.btn_confirm.clicked.connect(self._on_confirm)
@@ -250,6 +272,7 @@ class GameTab(QtWidgets.QWidget):
         self.btn_restart.clicked.connect(self._on_restart)
         self.btn_reset_grid.clicked.connect(self._on_reset_grid)
         self.btn_save_game.clicked.connect(self._on_save_game)
+        self.btn_import.clicked.connect(self._on_import)
 
         # The CANCELLABLE countdown: a reusable member QTimer stepping
         # 3 -> 2 -> 1 -> GO (P-2). Constructed here; started only by
@@ -845,6 +868,99 @@ class GameTab(QtWidgets.QWidget):
         from . import gamestart
         data = gamestart.capture_checkpoint_snapshot(elapsed)
         return gamestart.save_checkpoint(path, data)
+
+    # ---- the Import handler (07-07: PERSIST-02) ----
+
+    def _on_import(self):
+        """Import button: load an exported game file and start it via
+        _guard. The THIN wrapper owns the ONLY modal (the file dialog);
+        the impl is box-free (the 04-09 _X_impl law).
+
+        GATE-FREE (07-RESEARCH-import.md I2): unlike every other tab
+        handler there is NO isinstance gate upfront -- Import is legal
+        with NO game live (it CREATES one; the v1 import ran with any
+        prior state, PA-__init__:790-812), so a pre-GO/no-game press
+        must reach the same dialog. NO confirmation warning mid-game
+        (07-07 Recorded Decision 2): house law -- spec warnings exist
+        ONLY for Skip/Give Up (spec.md:43-45, restart-reset D9); a
+        mid-game Import discards the running game exactly like Start
+        does. The filter is the 04-12 export's EXACT filter ('AA-match
+        Game (*.aamatch.json);;All Files (*)' -- the game-files-only
+        half; the .aamz checkpoint extension + kind dispatch land in
+        the later plan, no dead branch here). Cancel is a silent
+        no-op. NO success box: the countdown + armed wizard + the
+        after-arm info-box line ARE the feedback (the _on_start
+        precedent). Refusals surface VERBATIM through _guard (no
+        catch-and-humanize layer -- the 04-13/06-08 convention)."""
+        path, _filter = QtWidgets.QFileDialog.getOpenFileName(
+            self, 'Import AA-match Game', '',
+            'AA-match Game (*.aamatch.json);;All Files (*)')
+        if not path:
+            return
+        self._guard(lambda: self._import_game_from(path))
+
+    def _import_game_from(self, path):
+        """Non-modal import impl (07-07, PERSIST-02): materialize the
+        game file's EMBEDDED payload directly into a fresh, prepared
+        game and arm the countdown.
+
+        REFUSAL-FIRST (parse + gates BEFORE any scene touch): the
+        04-12-proven five-gate consumer contract -- read the JSON
+        container (unparseable refuses inside the pure reader) and run
+        game_file.parse_game_data (foreign magic / newer container /
+        misfiled kind / wrong game_format_version / the exact-match
+        detector stamp / ligand integrity + source cross-checks). A
+        refusal raises the ValueError family BEFORE this impl mutates
+        anything: the scene, the tab log, the wizard stack, the
+        countdown, and the running game stay EXACTLY as they were.
+        (07-07 in-flight fix: the import reads the container via
+        persistence.read_json_file -- parse_game_data takes the FULL
+        container header + data so its gate 1 can run; a
+        load_container(...,'game') return value already STRIPS the
+        header the gate needs. Every gate class still runs through
+        these two calls.) The disk path routes paths.to_windows_path
+        (the AGENTS path law; on Windows the dialog's own path passes
+        through unchanged).
+
+        THEN the deferred replacement sequence, mirroring _restart_now
+        and _start_impl: cancel_pending_start FIRST (P-2 belt-and-
+        braces -- an in-flight countdown's GO must never activate an
+        orphaned wizard over the imported game), _pop_game_wizard
+        (P-3 -- the live GameWizard pops with its cleanup; a user
+        wizard is never popped), then the 07-05 payload-direct seam
+        -- cleanup -> materialize the embedded payload (the truth,
+        NEVER regenerated: setup+seed regeneration is manifest-content
+        -dependent and impossible for uploaded games on the importer
+        machine) -> adopt a FRESH GameState (zeros; the timer anchors
+        from zero at GO -- a game file carries no elapsed; the sidecar
+        elapsed belongs to the checkpoint path only) -> wizard ->
+        compose. NO seed arg: the seam derives it from payload['seed']
+        (the spec's authoritative seed). NO upfront gate: an import
+        with NO game live just skips the cancel/pop no-ops into the
+        same sequence.
+
+        LOG AFTER THE ARM (the restart D7 law / 07-03's placement
+        law): the pure status_text.game_imported_line logs AFTER
+        start_countdown arms -- the arm's _info_log.clear() would
+        wipe a pre-arm line. NO boxes here (the smoke-99 law --
+        headless smokes drive this impl directly). Returns True on a
+        successful arm; raises the ValueError/OSError family on
+        refusal or viewer failure (the wrapper's _guard boxes it
+        verbatim)."""
+        from . import game_file, gamestart, paths, persistence
+        from . import status_text
+        container = persistence.read_json_file(paths.to_windows_path(path))
+        parsed = game_file.parse_game_data(container)
+        self.cancel_pending_start()
+        self._pop_game_wizard()
+        wiz = gamestart.start_game_from_payload(
+            parsed['payload'],
+            ligand_content=(parsed['ligand_texts'] or None),
+            setup=parsed['setup'],
+            activate=False)
+        self.start_countdown(wiz)
+        self._log(status_text.game_imported_line(path))
+        return True
 
     # ---- the endgame sequence (06-07: the shared game-over tail) ----
 

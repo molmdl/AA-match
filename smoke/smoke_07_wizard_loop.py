@@ -80,6 +80,20 @@ PART F  THE 03-06 FIELD BUG BATTERIES (checkpoint fix pass):
         detect() yet confirm_molecule()/engine.confirm returns the
         scope -- score 0.00, empty result -- the wrong-ligand record
         can no longer count.
+PART G  THE 07-08 REBUILD-PATH PRIMITIVES: a default game armed via
+        gamestart.start_game() gets a scripted pick (so _current_slot
+        is set) and a hint() (so _color_store is non-empty); the books
+        are snapshotted + deep-copied, the live wizard is CORRUPTED
+        by test-only direct attribute assignment (the live instance
+        is the more demanding consumer than the rebuild path's fresh
+        constructor-made wizard -- resume must overwrite, not merge),
+        resume_from applies the snapshot, and EVERY book field reads
+        back exactly (_color_store with its JSON pairs normalized
+        back to (int id, color) tuples, the five scalars); the
+        identity-agnostic predicate is proven True for the live
+        wizard and False for None / a plain object / a
+        foreign-identity GameWizard stub (the name matches; the module
+        suffix does not -- 07-RESEARCH-state.md sec. 6).
 
 Pick scripting (real-mouse delivery is the human checkpoint,
 03-RESEARCH-wizard-interaction.md SS8): the C layer would route a
@@ -97,6 +111,7 @@ banned cmd APIs anywhere -- cmd.get_object_matrix IS legal and required
 
 Python floor: runs inside PyMOL's Windows Python (3.9); written 3.6-safe.
 """
+import copy
 import math
 import os
 import sys
@@ -135,7 +150,8 @@ from pymol import cmd  # noqa: E402
 from aamatch.persistence import read_json_file  # noqa: E402
 from aamatch.manifest import parse_manifest_dict, enumerate_entries  # noqa: E402
 from aamatch.setup_state import validate_state  # noqa: E402
-from aamatch import engine, geometry, placement, wizard_core  # noqa: E402
+from aamatch import engine, gamestart, geometry, placement, wizard_core  # noqa: E402
+from aamatch import wizard as wizard_mod  # noqa: E402
 from aamatch.wizard import GameWizard  # noqa: E402
 from aamatch.detector import extract_features  # noqa: E402
 from aamatch.thresholds import PISTACK_ANGLE_TOL_DEG  # noqa: E402
@@ -948,6 +964,108 @@ try:
 except Exception:
     traceback.print_exc()
     check('part F field-bug batteries', False, 'raised (see traceback)')
+    try:
+        cmd.set_wizard()
+    except Exception:
+        pass
+    placement.cleanup_game_objects()
+
+# ============================================================
+# PART G: the 07-08 rebuild-path primitives -- the books round trip
+# (snapshot -> mutate -> resume_from -> equality) and the
+# identity-agnostic wizard predicate
+# ============================================================
+try:
+    wiz_g = gamestart.start_game()
+    check('part G game armed via gamestart.start_game',
+          cmd.get_wizard() is wiz_g,
+          'stack top=%r' % (cmd.get_wizard(),))
+    g_slot = sorted(wiz_g._objects_by_slot)[0]
+    g_obj = wiz_g._objects_by_slot[g_slot]
+    _script_pick(wiz_g, '%s and name CA' % g_obj)
+    check('part G pick sets the current slot',
+          wiz_g._current_slot == g_slot,
+          '_current_slot=%r want %r' % (wiz_g._current_slot, g_slot))
+    hint_g = wiz_g.hint()
+    check('hint populates the color store',
+          isinstance(hint_g, dict) and hint_g['count'] > 0
+          and bool(wiz_g._color_store),
+          'hint count=%r store=%d object(s)'
+          % (hint_g.get('count') if isinstance(hint_g, dict) else None,
+             len(wiz_g._color_store)))
+
+    # The round trip: snapshot the books + deep-copy, CORRUPT the LIVE
+    # wizard (test-only direct attribute assignment, documented: no
+    # public op exposes these fields; the live instance is the more
+    # demanding consumer than the rebuild path's fresh
+    # constructor-made wizard -- resume must overwrite, not merge),
+    # resume_from applies the snapshot, assert every book field equals.
+    saved_books = copy.deepcopy(wiz_g.snapshot_books())
+    wiz_g._current_slot = None
+    wiz_g._color_store = {}
+    wiz_g._event_seq = 999
+    wiz_g._last_event = {'kind': 'part_g_mutation', 'seq': 999}
+    wiz_g._error = 'part G mutation'
+    wiz_g._saved_msm = 7
+    wiz_g.resume_from(saved_books)
+    expected_store = dict(
+        (obj, [tuple(pair) for pair in entries])
+        for obj, entries in saved_books['color_store'].items())
+    check('resume_from restores the color store exactly',
+          wiz_g._color_store == expected_store
+          and bool(wiz_g._color_store),
+          '%d object(s); the sidecar JSON pairs equal after '
+          'normalization' % len(wiz_g._color_store))
+    check('resume_from restores the scalar books exactly',
+          wiz_g._current_slot == saved_books['current_slot']
+          and wiz_g._event_seq == saved_books['event_seq']
+          and wiz_g._last_event == saved_books['last_event']
+          and wiz_g._error == saved_books['error']
+          and wiz_g._saved_msm == saved_books['saved_msm'],
+          'slot=%r seq=%r last=%r error=%r msm=%r'
+          % (wiz_g._current_slot, wiz_g._event_seq,
+             wiz_g._last_event, wiz_g._error, wiz_g._saved_msm))
+    check('resume_from rebuilds the store as tuples-of-pairs',
+          all(isinstance(pair, tuple) and len(pair) == 2
+              and isinstance(pair[0], int)
+              for pairs in wiz_g._color_store.values()
+              for pair in pairs),
+          '%d object(s): every pair a (int id, color) tuple -- the '
+          'store is rebuilt, never the sidecar lists adopted by '
+          'reference' % len(wiz_g._color_store))
+
+    # The identity predicate: the name + module-suffix form catches a
+    # GameWizard under EITHER import identity (isinstance cannot cross
+    # module objects -- 07-RESEARCH-state.md sec. 6).
+    # Stub module string fix (Rule 1): the plan's literal
+    # 'not_aamatch.wizard' ENDS WITH 'aamatch.wizard' (endswith is a
+    # pure suffix match), so the predicate's permissive suffix form
+    # deliberately accepts it; the negative control needs a module
+    # path that genuinely fails the suffix.
+    _stub_cls = type(str('GameWizard'), (object,),
+                     {'__module__': 'foreign.wizard'})
+    check('predicate true for the live wizard',
+          wizard_mod.is_game_wizard_any_identity(wiz_g) is True,
+          'type=%r module=%r'
+          % (type(wiz_g).__name__, type(wiz_g).__module__))
+    check('predicate false for None',
+          wizard_mod.is_game_wizard_any_identity(None) is False, '')
+    check('predicate false for a plain object',
+          wizard_mod.is_game_wizard_any_identity(object()) is False,
+          '')
+    check('predicate refuses a foreign-identity GameWizard stub',
+          wizard_mod.is_game_wizard_any_identity(_stub_cls()) is False,
+          '__module__=%r (the name matches; the module suffix does not)'
+          % (_stub_cls.__module__,))
+
+    cmd.set_wizard()
+    placement.cleanup_game_objects()
+    check('part G teardown leaves scene pre-game EXACTLY',
+          list(cmd.get_names('objects')) == pre_names,
+          'post=%s' % list(cmd.get_names('objects')))
+except Exception:
+    traceback.print_exc()
+    check('part G rebuild primitives', False, 'raised (see traceback)')
     try:
         cmd.set_wizard()
     except Exception:

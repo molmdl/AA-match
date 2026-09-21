@@ -98,8 +98,9 @@ Each task was committed atomically (worktree branch `exec/07-05`):
 1. **Task 1: engine.adopt_game op** - `112f3ea` (feat)
 2. **Task 2: start_game_from_payload + _last_start 'payload' + placement wrap** - `3f601b5` (feat)
 3. **Task 3: SMOKE-08 new part + SMOKE-11 PART-H pin evolution** - `f4503f7` (test)
+4. **In-flight pin conformance (Task 2 polish)** - `8fd3cc8` (fix): the Task-2 wrap split the `bundled ligand` token across a string-literal line break, breaking the plan's must_haves source-content pin for placement.py; the concatenation was restructured so the pinned phrase is contiguous (raised message byte-identical; caught by self-review before hand-off)
 
-**Plan metadata:** (see final docs commit)
+**Plan metadata:** `c186c91` + follow-up (docs: complete plan + pin-fix record)
 
 ## Files Created/Modified
 
@@ -130,7 +131,7 @@ None - plan executed exactly as written. (The plan's own recorded decisions cove
 
 ## Issues Encountered
 
-None. All three tasks green on first run (py_compile, 881/881 WSL, both updated smokes PASS first run, all named regression smokes PASS).
+One in-flight self-catch (no plan-change): the Task-2 placement wrap initially split the pinned phrase `could not load bundled ligand` across a string-literal line break, so the plan's must_haves `contains` source pin did not match the file even though the raised message was correct. Caught during the final must-have artifact sweep, fixed as `8fd3cc8` (contiguous literal, message byte-identical), and re-verified (881/881 WSL + SMOKE-08 PASS). All three tasks otherwise green on first run (py_compile, both updated smokes PASS first run, all named regression smokes PASS).
 
 ## Concerns for Later Plans (07-07, 07-09, 07-11)
 

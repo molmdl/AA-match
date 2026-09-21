@@ -116,6 +116,20 @@ def _rebuild_game_wizard():
     return object.__new__(GameWizard)
 
 
+def is_game_wizard_any_identity(wiz):
+    """True iff `wiz` is a GameWizard under EITHER module identity
+    (aamatch.wizard OR pmg_tk.startup.aamatch.wizard). isinstance
+    against this module's class fails across module objects (the
+    AGENTS gate-5 two-module-object hazard); a pickle-resolved
+    instance must live under one of the two paths, so the name +
+    module-suffix predicate is identity-agnostic by construction
+    (07-RESEARCH-state.md sec. 6). Used by the checkpoint load's
+    pop-before-load step and the adopt-or-rebuild decision."""
+    return (wiz is not None
+            and type(wiz).__name__ == 'GameWizard'
+            and type(wiz).__module__.endswith('aamatch.wizard'))
+
+
 class GameWizard(Wizard):
     """The Phase-3 gameplay-loop wizard (PLAY-01..04).
 
@@ -453,6 +467,28 @@ class GameWizard(Wizard):
             'error': self._error,
             'saved_msm': self._saved_msm,
         }
+
+    def resume_from(self, books):
+        """Apply the checkpoint sidecar's 'wizard' repair block (Phase 7
+        rebuild path). The constructor already derived
+        _slot_by_object/_objects_by_slot/_ligand_object from (payload,
+        registry); this op adopts the plain-data books with additive
+        .get defaults (unknown keys preserved by simply not reading
+        them -- the P9 passthrough law). NO cmd calls: the loaded .pse
+        already shows the saved colors (per-atom colors round-trip
+        bit-exactly, SMOKE-17), so no recolor/rebuild is performed here
+        -- the books only restore the ORIGINAL-color snapshot consumed
+        by a later cleanup()."""
+        self._current_slot = books.get('current_slot')
+        store = books.get('color_store') or {}
+        self._color_store = dict(
+            (obj, [(int(atom_id), color) for atom_id, color in entries])
+            for obj, entries in store.items())
+        self._event_seq = int(books.get('event_seq') or 0)
+        self._last_event = books.get('last_event')
+        self._error = books.get('error')
+        saved_msm = books.get('saved_msm')
+        self._saved_msm = None if saved_msm is None else int(saved_msm)
 
     # -- Lifecycle event machinery (06-05) --------------------------------
 

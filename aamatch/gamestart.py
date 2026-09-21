@@ -458,7 +458,106 @@ def start_game(setup=None, seed=42, candidates=None, ligand_content=None,
         activate_game(wiz)
     slots = sum(len(mol['slots']) for mol in registry['molecules'])
     print('AA-match %s: game started -- %d molecule(s), %d amino-acid '
-          'slot(s), seed %d (cleaned %d prior game object(s)).'
+          'slot(s), seed %d (        cleaned %d prior game object(s)).'
           % (__version__, len(registry['molecules']), slots,
              int(seed), cleaned['deleted']))
     return wiz
+
+
+def capture_checkpoint_snapshot(elapsed=None):
+    """Build the COMPLETE checkpoint sidecar data dict (plan 07-04).
+
+    Read-only: no scene mutation, no viewer calls besides
+    ``cmd.get_wizard()``. The CALLER (``save_checkpoint`` below, or a
+    smoke) owns all I/O. Returns the ``checkpoint.build_checkpoint_data``
+    output (07-RESEARCH-state.md s2 schema): the embedded 'game' block
+    is the FULL game_file.make_game_data output VERBATIM
+    (embed-don't-regenerate; ``_last_start`` carries the materialization
+    setup + candidates, ``engine._payload``/``_ligand_content`` the live
+    module state), 'game_state' is engine.game_status() VERBATIM,
+    'registry' is the identity-only JSON conversion, 'wizard' is
+    wiz.snapshot_books().
+
+    Elapsed resolution (timer doctrine, plan 07-04 decision 2): the
+    caller-passed value (captured BEFORE the file dialog by the 07-06
+    wrapper) is stored VERBATIM; None resolves to
+    ``max(0.0, now - timer_anchor)`` while a game is running, and to
+    None on a game_over state (final_time is frozen by stop_timer and
+    authoritative). Saving on game_over is ALLOWED (decision 3 --
+    to_dict carries game_over/end_state/final_time losslessly).
+
+    Reading engine._payload/_registry/_ligand_content directly here is
+    SANCTIONED: gamestart is the cmd-tier lifecycle home (the
+    05-07/05-10 law binds the Qt tier only -- the tab reaches this
+    state exclusively through this seam).
+
+    Fail-closed: raises ValueError when no live GameWizard is on the
+    stack (defensive for direct drives; the Qt wrapper's gate-first
+    silent no-op is the primary path) or when the _last_start store is
+    missing under a live wizard.
+    """
+    from . import checkpoint, game_file
+    wiz = cmd.get_wizard()
+    if not isinstance(wiz, GameWizard):
+        raise ValueError(
+            'no live AA-match game to save (start or resume a game '
+            'first).')
+    gs = engine.game_status()
+    if gs['game_over']:
+        elapsed = None            # final_time is frozen + authoritative
+    elif elapsed is None:
+        elapsed = max(0.0, time.time() - gs['timer_anchor'])
+    if _last_start is None:
+        raise ValueError(
+            'cannot checkpoint: the initial-state store _last_start is '
+            'missing under a live game wizard.')
+    ligand_files = (game_file.encode_ligand_files(engine._ligand_content)
+                    if engine._ligand_content else None)
+    created_at = time.strftime('%Y-%m-%dT%H:%M:%S')
+    game_data = game_file.make_game_data(
+        setup=_last_start['setup'], payload=engine._payload,
+        ligand_files=ligand_files, created_at=created_at)
+    return checkpoint.build_checkpoint_data(
+        game_data=game_data, game_state=gs, elapsed_at_save=elapsed,
+        registry=engine._registry, wizard_books=wiz.snapshot_books(),
+        candidates=_last_start['candidates'], created_at=created_at)
+
+
+def save_checkpoint(path, data):
+    """Write ONE atomic .aamz checkpoint archive; return the final path.
+
+    (plan 07-04, Recorded Decision 1) ``cmd.save`` scope = FULL session
+    (no selection argument), paired with the full-replace resume load --
+    a game-scoped session save would DESTROY the user's own objects on
+    resume, and SMOKE-17 proved the full-session round-trip exactly.
+
+    Sequence: mint a temp .pse INSIDE this (Windows) process (no path
+    conversion needed -- 07-RESEARCH-import.md S3-3), save the full
+    session into it, hand it to ``checkpoint.write_checkpoint_zip``
+    (its own temp + os.replace atomic write, members game.pse +
+    state.json), then remove the temp .pse best-effort in a finally
+    block (the PA-__init__:775 shape). ``path`` is routed through
+    paths.to_windows_path (the AGENTS path law; Windows QFileDialog
+    paths pass through unchanged).
+
+    NO viewer refresh, NO modal, NO scheduling tail -- Save never ends
+    the game. Failures (session-save OSError family; zip OSError /
+    ValueError) propagate to the caller's guard (the 04-09 contract): a
+    failed save leaves the scene and the game untouched, and the temp
+    .pse is cleaned regardless.
+    """
+    import os
+    import tempfile
+    from . import checkpoint, paths
+    final = paths.to_windows_path(path)
+    fd, tmp_pse = tempfile.mkstemp(suffix='.pse')
+    os.close(fd)
+    try:
+        cmd.save(tmp_pse)                 # FULL session (decision 1)
+        checkpoint.write_checkpoint_zip(final, data, tmp_pse)
+    finally:
+        try:
+            os.unlink(tmp_pse)
+        except OSError:
+            pass
+    return final

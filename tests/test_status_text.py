@@ -47,6 +47,7 @@ State dicts are PLAIN DATA shaped exactly like what GameWizard.get_status()
      'error': None | str}
 """
 
+import inspect
 import unittest
 
 from aamatch import status_text
@@ -745,6 +746,108 @@ class TestEndgameLines(unittest.TestCase):
         with self.assertRaises(ValueError) as cm:
             status_text.endgame_lines(self._summary(end_state='exploded'))
         self.assertIn('exploded', str(cm.exception))
+
+
+# ---------------------------------------------------------------------------
+# Phase 7 (plan 07-03) -- additive battery. RED first: the three
+# handler-logged line builders (game_saved_line, game_imported_line,
+# game_resumed_line) do not exist yet, so these tests fail on
+# AttributeError; the GREEN commit implements them. The Phase-5/6 pins above
+# stay BYTE-UNCHANGED: EVENT_KINDS keeps its EXACTLY-15-key set and the
+# game_saved/game_imported reserved notes keep their 'reserved for Phase 7'
+# wording byte-unchanged (the Phase-6 precedent -- the builders, not the
+# dict, carry the final wording; reserved-note pins at :315-316 and
+# TestEventKinds keep passing untouched).
+#
+# Pattern provenance (05-RESEARCH-status-surface.md:290-291): 'Game saved
+# to %s.' / 'Game imported: %s.' are DIRECT-_log lines emitted by tab-side
+# handlers, NOT the poll-diff -- Save/Import are tab operations (the wizard
+# is not the actor; for Import the wizard does not exist yet), and the
+# poll's fingerprint set has no key for them. The same handler-logged
+# law as game_restarted_line applies: no event argument, EXCLUDED from
+# _EVENT_BUILDERS. game_resumed_line (07-RESEARCH-state.md section 4 step 9
+# -- the checkpoint-resume tab re-arm) shares the pattern; the EVENT_KINDS
+# set has no resume kind and the handler-logged pattern needs none.
+# ---------------------------------------------------------------------------
+
+
+class TestGameSavedLine(unittest.TestCase):
+    """The save line (SCORE-08): 'Game saved to %s.' -- handler-logged by
+    the Game tab's Save wrapper AFTER a successful checkpoint write."""
+
+    def test_basic(self):
+        self.assertEqual(
+            status_text.game_saved_line('C:\\x\\game.aamz'),
+            'Game saved to C:\\x\\game.aamz.')
+
+    def test_trailing_period(self):
+        # The trailing period is part of the pinned wording.
+        self.assertEqual(
+            status_text.game_saved_line('out/game.aamz'),
+            'Game saved to out/game.aamz.')
+
+
+class TestGameImportedLine(unittest.TestCase):
+    """The import line (PERSIST-02): 'Game imported: %s.' --
+    handler-logged by the Game tab's Import wrapper AFTER
+    start_countdown arms (the countdown's _info_log.clear() would wipe
+    a pre-arm line -- the restart D2/D7 law verbatim)."""
+
+    def test_basic(self):
+        path = 'C:\\save\\level3.aamz'
+        self.assertEqual(status_text.game_imported_line(path),
+                         'Game imported: %s.' % path)
+
+
+class TestGameResumedLine(unittest.TestCase):
+    """The checkpoint-resume line (PERSIST-03): 'Game resumed from %s.'
+    -- handler-logged by the Game tab after a checkpoint load re-arms
+    the tab (no countdown on resume)."""
+
+    def test_basic(self):
+        path = 'C:\\auto\\checkpoint.aamz'
+        self.assertEqual(status_text.game_resumed_line(path),
+                         'Game resumed from %s.' % path)
+
+
+class TestPhase7BuildersHandlerLogged(unittest.TestCase):
+    """The three Phase-7 builders share the game_restarted_line
+    handler-logged pattern: they take no event argument (their single
+    parameter is 'path') and are EXCLUDED from _EVENT_BUILDERS -- the
+    poll-diff can never see them (tab-side operations; the reserved
+    EVENT_KINDS set stays 15, no new kind)."""
+
+    def test_kinds_not_in_poll_builder_table(self):
+        table = status_text._EVENT_BUILDERS
+        self.assertNotIn('game_saved', table)
+        self.assertNotIn('game_imported', table)
+        self.assertNotIn('game_resumed', table)
+
+    def test_builder_functions_not_in_poll_builder_table(self):
+        values = set(status_text._EVENT_BUILDERS.values())
+        for name in ('game_saved_line', 'game_imported_line',
+                     'game_resumed_line'):
+            self.assertNotIn(getattr(status_text, name), values)
+
+    def test_take_no_event_argument(self):
+        # Signature pin: exactly one parameter, named 'path' -- these
+        # builders never consume a last_event marker payload.
+        for name in ('game_saved_line', 'game_imported_line',
+                     'game_resumed_line'):
+            params = list(inspect.signature(
+                getattr(status_text, name)).parameters.values())
+            self.assertEqual(len(params), 1, name)
+            self.assertEqual(params[0].name, 'path', name)
+
+    def test_vocabulary_pins_unchanged(self):
+        # The pre-existing vocabulary pins must keep passing
+        # byte-unchanged: exactly 15 kinds, and the game_saved /
+        # game_imported notes still carry 'reserved for Phase 7'.
+        self.assertEqual(len(status_text.EVENT_KINDS), 15)
+        self.assertIn('reserved for Phase 7',
+                      status_text.EVENT_KINDS['game_saved'])
+        self.assertIn('reserved for Phase 7',
+                      status_text.EVENT_KINDS['game_imported'])
 
 
 if __name__ == '__main__':

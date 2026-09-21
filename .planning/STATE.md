@@ -5,22 +5,22 @@
 See: .planning/PROJECT.md (updated 2026-09-05)
 
 **Core value:** The player can place amino acids onto a small molecule in the PyMOL 3D viewer and the game correctly detects and scores the interactions they form — turning unguided 3D manipulation practice into a scored game.
-**Current focus:** Phase 7 — Checkpoint & Game-File Persistence — IN PROGRESS (1/12); 07-01 DONE (GameWizard `.pse` restore fixed — argless `__reduce__`; SMOKE-17 strict compare PROVEN). Phase 6 — Scoring Lifecycle & Endgame — **COMPLETE + VERIFIED (10/10, 06-VERIFICATION passed 39/39)**
+**Current focus:** Phase 7 — Checkpoint & Game-File Persistence — IN PROGRESS (2/12); 07-01 DONE (GameWizard `.pse` restore fixed — argless `__reduce__`; SMOKE-17 strict compare PROVEN) + 07-02 DONE (pure checkpoint schema + 4-gate parse + reconcile_registry + .aamz zip I/O — 46-test battery, PURE_MODULES = 19)
 
 ## Current Position
 
 Phase: 7 of 9 (Checkpoint & Game-File Persistence)
-Plan: 1 of 12 complete — 07-01 (GameWizard __reduce__ argless rebuilder — .pse wizard-drop landmine FIXED + SMOKE-17 phase-B flipped to strict restore compare PROVEN, zero Session-Warning) DONE
-Status: In progress — wave 1 running (07-01 complete on exec/07-01 worktree, pending orchestrator merge)
-Last activity: 2026-09-21 — Completed 07-01-PLAN.md
+Plan: 2 of 12 complete — 07-01 (GameWizard __reduce__ argless rebuilder — .pse wizard-drop landmine FIXED + SMOKE-17 phase-B flipped to strict restore compare PROVEN, zero Session-Warning) + 07-02 (pure checkpoint sidecar module — schema constants, four-gate parse chain replaying parse_game_data VERBATIM, sentinel-first reconcile_registry, .aamz zip I/O; 46-test battery, 873/873 suite green, PURE_MODULES = 19) DONE
+Status: In progress — wave 1 complete (07-01/07-02/07-03 parallel worktrees); 07-01 + 07-02 merged to main
+Last activity: 2026-09-21 — Completed 07-01 + 07-02 (wave-1 merge)
 
-Progress: [█░░░░░░░░░░░] 1/12 of Phase 7 · [█████████░] 86% of planned plans (69/80; 6/9 phases verified)
+Progress: [██░░░░░░░░░░] 2/12 of Phase 7 · [█████████░] 86% of planned plans (70/80; 6/9 phases verified)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 69 (Phase 1: 01-01…01-09; Phase 2: 02-01…02-15; Phase 3: 03-01…03-07; Phase 4: 04-01…04-15; Phase 5: 05-01…05-11; Phase 6: 06-01…06-10; Phase 7: 07-01)
-- Average duration: ~11 min (02-03); 6 min (02-04); ~29 min (02-05); 23 min (02-06); 4 min (02-09); 11 min (02-07); 17 min (02-08); ~20 min (02-13); ~27 min (02-11); 16 min (02-14); 29 min (02-15); ~15 min (03-01); ~55 min (03-02); ~14 min (03-03); ~27 min (03-04); ~14 min (03-05); ~10 min (04-01); ~8 min (04-02); 16 min (04-04); ~9 min (04-03); 17 min (04-05); ~15 min (04-06); 16 min (04-07); 23 min (04-08); ~49 min (04-09); ~7 min (04-10); ~16 min (04-11); ~10 min (04-12); ~6 min (04-13); ~5 min (04-14 docs-only checkpoint record); ~15 min (04-15 fix + re-verify + checkpoint record); ~7 min (05-02) + 3 min (05-04) + ~7 min (05-05) + 5 min (05-07) + ~17 min (05-08) + ~10 min (05-09) + ~13 min (05-10) + ~20 min (05-11 fix + record); phase-6: 47 min (06-01) + ~12 min (06-03) + 13 min (06-05) + 17 min (06-06) + ~17 min (06-07) + 12 min (06-08) + 16 min (06-09) + ~12 min (06-10 checkpoint fix + record); 05-01/05-03/05-06 + 06-02/06-04 durations unrecorded (agent reports omitted them)
+- Total plans completed: 70 (Phase 1: 01-01…01-09; Phase 2: 02-01…02-15; Phase 3: 03-01…03-07; Phase 4: 04-01…04-15; Phase 5: 05-01…05-11; Phase 6: 06-01…06-10; Phase 7: 07-01, 07-02)
+- Average duration: ~11 min (02-03); 6 min (02-04); ~29 min (02-05); 23 min (02-06); 4 min (02-09); 11 min (02-07); 17 min (02-08); ~20 min (02-13); ~27 min (02-11); 16 min (02-14); 29 min (02-15); ~15 min (03-01); ~55 min (03-02); ~14 min (03-03); ~27 min (03-04); ~14 min (03-05); ~10 min (04-01); ~8 min (04-02); 16 min (04-04); ~9 min (04-03); 17 min (04-05); ~15 min (04-06); 16 min (04-07); 23 min (04-08); ~49 min (04-09); ~7 min (04-10); ~16 min (04-11); ~10 min (04-12); ~6 min (04-13); ~5 min (04-14 docs-only checkpoint record); ~15 min (04-15 fix + re-verify + checkpoint record); ~7 min (05-02) + 3 min (05-04) + ~7 min (05-05) + 5 min (05-07) + ~17 min (05-08) + ~10 min (05-09) + ~13 min (05-10) + ~20 min (05-11 fix + record); phase-6: 47 min (06-01) + ~12 min (06-03) + 13 min (06-05) + 17 min (06-06) + ~17 min (06-07) + 12 min (06-08) + 16 min (06-09) + ~12 min (06-10 checkpoint fix + record); phase-7: 7 min (07-01) + ~11 min (07-02); 05-01/05-03/05-06 + 06-02/06-04 + 07-03 durations unrecorded (agent reports omitted them)
 - Total execution time: —
 
 **By Phase:**
@@ -33,11 +33,11 @@ Progress: [█░░░░░░░░░░░] 1/12 of Phase 7 · [███�
 | 4 | 15/15 ✓ | ~10 min (04-01) + ~8 min (04-02) + 16 min (04-04) + ~9 min (04-03) + 17 min (04-05) + ~15 min (04-06) + 16 min (04-07) + 23 min (04-08) + ~49 min (04-09) + ~7 min (04-10) + ~16 min (04-11) + ~10 min (04-12) + ~6 min (04-13) + ~5 min (04-14 docs-only) + ~15 min (04-15 fix+record) | — |
 | 5 | 11/11 ✓ | ~7 min (05-02) + 3 min (05-04) + ~7 min (05-05) + 5 min (05-07) [wave 1: 6 parallel] + ~20 min (05-06) + ~17 min (05-08) + ~10 min (05-09) + ~13 min (05-10) [wave 4: 2 parallel] + ~20 min (05-11) | — |
 | 6 | 10/10 | 47 min (06-01) + ~12 min (06-03) + 13 min (06-05) + 17 min (06-06) + ~17 min (06-07) + 12 min (06-08) + 16 min (06-09) + ~12 min (06-10 checkpoint fix + record); 06-02/06-04 durations unrecorded (wave-1 agent reports omitted them) | — |
-| 7 | 1/12 | 7 min (07-01) | — |
+| 7 | 2/12 | 7 min (07-01) + ~11 min (07-02) | — |
 
 **Recent Trend:**
-- Last 5 plans: 06-08 (12 min), 06-09 (16 min), 06-10 (~12 min checkpoint fix + record), 07-01 (7 min)
-- Trend: steady ~5-20 min per plan; parallel waves via the AGENTS.md worktree protocol (phase 7 wave 1: 3 plans incl. 07-01), zero merge conflicts
+- Last 5 plans: 06-09 (16 min), 06-10 (~12 min checkpoint fix + record), 07-01 (7 min), 07-02 (~11 min)
+- Trend: steady ~5-20 min per plan; parallel waves via the AGENTS.md worktree protocol (phase 7 wave 1: 3 plans), STATE.md blended by the orchestrator on merge
 
 *Updated after each plan completion*
 
@@ -230,6 +230,9 @@ Decisions are logged in PROJECT.md Key Decisions table. Seeded from PROJECT.md a
 - (06-10, fix-batch ff4b519) **Advance-compose law:** EVERY advance (molecule OR level) re-frames the camera through `_compose_active_molecule` — the ONE 06-04 compose seam; the molecule branch of `_advance_after_record` previously returned without composing (root cause of the step-1 defect). One added statement; regression teeth = SMOKE-15 PART B2 camera re-frame assert (RED-proven pre-fix — exactly one expected failure; 75/75 after). Re-green: py_compile OK, 826/826 WSL, SMOKE-15 75/75, SMOKE-07 56 PASS lines, SMOKE-16 67/67. Step-1 human re-verify **RE-VERIFIED PASS (human, 2026-09-21)** — in-level molecule advance ALSO re-frames the camera via the 06-04 seam, confirmed in the GUI (camera auto re-framed/zoomed onto molecule 2's grid after Confirm on molecule 1, molecules_per_level=1 then default 2).
 - (06 close-out, 2026-09-21) **Phase 6 COMPLETE + VERIFIED:** 06-VERIFICATION.md status `passed` (39/39 must-haves; the step-1 re-verify obligation closed same-day); ROADMAP 06-01..06-10 all ticked; REQUIREMENTS.md traceability flips SCORE-01/02/03/05/06/07/09/10 Pending → Complete.
 - (07-01) **GameWizard `.pse` restore law:** `__reduce__` = module-level argless `_rebuild_game_wizard` (object.__new__; __init__ never runs) + inherited `__getstate__` (pops only `cmd`) + default state-dict application (NO `__setstate__`) — the probe-proven option (i); never make `__init__` args optional for pickle's sake. A saved-with-wizard session restores the wizard ACTIVE on the stack with byte-equal books and zero Session-Warning (SMOKE-17 strict compare PROVEN, two-process); `engine._game` stays dead after load — the sidecar owns game state (07-02+). Console cleanliness is asserted by positive restore (the defect path prints AND drops); the `SMOKE-17 NOTE console:` line carries the criterion-3 claim to the human checkpoint.
+- (07-02) checkpoint.py = the PURE home of the .aamz checkpoint (PURE_MODULES = 19; json/os/tempfile/zipfile + pure persistence/game_file only): `checkpoint_format_version` is a THIRD distinct refuse-newer gate (own constant `CHECKPOINT_VERSION=1`, canonical 01-02 phrasing — never conflated with container FORMAT_VERSION or DETECTOR_VERSION). The embedded 'game' block replays `game_file.parse_game_data(make_container('game', ...))` VERBATIM — the five-gate chain incl. the detector EXACT-match gate refuses a stale checkpoint with the level_spec wording at ZERO new code cost. GameState block: verbatim to_dict (wrap-don't-reshape) + a light validator at parse (base keys / one-record invariant / L<i>M<j> in payload bounds / int non-bool counters / elapsed_at_save >= 0 or None — a negative is the rewind-the-clock refusal).
+- (07-02) reconcile_registry (sentinel-first, dependency-injected pure): keep iff object in observed AND sorted ids match exactly (placement.py:51-53 identity); NEVER-GHOST-ENTRY — non-verifying entries DROPPED + reported ({molecule, slot, object, reason}), never registered; scene extras reported missing_from_sidecar; rebuild restores materialize TUPLE shapes, pre_game_names rebuilt as [] (dropped on save — zero consumers); COMPLETENESS gate walks the payload-expected shape for the CURRENT level ONLY (future levels need nothing — single-level materialization law), first-missing-piece message pins object %r / molecule / slot (object None when even the sidecar row is gone).
+- (07-02) .aamz = ONE zip, two fixed members (game.pse + state.json); sidecar member = the FULL container JSON (check_container gate 1 applies on read); write = sort_keys/indent-2 JSON + temp-mkstemp + os.replace (write_json_atomic discipline); read = refusal-FIRST — zip/sidecar/parse gates ALL run BEFORE extraction hand-off (BadZipFile -> FormatError, never bare; caller owns the extracted-temp rmtree).
 
 
 ### Pending Todos
@@ -294,8 +297,8 @@ Decisions are logged in PROJECT.md Key Decisions table. Seeded from PROJECT.md a
 
 ## Session Continuity
 
-Last session: 2026-09-21 (07-01 executed on exec/07-01 worktree: GameWizard `.pse` restore landmine fixed — argless `_rebuild_game_wizard`; SMOKE-17 phase-B strict compare PROVEN two-process; 826/826 WSL green)
-Stopped at: Completed 07-01-PLAN.md (on exec/07-01 worktree, pending orchestrator merge) — Phase 7 in progress (1/12)
+Last session: 2026-09-21 (Phase 7 wave 1 executed in 3 parallel worktrees: 07-01 GameWizard `.pse` restore landmine fixed — argless `_rebuild_game_wizard`, SMOKE-17 strict compare PROVEN two-process; 07-02 checkpoint.py + 46-test battery + PURE_MODULES registration, 873/873 green)
+Stopped at: Wave-1 merge in progress — 07-01 + 07-02 merged to main; 07-03 next (branch exec/07-03)
 Resume file: None
 
 ## Next Actions

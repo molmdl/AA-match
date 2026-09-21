@@ -195,7 +195,7 @@ Plans:
 
 Plans:
 - [ ] 07-01-PLAN.md — Wizard argless `__reduce__` rebuilder + SMOKE-17 strict-restore flip (wave 1)
-- [ ] 07-02-PLAN.md — `checkpoint.py` pure module: schema + 4-gate parse + reconcile_registry + .aamz zip I/O (wave 1)
+- [x] 07-02-PLAN.md — `checkpoint.py` pure module: schema + 4-gate parse + reconcile_registry + .aamz zip I/O (wave 1)
 - [ ] 07-03-PLAN.md — status_text handler-logged line-builders (saved/imported/resumed) (wave 1)
 - [ ] 07-04-PLAN.md — Save-side seams: wizard.snapshot_books + capture_checkpoint_snapshot + save_checkpoint + SMOKE-18 (wave 2)
 - [ ] 07-05-PLAN.md — Payload-direct seam: engine.adopt_game + start_game_from_payload + _last_start 'payload' + placement CmdException wrap (wave 3)

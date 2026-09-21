@@ -108,6 +108,8 @@ Python floor: PyMOL's Windows Python 3.9 at runtime, written 3.6-safe
 (Gate D compiles every aamatch/*.py under python3.6).
 """
 
+import time
+
 from pymol import cmd
 
 from . import capability, detector, game_state, generator, geometry
@@ -350,6 +352,37 @@ def materialize(payload, level_index=0, ligand_content=None):
     _payload = payload
     _registry = registry
     return registry
+
+
+def adopt_game(payload, registry, game_state_dict, ligand_content,
+               elapsed_at_save=None):
+    """Rebind ALL FOUR engine module globals from explicit inputs
+    (Phase 7: the payload-direct import seam AND the checkpoint
+    resume). NEVER regenerates -- the payload is the truth
+    (embed-don't-regenerate, game_file.py:17-20).
+
+    ``game_state_dict`` goes through GameState.from_dict (lossless,
+    SMOKE-17-proven). ``elapsed_at_save`` (checkpoint resume only)
+    rebases the timer via the P-4 single-anchor primitive when the
+    game is NOT over and elapsed is not None -- the clock continues
+    from the save moment. A fresh import passes game_state from a
+    fresh GameState() and elapsed None (timer from zero at GO via
+    activate_game). Fail-closed: a malformed game_state_dict raises
+    the from_dict error wrapped as EngineError naming the cause.
+    """
+    global _payload, _registry, _game, _ligand_content
+    try:
+        game = game_state.GameState.from_dict(game_state_dict)
+    except (KeyError, TypeError, ValueError) as exc:
+        raise EngineError(
+            'adopt_game: invalid game-state data (%s)' % exc)
+    _payload = payload
+    _registry = registry
+    _game = game
+    _ligand_content = ligand_content or None
+    if elapsed_at_save is not None and not game.game_over:
+        game.rebase_timer(time.time(), elapsed_at_save)
+    return game
 
 
 def _slot_object(registry, slot_id):

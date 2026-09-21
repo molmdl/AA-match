@@ -49,9 +49,17 @@ Binding facts this module encodes (05-RESEARCH-status-surface.md):
   IS wizard_text.result_lines, imported and reused verbatim (the
   single-home law -- zero drift risk). SKIP_WARNING_*/GIVEUP_WARNING_*
   are the confirmation-box wording (endgame-ui sec 3.3); endgame_lines
-  renders the SCORE-07 block (headline, per-level scores, total, time,
-  sizes, counters) identically for the info box and the modal;
-  format_mss is the pure M:SS timer formatter.
+    renders the SCORE-07 block (headline, per-level scores, total, time,
+    sizes, counters) identically for the info box and the modal;
+    format_mss is the pure M:SS timer formatter.
+- Phase 7 (plan 07-03): the three handler-logged line builders
+  (game_saved_line, game_imported_line, game_resumed_line) land in the
+  game_restarted_line shape -- no event argument, EXCLUDED from
+  _EVENT_BUILDERS (Save/Import/Resume are tab-side operations; the
+  poll's fingerprint set has no key for them). EVENT_KINDS stays
+  EXACTLY 15 and the game_saved/game_imported reserved notes stay
+  BYTE-UNCHANGED (the Phase-6 precedent); there is no reserved resume
+  kind -- the handler-logged pattern needs none.
 """
 
 from .wizard_text import required_summary, result_lines
@@ -263,6 +271,34 @@ def game_restarted_line():
     popped wizard anyway), so it takes no event argument and is
     EXCLUDED from _EVENT_BUILDERS below."""
     return 'Game restarted.'
+
+
+def game_saved_line(path):
+    """The save line (Phase 7, SCORE-08). Handler-logged by the Game
+    tab's Save wrapper AFTER a successful checkpoint write; takes no
+    event argument and is EXCLUDED from _EVENT_BUILDERS (Save is a
+    tab-side operation -- the wizard is not the actor; the poll's
+    fingerprint set has no key for it). Sketch provenance:
+    05-RESEARCH-status-surface.md:290."""
+    return 'Game saved to %s.' % path
+
+
+def game_imported_line(path):
+    """The import line (Phase 7, PERSIST-02). Handler-logged by the
+    Game tab's Import wrapper AFTER start_countdown arms (the
+    countdown's _info_log.clear() would wipe a pre-arm line -- the
+    restart D2/D7 law verbatim). Sketch provenance:
+    05-RESEARCH-status-surface.md:291."""
+    return 'Game imported: %s.' % path
+
+
+def game_resumed_line(path):
+    """The checkpoint-resume line (Phase 7, PERSIST-03). Handler-logged
+    by the Game tab after a checkpoint load re-arms the tab (no
+    countdown on resume -- the scene and books come back intact).
+    Handler-logged like its siblings; EXCLUDED from _EVENT_BUILDERS
+    (the reserved EVENT_KINDS set stays 15 -- no new kind)."""
+    return 'Game resumed from %s.' % path
 
 
 # The poll-emitted builder table (05-RESEARCH Q5/06-RESEARCH Q7

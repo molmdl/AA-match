@@ -353,11 +353,11 @@ def materialize(payload, level_index=0, ligand_content=None):
                 # subclasses ValueError, so _guard surfaces it verbatim.
                 # Nothing else is wrapped.
                 raise PlacementError(
-                    'materialize: molecule %r could not load bundled '
-                    'ligand %r (%s: %s) -- the AA-match data files may '
-                    'be missing or corrupt'
-                    % (molecule_id, ligand['file'],
-                       type(exc).__name__, exc))
+                    'materialize: molecule %r ' % (molecule_id,)
+                    + 'could not load bundled ligand %r (%s: %s) -- '
+                      'the AA-match data files may be missing or '
+                      'corrupt'
+                    % (ligand['file'], type(exc).__name__, exc))
         n_lig = _assert_count(lig_name, 1,
                               'materialize ligand %s' % molecule_id)
         _sentinel_tag(lig_name)

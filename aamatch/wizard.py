@@ -428,6 +428,32 @@ class GameWizard(Wizard):
         callables). Returns _state_dict()."""
         return self._state_dict()
 
+    def snapshot_books(self):
+        """Plain-data snapshot of the wizard books for the checkpoint
+        sidecar's 'wizard' repair block (Phase 7). The block is consumed
+        ONLY when the pickled wizard did not restore (identity mismatch /
+        pre-fix sessions); on the adopt path the pickle already carries
+        everything. Pure read of self -- no viewer calls, no mutation,
+        no new state (the 05-07/05-10 law: the tab/engine never touch
+        wizard privates; this is the sanctioned public read).
+
+        ``color_store`` values are lists of [ID, color] pairs (JSON
+        lists -- the sidecar round-trips them back as lists; resume in
+        07-08 re-normalizes). ``_result`` is deliberately OMITTED
+        (always None in the advance flow -- 07-RESEARCH-state.md s1.4).
+        """
+        import copy
+        return {
+            'current_slot': self._current_slot,
+            'color_store': dict(
+                (obj, [[atom_id, color] for atom_id, color in entries])
+                for obj, entries in self._color_store.items()),
+            'event_seq': self._event_seq,
+            'last_event': copy.deepcopy(self._last_event),
+            'error': self._error,
+            'saved_msm': self._saved_msm,
+        }
+
     # -- Lifecycle event machinery (06-05) --------------------------------
 
     def _set_event(self, kind, **payload):

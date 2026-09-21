@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-09-05)
 
 **Core value:** The player can place amino acids onto a small molecule in the PyMOL 3D viewer and the game correctly detects and scores the interactions they form — turning unguided 3D manipulation practice into a scored game.
-**Current focus:** Phase 6 — Scoring Lifecycle & Endgame — **COMPLETE + VERIFIED (10/10)**; 06-10 [HUMAN] checkpoint APPROVED-after-fix (1 fix-batch item, commit ff4b519; step-1 re-verify RE-VERIFIED PASS 2026-09-21); 06-VERIFICATION.md passed 39/39 (status: passed)
+**Current focus:** Phase 7 — Checkpoint & Game-File Persistence — **IN PROGRESS (wave 1: 07-02 complete)**; 07-02 pure checkpoint schema + zip I/O module landed (46-test WSL battery, PURE_MODULES = 19)
 
 ## Current Position
 
-Phase: 6 of 9 (Scoring Lifecycle & Endgame)
-Plan: 10 of 10 complete — 06-01 (GameState lifecycle data layer, TDD) + 06-02 (status_text Phase-6 surface, TDD) + 06-04 (gamestart compose seam) [wave 1: parallel worktrees, merged] + 06-03 (engine lifecycle ops + SMOKE-15 PART A) + 06-05 (wizard lifecycle core) + 06-06 (wizard skip/give-up half — shared-advancement skip, one _require_playing gate, SMOKE-15 PART C 24/24) + 06-07 (tab lifecycle wiring part 1 — Confirm + Skip/Give-Up dropdown, _endgame_sequence, label fix) + 06-08 (tab lifecycle wiring part 2 — Restart _last_start replay + Reset wizard-public dispatch, D7 line placement, SMOKE-16 A+B 53/53) + 06-09 (endgame screen modal — _show_endgame_modal + wrapper singleShot tails, SMOKE-16 C 14/14, full six-smoke battery green) + 06-10 ([HUMAN] consolidated GUI checkpoint APPROVED-after-fix 2026-09-21 — steps 2-9 PASS, step 1 defect fixed in-session: molecule-advance camera re-frame, commit ff4b519, 826/826 WSL + SMOKE-15 75/75 + SMOKE-07 56 + SMOKE-16 67/67 re-green) DONE
-Status: Phase 6 **COMPLETE + VERIFIED** — 06-10 verdict recorded (APPROVED-after-fix; step-1 human re-verify **RE-VERIFIED PASS 2026-09-21** — camera re-framed onto molecule 2's grid after the Confirm, fix ff4b519 verified in the GUI) + 06-VERIFICATION.md **passed 39/39** (re-verify closed 2026-09-21); 6/9 phases verified
-Last activity: 2026-09-21 — Phase 6 close-out (step-1 re-verify approval recorded; bookkeeping done)
+Phase: 7 of 9 (Checkpoint & Game-File Persistence)
+Plan: 2 of 12 complete — 07-01 [wave 1 agent] + 07-02 (pure checkpoint sidecar module — schema constants, four-gate parse chain replaying parse_game_data VERBATIM, sentinel-first reconcile_registry, .aamz zip I/O; 46-test battery, 873/873 suite green, PURE_MODULES = 19) DONE
+Status: Phase 7 **IN PROGRESS** — wave 1 (07-01/07-02/07-03 parallel worktrees) running; 07-02 branch exec/07-02 complete, awaiting orchestrator merge
+Last activity: 2026-09-21 — Completed 07-02-PLAN.md (worktree exec/07-02)
 
-Progress: [██████████] 10/10 of Phase 6 · [██████████] 100% of planned plans (68/68; 6/9 phases verified)
+Progress: [█░░░░░░░░░░░] 1/12 of Phase 7 · [████████░░] 86% of planned plans (69/80; 6/9 phases verified)
 
 ## Performance Metrics
 
@@ -228,6 +228,9 @@ Decisions are logged in PROJECT.md Key Decisions table. Seeded from PROJECT.md a
 - (06-10, HUMAN verdicts 2026-09-21) Checkpoint APPROVED-after-fix with 1 fix-batch item resolved in-session: steps 2-9 PASS (level escalation with camera frame + CONTINUOUS timer 8:28; Skip warning + mercy path 0.00 + timer freeze under the new modal human-confirmed, P-5; Give Up + endgame block/headline + frozen label + on-top modal + scene kept; natural end 'You win! All 3 level(s) finished in 8:28.'; Restart D7 after-the-arm order + zeroed counters; Reset positions with orientations kept; wording ALL CONFIRMED no amendments; console = 04-14 baseline only). Step 1 (SCORE-01/02): semantics/wording PASS but the camera did NOT re-frame on an in-level molecule advance (human verbatim: "lv 1 after 1st mol not zooming to 2nd mol's grid and no instruction to do so"). Human-volunteered observations recorded: skip-then-immediate-give-up sequencing correct ("i do give up within few second after skip"); Hint + 'Formed (not required)' extras exercised in-session.
 - (06-10, fix-batch ff4b519) **Advance-compose law:** EVERY advance (molecule OR level) re-frames the camera through `_compose_active_molecule` — the ONE 06-04 compose seam; the molecule branch of `_advance_after_record` previously returned without composing (root cause of the step-1 defect). One added statement; regression teeth = SMOKE-15 PART B2 camera re-frame assert (RED-proven pre-fix — exactly one expected failure; 75/75 after). Re-green: py_compile OK, 826/826 WSL, SMOKE-15 75/75, SMOKE-07 56 PASS lines, SMOKE-16 67/67. Step-1 human re-verify **RE-VERIFIED PASS (human, 2026-09-21)** — in-level molecule advance ALSO re-frames the camera via the 06-04 seam, confirmed in the GUI (camera auto re-framed/zoomed onto molecule 2's grid after Confirm on molecule 1, molecules_per_level=1 then default 2).
 - (06 close-out, 2026-09-21) **Phase 6 COMPLETE + VERIFIED:** 06-VERIFICATION.md status `passed` (39/39 must-haves; the step-1 re-verify obligation closed same-day); ROADMAP 06-01..06-10 all ticked; REQUIREMENTS.md traceability flips SCORE-01/02/03/05/06/07/09/10 Pending → Complete.
+- (07-02) checkpoint.py = the PURE home of the .aamz checkpoint (PURE_MODULES = 19; json/os/tempfile/zipfile + pure persistence/game_file only): `checkpoint_format_version` is a THIRD distinct refuse-newer gate (own constant `CHECKPOINT_VERSION=1`, canonical 01-02 phrasing — never conflated with container FORMAT_VERSION or DETECTOR_VERSION). The embedded 'game' block replays `game_file.parse_game_data(make_container('game', ...))` VERBATIM — the five-gate chain incl. the detector EXACT-match gate refuses a stale checkpoint with the level_spec wording at ZERO new code cost. GameState block: verbatim to_dict (wrap-don't-reshape) + a light validator at parse (base keys / one-record invariant / L<i>M<j> in payload bounds / int non-bool counters / elapsed_at_save >= 0 or None — a negative is the rewind-the-clock refusal).
+- (07-02) reconcile_registry (sentinel-first, dependency-injected pure): keep iff object in observed AND sorted ids match exactly (placement.py:51-53 identity); NEVER-GHOST-ENTRY — non-verifying entries DROPPED + reported ({molecule, slot, object, reason}), never registered; scene extras reported missing_from_sidecar; rebuild restores materialize TUPLE shapes, pre_game_names rebuilt as [] (dropped on save — zero consumers); COMPLETENESS gate walks the payload-expected shape for the CURRENT level ONLY (future levels need nothing — single-level materialization law), first-missing-piece message pins object %r / molecule / slot (object None when even the sidecar row is gone).
+- (07-02) .aamz = ONE zip, two fixed members (game.pse + state.json); sidecar member = the FULL container JSON (check_container gate 1 applies on read); write = sort_keys/indent-2 JSON + temp-mkstemp + os.replace (write_json_atomic discipline); read = refusal-FIRST — zip/sidecar/parse gates ALL run BEFORE extraction hand-off (BadZipFile -> FormatError, never bare; caller owns the extracted-temp rmtree).
 
 
 ### Pending Todos
@@ -292,8 +295,8 @@ Decisions are logged in PROJECT.md Key Decisions table. Seeded from PROJECT.md a
 
 ## Session Continuity
 
-Last session: 2026-09-21 (Phase 6 close-out: step-1 re-verify RE-VERIFIED PASS — camera re-framed onto molecule 2's grid after the Confirm, ff4b519 verified in the GUI; 06-VERIFICATION.md flipped to passed; ROADMAP/REQUIREMENTS bookkeeping done)
-Stopped at: Phase 6 COMPLETE + VERIFIED (10/10 plans; 06-VERIFICATION.md passed 39/39, re-verify closed 2026-09-21) — next: **/gsd-plan-phase Phase 7 (Checkpoint & Game-File Persistence)**
+Last session: 2026-09-21 (Phase 7 wave 1: 07-02 executed in worktree tmp/exec-07-02 — checkpoint.py + 46-test battery + PURE_MODULES registration, 873/873 green)
+Stopped at: Completed 07-02-PLAN.md (branch exec/07-02, awaiting orchestrator wave-1 merge)
 Resume file: None
 
 ## Next Actions

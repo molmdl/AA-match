@@ -76,7 +76,18 @@ PART 5  compose seam generalization (06-04): on a deferred
 PART 6  determinism: all three starts used the same default seed ->
         payload['seed'] equal and the level-0 molecule ligand files
         identical (read back through the returned wizards' _payload).
-PART 7  teardown: Done + placement.cleanup_game_objects() returns the
+PART 7  payload-direct seam (07-05): an equivalent payload is read off
+        engine._payload (NEVER regenerated), an interloper seed-9999
+        generation is stamped and must read ZERO after
+        start_game_from_payload(payload, activate=False) replaces it --
+        the produced registry is byte-equal modulo instance to the
+        generated reference (same names, same sorted ids, same atom
+        counts), the engine adopt bound the payload BY IDENTITY with a
+        fresh GameState (all zeros, anchor None), _last_start carries
+        EXACTLY the 5-key tuple with 'payload' is the embedded truth,
+        and activate_game gives the same GO path (fresh float anchor,
+        wizard pushed). Restore: Done + cleanup -> baseline.
+PART 8  teardown: Done + placement.cleanup_game_objects() returns the
         scene to the pre-start snapshot EXACTLY.
 
 Conventions (frozen Phase 1, kept): anchor repo root via sys.argv
@@ -125,8 +136,8 @@ if _ROOT not in sys.path:
 from pymol import cmd  # noqa: E402
 
 import aamatch  # noqa: E402
-from aamatch import (gamestart, geometry, placement,  # noqa: E402
-                     setup_state, wizard_core)
+from aamatch import (engine, gamestart, geometry,  # noqa: E402
+                     placement, setup_state, wizard_core)
 from aamatch.wizard import GameWizard  # noqa: E402
 
 print('SMOKE-ENV pymol: %s' % (cmd.get_version()[0],), flush=True)
@@ -694,7 +705,127 @@ except Exception:
     check('part 5 determinism', False, 'raised (see traceback above)')
 
 # ============================================================
-# PART 7: teardown -- scene back to the pre-start snapshot EXACTLY
+# PART 7: payload-direct seam (07-05) -- start_game_from_payload
+# materializes the EMBEDDED payload with ZERO generator involvement;
+# the engine adopt sets all four module globals; _last_start carries
+# the 5-key tuple; the GO path is identical to start_game's
+# ============================================================
+try:
+    # P1: a normal GENERATED start (seed 42) -- capture the reference
+    # registry shape + per-object atom counts -----------------------
+    sentinel7 = dict(setup_state.DEFAULTS)
+    wiz_a = aamatch.gamestart.start_game(setup=sentinel7, seed=42)
+    reg_a = wiz_a._registry
+    status_a = engine.game_status()
+    names_a = _game_objects()
+
+    def _reg_shape(reg):
+        """Instance-free registry snapshot: molecule order preserved,
+        every (object, sorted ids) entry captured by name."""
+        shape = []
+        for mol in reg['molecules']:
+            slots = dict((slot_id, (entry[0], list(entry[1])))
+                         for slot_id, entry in mol['slots'].items())
+            shape.append({'ligand': (mol['ligand'][0],
+                                     list(mol['ligand'][1])),
+                          'slots': slots})
+        return shape
+
+    shape_a = _reg_shape(reg_a)
+    counts_a = dict((obj, cmd.count_atoms(obj)) for obj in names_a)
+
+    # P2: obtain the payload WITHOUT regeneration (the live module
+    # state), swizzle the scene with a DIFFERENT seed (9999), stamp the
+    # interloper generation's instances (03-05 restart-identity law:
+    # same-level same-count scenes reuse the same deterministic names,
+    # so NAME sets prove nothing -- the marker band does) --------------
+    payload = engine._payload
+    aamatch.gamestart.start_game(setup=sentinel7, seed=9999)
+    _stamp(_game_objects())
+    wiz_b = aamatch.gamestart.start_game_from_payload(payload,
+                                                      activate=False)
+    check('part 7 payload seam: a GameWizard returned, NOT pushed',
+          isinstance(wiz_b, GameWizard)
+          and cmd.get_wizard() is not wiz_b,
+          'type=%r top=%r' % (type(wiz_b), cmd.get_wizard()))
+    reg_b = wiz_b._registry
+    shape_b = _reg_shape(reg_b)
+    check('part 7 registries equal modulo instance (names + ids)',
+          shape_a == shape_b,
+          'seed-42 registry shape replayed pixel-for-pixel')
+    counts_b = dict((obj, cmd.count_atoms(obj)) for obj in _game_objects())
+    check('part 7 per-object atom counts equal (deterministic shape)',
+          counts_a == counts_b,
+          '%d objects compared' % (len(counts_a),))
+    check('part 7 the seed-9999 generation is GONE (seam replaced)',
+          _marked_atoms() == 0,
+          'stamped interlopers surviving=%d' % (_marked_atoms(),))
+    check('part 7 adopt bound the EMBEDDED payload BY IDENTITY',
+          engine._payload is payload
+          and engine._payload['seed'] == 42,
+          'engine._payload=%r' % (engine._payload['seed'],))
+    gs_b = engine.game_status()
+    check('part 7 fresh GameState zeros (no regeneration residue)',
+          gs_b['molecule_scores'] == []
+          and gs_b['skip_count'] == 0
+          and gs_b['giveup_count'] == 0
+          and gs_b['game_over'] is False
+          and gs_b['timer_anchor'] is None,
+          'scores=%r skip=%d giveup=%d over=%r (generated game had '
+          'status captured in P1 as the reference baseline)'
+          % (gs_b['molecule_scores'], gs_b['skip_count'],
+             gs_b['giveup_count'], gs_b['game_over']))
+    check('part 7 wizard carries the payload + fresh books',
+          wiz_b._payload is payload and wiz_b._current_slot is None,
+          '_current_slot=%r' % (wiz_b._current_slot,))
+
+    # P3: _last_start 5-key pin (07-05 Recorded Decision 1) -----------
+    ls7 = gamestart._last_start or {}
+    check('part 7 _last_start holds EXACTLY the 5-key tuple',
+          sorted(ls7) == ['candidates', 'ligand_content', 'payload',
+                          'seed', 'setup'],
+          'keys=%r' % (sorted(ls7),))
+    check('part 7 _last_start payload is the EMBEDDED truth',
+          ls7.get('payload') is payload
+          and ls7.get('seed') == payload['seed'],
+          'seed=%r payload_seed=%r'
+          % (ls7.get('seed'), payload['seed']))
+
+    # P4: GO-path parity -- activate_game anchors from zero, pushes --
+    gamestart.activate_game(wiz_b)
+    anchor7 = engine._current_game().timer_anchor
+    check('part 7 GO anchors a FRESH timer from zero, wizard pushed',
+          cmd.get_wizard() is wiz_b and isinstance(anchor7, float),
+          'top=%r anchor=%r' % (cmd.get_wizard(), anchor7))
+
+    # Restore block: Done + prefix cleanup -> pre-start snapshot,
+    # store reset (later teardown expects the PART-0 baseline) --------
+    cmd.set_wizard()
+    cleaned7 = placement.cleanup_game_objects()
+    check('part 7 restore: pre-start scene EXACTLY, stack emptied',
+          cleaned7['deleted'] > 0
+          and cmd.get_names('objects') == pre_names
+          and cmd.get_wizard() is None,
+          'deleted=%d post wizard=%r'
+          % (cleaned7['deleted'], cmd.get_wizard()))
+    gamestart._last_start = None
+    REC['part7_payload_seam'] = (
+        'registry parity, adopt identity, fresh GameState, 5-key '
+        '_last_start, GO parity')
+except Exception:
+    traceback.print_exc()
+    check('part 7 payload-direct seam', False,
+          'raised (see traceback above)')
+    try:
+        if cmd.get_wizard() is not None:
+            cmd.set_wizard()
+    except Exception:
+        pass
+    placement.cleanup_game_objects()
+    gamestart._last_start = None
+
+# ============================================================
+# PART 8: teardown -- scene back to the pre-start snapshot EXACTLY
 # ============================================================
 try:
     if cmd.get_wizard() is not None:
@@ -707,7 +838,7 @@ try:
                                   cmd.get_names('objects')))
 except Exception:
     traceback.print_exc()
-    check('part 7 teardown', False, 'raised (see traceback above)')
+    check('part 8 teardown', False, 'raised (see traceback above)')
     placement.cleanup_game_objects()
 
 # --- evidence summary -------------------------------------------------

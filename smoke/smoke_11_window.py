@@ -121,10 +121,12 @@ PART H  (ALWAYS, T1a -- the 05-05 SETUP-11 deferred-activation direct
         gamestart.start_game(setup=sentinel, seed=4242, activate=False)
         returns an UNACTIVATED GameWizard (cmd.get_wizard() is NOT it --
         the countdown window is wizard-free, pitfall P-1) while the
-        scene grew (preparation complete); module-level _last_start
-        holds EXACTLY the 4 input-tuple keys with the setup DEEP-COPIED
-        (is not the sentinel, nested list not aliased) and the seed a
-        real int; GO via gamestart.activate_game(wiz) pushes THAT wizard
+         scene grew (preparation complete); module-level _last_start
+         holds EXACTLY the 5 input-tuple keys (07-05 deliberate
+         evolution: the additive 'payload' entry, a dict carrying the
+         seed) with the setup DEEP-COPIED
+         (is not the sentinel, nested list not aliased) and the seed a
+         real int; GO via gamestart.activate_game(wiz) pushes THAT wizard
         (conditional replace re-evaluated AT activation), anchors
         engine._current_game().timer_anchor to a float (timer from zero),
         and captures the wizard's msm snapshot post-push (the ORDER LAW
@@ -831,11 +833,20 @@ try:
           'grew=%d (preparation complete)' % (len(new_h),))
 
     # ---- _last_start input tuple (SETUP-11; Phase-6 Restart) ----
+    # 07-05 DELIBERATE evolution (plan-authorized): the pin moved from
+    # the 4-key tuple to the 5-key tuple -- the ADDITIVE 'payload'
+    # entry (07-05 Recorded Decision 1) makes every Restart replay
+    # payload-direct (byte-identical for demos, CORRECT for uploads).
     ls = gamestart._last_start or {}
-    check('part H: _last_start holds EXACTLY the 4 input-tuple keys',
-          sorted(ls) == ['candidates', 'ligand_content', 'seed',
-                         'setup'],
+    check('part H: _last_start holds EXACTLY the 5 input-tuple keys',
+          sorted(ls) == ['candidates', 'ligand_content', 'payload',
+                         'seed', 'setup'],
           'keys=%r' % (sorted(ls),))
+    check('part H: _last_start payload is a dict carrying the seed',
+          isinstance(ls.get('payload'), dict)
+          and 'seed' in ls['payload']
+          and ls['payload']['seed'] == 4242,
+          'the embed-don-t-regenerate replay input (07-05)')
     check('part H: _last_start setup DEEP-COPIED (aliasing proof)',
           isinstance(ls.get('setup'), dict)
           and ls.get('setup') is not sentinel

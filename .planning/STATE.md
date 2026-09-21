@@ -5,21 +5,21 @@
 See: .planning/PROJECT.md (updated 2026-09-05)
 
 **Core value:** The player can place amino acids onto a small molecule in the PyMOL 3D viewer and the game correctly detects and scores the interactions they form — turning unguided 3D manipulation practice into a scored game.
-**Current focus:** Phase 6 — Scoring Lifecycle & Endgame — **COMPLETE + VERIFIED (10/10)**; 06-10 [HUMAN] checkpoint APPROVED-after-fix (1 fix-batch item, commit ff4b519; step-1 re-verify RE-VERIFIED PASS 2026-09-21); 06-VERIFICATION.md passed 39/39 (status: passed)
+**Current focus:** Phase 7 — Checkpoint & Game-File Persistence — IN PROGRESS (1/12); 07-01 DONE (GameWizard `.pse` restore fixed — argless `__reduce__`; SMOKE-17 strict compare PROVEN). Phase 6 — Scoring Lifecycle & Endgame — **COMPLETE + VERIFIED (10/10, 06-VERIFICATION passed 39/39)**
 
 ## Current Position
 
-Phase: 6 of 9 (Scoring Lifecycle & Endgame)
-Plan: 10 of 10 complete — 06-01 (GameState lifecycle data layer, TDD) + 06-02 (status_text Phase-6 surface, TDD) + 06-04 (gamestart compose seam) [wave 1: parallel worktrees, merged] + 06-03 (engine lifecycle ops + SMOKE-15 PART A) + 06-05 (wizard lifecycle core) + 06-06 (wizard skip/give-up half — shared-advancement skip, one _require_playing gate, SMOKE-15 PART C 24/24) + 06-07 (tab lifecycle wiring part 1 — Confirm + Skip/Give-Up dropdown, _endgame_sequence, label fix) + 06-08 (tab lifecycle wiring part 2 — Restart _last_start replay + Reset wizard-public dispatch, D7 line placement, SMOKE-16 A+B 53/53) + 06-09 (endgame screen modal — _show_endgame_modal + wrapper singleShot tails, SMOKE-16 C 14/14, full six-smoke battery green) + 06-10 ([HUMAN] consolidated GUI checkpoint APPROVED-after-fix 2026-09-21 — steps 2-9 PASS, step 1 defect fixed in-session: molecule-advance camera re-frame, commit ff4b519, 826/826 WSL + SMOKE-15 75/75 + SMOKE-07 56 + SMOKE-16 67/67 re-green) DONE
-Status: Phase 6 **COMPLETE + VERIFIED** — 06-10 verdict recorded (APPROVED-after-fix; step-1 human re-verify **RE-VERIFIED PASS 2026-09-21** — camera re-framed onto molecule 2's grid after the Confirm, fix ff4b519 verified in the GUI) + 06-VERIFICATION.md **passed 39/39** (re-verify closed 2026-09-21); 6/9 phases verified
-Last activity: 2026-09-21 — Phase 6 close-out (step-1 re-verify approval recorded; bookkeeping done)
+Phase: 7 of 9 (Checkpoint & Game-File Persistence)
+Plan: 1 of 12 complete — 07-01 (GameWizard __reduce__ argless rebuilder — .pse wizard-drop landmine FIXED + SMOKE-17 phase-B flipped to strict restore compare PROVEN, zero Session-Warning) DONE
+Status: In progress — wave 1 running (07-01 complete on exec/07-01 worktree, pending orchestrator merge)
+Last activity: 2026-09-21 — Completed 07-01-PLAN.md
 
-Progress: [██████████] 10/10 of Phase 6 · [██████████] 100% of planned plans (68/68; 6/9 phases verified)
+Progress: [█░░░░░░░░░░░] 1/12 of Phase 7 · [█████████░] 86% of planned plans (69/80; 6/9 phases verified)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 68 (Phase 1: 01-01…01-09; Phase 2: 02-01…02-15; Phase 3: 03-01…03-07; Phase 4: 04-01…04-15; Phase 5: 05-01…05-11; Phase 6: 06-01…06-10)
+- Total plans completed: 69 (Phase 1: 01-01…01-09; Phase 2: 02-01…02-15; Phase 3: 03-01…03-07; Phase 4: 04-01…04-15; Phase 5: 05-01…05-11; Phase 6: 06-01…06-10; Phase 7: 07-01)
 - Average duration: ~11 min (02-03); 6 min (02-04); ~29 min (02-05); 23 min (02-06); 4 min (02-09); 11 min (02-07); 17 min (02-08); ~20 min (02-13); ~27 min (02-11); 16 min (02-14); 29 min (02-15); ~15 min (03-01); ~55 min (03-02); ~14 min (03-03); ~27 min (03-04); ~14 min (03-05); ~10 min (04-01); ~8 min (04-02); 16 min (04-04); ~9 min (04-03); 17 min (04-05); ~15 min (04-06); 16 min (04-07); 23 min (04-08); ~49 min (04-09); ~7 min (04-10); ~16 min (04-11); ~10 min (04-12); ~6 min (04-13); ~5 min (04-14 docs-only checkpoint record); ~15 min (04-15 fix + re-verify + checkpoint record); ~7 min (05-02) + 3 min (05-04) + ~7 min (05-05) + 5 min (05-07) + ~17 min (05-08) + ~10 min (05-09) + ~13 min (05-10) + ~20 min (05-11 fix + record); phase-6: 47 min (06-01) + ~12 min (06-03) + 13 min (06-05) + 17 min (06-06) + ~17 min (06-07) + 12 min (06-08) + 16 min (06-09) + ~12 min (06-10 checkpoint fix + record); 05-01/05-03/05-06 + 06-02/06-04 durations unrecorded (agent reports omitted them)
 - Total execution time: —
 
@@ -33,10 +33,11 @@ Progress: [██████████] 10/10 of Phase 6 · [█████�
 | 4 | 15/15 ✓ | ~10 min (04-01) + ~8 min (04-02) + 16 min (04-04) + ~9 min (04-03) + 17 min (04-05) + ~15 min (04-06) + 16 min (04-07) + 23 min (04-08) + ~49 min (04-09) + ~7 min (04-10) + ~16 min (04-11) + ~10 min (04-12) + ~6 min (04-13) + ~5 min (04-14 docs-only) + ~15 min (04-15 fix+record) | — |
 | 5 | 11/11 ✓ | ~7 min (05-02) + 3 min (05-04) + ~7 min (05-05) + 5 min (05-07) [wave 1: 6 parallel] + ~20 min (05-06) + ~17 min (05-08) + ~10 min (05-09) + ~13 min (05-10) [wave 4: 2 parallel] + ~20 min (05-11) | — |
 | 6 | 10/10 | 47 min (06-01) + ~12 min (06-03) + 13 min (06-05) + 17 min (06-06) + ~17 min (06-07) + 12 min (06-08) + 16 min (06-09) + ~12 min (06-10 checkpoint fix + record); 06-02/06-04 durations unrecorded (wave-1 agent reports omitted them) | — |
+| 7 | 1/12 | 7 min (07-01) | — |
 
 **Recent Trend:**
-- Last 5 plans: 06-06 (17 min), 06-07 (~17 min), 06-08 (12 min), 06-09 (16 min), 06-10 (~12 min checkpoint fix + record)
-- Trend: steady ~5-20 min per plan; parallel waves (wave 1: 6 plans, wave 4: 2 plans) via the AGENTS.md worktree protocol, zero merge conflicts
+- Last 5 plans: 06-08 (12 min), 06-09 (16 min), 06-10 (~12 min checkpoint fix + record), 07-01 (7 min)
+- Trend: steady ~5-20 min per plan; parallel waves via the AGENTS.md worktree protocol (phase 7 wave 1: 3 plans incl. 07-01), zero merge conflicts
 
 *Updated after each plan completion*
 
@@ -228,6 +229,7 @@ Decisions are logged in PROJECT.md Key Decisions table. Seeded from PROJECT.md a
 - (06-10, HUMAN verdicts 2026-09-21) Checkpoint APPROVED-after-fix with 1 fix-batch item resolved in-session: steps 2-9 PASS (level escalation with camera frame + CONTINUOUS timer 8:28; Skip warning + mercy path 0.00 + timer freeze under the new modal human-confirmed, P-5; Give Up + endgame block/headline + frozen label + on-top modal + scene kept; natural end 'You win! All 3 level(s) finished in 8:28.'; Restart D7 after-the-arm order + zeroed counters; Reset positions with orientations kept; wording ALL CONFIRMED no amendments; console = 04-14 baseline only). Step 1 (SCORE-01/02): semantics/wording PASS but the camera did NOT re-frame on an in-level molecule advance (human verbatim: "lv 1 after 1st mol not zooming to 2nd mol's grid and no instruction to do so"). Human-volunteered observations recorded: skip-then-immediate-give-up sequencing correct ("i do give up within few second after skip"); Hint + 'Formed (not required)' extras exercised in-session.
 - (06-10, fix-batch ff4b519) **Advance-compose law:** EVERY advance (molecule OR level) re-frames the camera through `_compose_active_molecule` — the ONE 06-04 compose seam; the molecule branch of `_advance_after_record` previously returned without composing (root cause of the step-1 defect). One added statement; regression teeth = SMOKE-15 PART B2 camera re-frame assert (RED-proven pre-fix — exactly one expected failure; 75/75 after). Re-green: py_compile OK, 826/826 WSL, SMOKE-15 75/75, SMOKE-07 56 PASS lines, SMOKE-16 67/67. Step-1 human re-verify **RE-VERIFIED PASS (human, 2026-09-21)** — in-level molecule advance ALSO re-frames the camera via the 06-04 seam, confirmed in the GUI (camera auto re-framed/zoomed onto molecule 2's grid after Confirm on molecule 1, molecules_per_level=1 then default 2).
 - (06 close-out, 2026-09-21) **Phase 6 COMPLETE + VERIFIED:** 06-VERIFICATION.md status `passed` (39/39 must-haves; the step-1 re-verify obligation closed same-day); ROADMAP 06-01..06-10 all ticked; REQUIREMENTS.md traceability flips SCORE-01/02/03/05/06/07/09/10 Pending → Complete.
+- (07-01) **GameWizard `.pse` restore law:** `__reduce__` = module-level argless `_rebuild_game_wizard` (object.__new__; __init__ never runs) + inherited `__getstate__` (pops only `cmd`) + default state-dict application (NO `__setstate__`) — the probe-proven option (i); never make `__init__` args optional for pickle's sake. A saved-with-wizard session restores the wizard ACTIVE on the stack with byte-equal books and zero Session-Warning (SMOKE-17 strict compare PROVEN, two-process); `engine._game` stays dead after load — the sidecar owns game state (07-02+). Console cleanliness is asserted by positive restore (the defect path prints AND drops); the `SMOKE-17 NOTE console:` line carries the criterion-3 claim to the human checkpoint.
 
 
 ### Pending Todos
@@ -287,13 +289,13 @@ Decisions are logged in PROJECT.md Key Decisions table. Seeded from PROJECT.md a
 
 - **Phase 2 gate DETECT-03: RESOLVED (approved 2026-09-06, provisional pending Phase-8 dataset revisit)** — plans 02-05..02-08 transcribe constants from docs/DETECTION_THRESHOLDS.md row-by-row; the units/atom-typing check passed at approval.
 - ~~Phase 3 spike: movement model~~ — FULLY CLOSED (03-07): spike verdict (RESEARCH-B, commit 3143555) + interactive-drag HUMAN verdict (drag = matrix path, proven) + detector-visibility probe (MATRIX PATH VISIBLE). Gameplay movement frozen on baked-coordinate buttons/keyboard; native drag not a gameplay input.
-- Phase 7 gate: `.pse` matrix round-trip smoke before committing checkpoint design
+- ~~Phase 7 gate: `.pse` matrix round-trip smoke before committing checkpoint design~~ — RESOLVED (07-RESEARCH-pse.md, 2026-09-21): matrices/coords/view/sentinels bit-exact; 07-01 additionally FIXED the wizard-restore half (argless `__reduce__`; SMOKE-17 strict compare PROVEN). Remaining [UNVERIFIED] item: installed-identity (`pmg_tk.startup.aamatch`) round-trip — inferred-safe, covered by the Phase-7 human checkpoint (07-12).
 - **Phase 5/6 gap candidates: NONE from 03-07.** The native-drag detector-visibility guard was pre-planned only IF the probe returned INVISIBLE; it returned VISIBLE (transform_object bakes coordinates) — guard not opened. q/e camera-z-sign feel = by-design screen-relative movement (help text owned by Phase 5/9).
 
 ## Session Continuity
 
-Last session: 2026-09-21 (Phase 6 close-out: step-1 re-verify RE-VERIFIED PASS — camera re-framed onto molecule 2's grid after the Confirm, ff4b519 verified in the GUI; 06-VERIFICATION.md flipped to passed; ROADMAP/REQUIREMENTS bookkeeping done)
-Stopped at: Phase 6 COMPLETE + VERIFIED (10/10 plans; 06-VERIFICATION.md passed 39/39, re-verify closed 2026-09-21) — next: **/gsd-plan-phase Phase 7 (Checkpoint & Game-File Persistence)**
+Last session: 2026-09-21 (07-01 executed on exec/07-01 worktree: GameWizard `.pse` restore landmine fixed — argless `_rebuild_game_wizard`; SMOKE-17 phase-B strict compare PROVEN two-process; 826/826 WSL green)
+Stopped at: Completed 07-01-PLAN.md (on exec/07-01 worktree, pending orchestrator merge) — Phase 7 in progress (1/12)
 Resume file: None
 
 ## Next Actions

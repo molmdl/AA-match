@@ -197,9 +197,9 @@ def _editor(container):
     dict (the test_game_file mutation pattern, deep-copied because the
     game block embeds the shared fixture payload)."""
     def edit(edit_fn):
-        container = copy.deepcopy(container)
-        edit_fn(container['data'])
-        return container
+        mutated = copy.deepcopy(container)
+        edit_fn(mutated['data'])
+        return mutated
     return edit
 
 

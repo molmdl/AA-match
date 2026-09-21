@@ -97,6 +97,25 @@ class WizardError(ValueError):
     the object whose matrix failed the identity invariant."""
 
 
+def _rebuild_game_wizard():
+    """Argless unpickle rebuilder for GameWizard (Phase 7 checkpoint).
+
+    pickle resolves this function BY MODULE PATH, calls it with no
+    args, then applies the pickled state dict via __dict__.update
+    (no __setstate__ needed -- the inherited Wizard.__getstate__
+    already strips only 'cmd', which session_restore_wizard rebinds
+    after construction). __init__ never runs, so its required
+    payload/registry args cannot raise. PROVEN through the real task
+    path (session_save_wizard -> pickle.loads -> cmd rebind ->
+    set_wizard_stack) by SMOKE-17 phase-A part C.
+
+    Module identity (AGENTS gate 5): the pickle records the class by
+    its import path; save and load must happen under ONE identity
+    (aamatch.* in smokes, pmg_tk.startup.aamatch.* when installed).
+    """
+    return object.__new__(GameWizard)
+
+
 class GameWizard(Wizard):
     """The Phase-3 gameplay-loop wizard (PLAY-01..04).
 
@@ -160,6 +179,19 @@ class GameWizard(Wizard):
         self._last_event = None
         self._game_over = False
         self._end_state = None
+
+    def __reduce__(self):
+        """Argless reconstruction (Phase 7). The pymol Wizard base
+        __reduce__ returns (self.__class__, (), state) which calls
+        GameWizard() with NO args -> TypeError ('__init__() missing 2
+        required positional arguments') inside session_restore_wizard ->
+        caught -> 'Session-Warning: unable to restore wizard.' -> the
+        wizard DROPPED from the restored session (SMOKE-17-observed).
+        Rebuilding via object.__new__ skips __init__; the state dict
+        carries every book (all plain data -- SMOKE-17 phase-A
+        enumerated __dict__: no Qt, no locks, no controller refs).
+        """
+        return (_rebuild_game_wizard, (), self.__getstate__())
 
     def get_event_mask(self):
         """pick(1) | select(2) | key(4) | special(8) = 15.

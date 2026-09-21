@@ -5,22 +5,22 @@
 See: .planning/PROJECT.md (updated 2026-09-05)
 
 **Core value:** The player can place amino acids onto a small molecule in the PyMOL 3D viewer and the game correctly detects and scores the interactions they form — turning unguided 3D manipulation practice into a scored game.
-**Current focus:** Phase 7 — Checkpoint & Game-File Persistence — IN PROGRESS (4/12); wave 2 plan 07-04 DONE (save side: gamestart capture/save seams + GameWizard.snapshot_books + SMOKE-18 save E2E 31/31, REAL `__reduce__` restore proven in-process); wave 1 merged (07-01 wizard `.pse` restore fix; 07-02 pure checkpoint module; 07-03 handler-logged builders)
+**Current focus:** Phase 7 — Checkpoint & Game-File Persistence — IN PROGRESS (5/12 on this branch); wave 3 plan 07-06 DONE in worktree (Game-tab Save button: btn_save_game + gate-first wrapper + box-free _save_game_to impl driving the 07-04 seams; SMOKE-16 PART D 77/77, SMOKE-14 regression PASS, 881/881 WSL); wave 2 plan 07-04 DONE; wave 1 merged (07-01 wizard `.pse` restore fix; 07-02 pure checkpoint module; 07-03 handler-logged builders); parallel 07-05 (load/reconstruct side) merging separately
 
 ## Current Position
 
 Phase: 7 of 9 (Checkpoint & Game-File Persistence)
-Plan: 4 of 12 complete — 07-01 (GameWizard __reduce__ argless rebuilder — .pse wizard-drop landmine FIXED + SMOKE-17 phase-B flipped to strict restore compare PROVEN, zero Session-Warning) + 07-02 (pure checkpoint sidecar module — schema constants, four-gate parse chain replaying parse_game_data VERBATIM, sentinel-first reconcile_registry, .aamz zip I/O; 46-test battery, 873/873 suite green, PURE_MODULES = 19) + 07-03 (status_text Phase-7 handler-logged line builders: game_saved_line/game_imported_line/game_resumed_line, TDD RED 5b5feca → GREEN 548b82b, 834/834 WSL) + 07-04 (SAVE side — capture_checkpoint_snapshot + save_checkpoint cmd seams, FULL-session cmd.save → atomic .aamz {game.pse + state.json}, wizard books public snapshot, SMOKE-18 31/31 with REAL pickle-path wizard restore, 881/881 WSL, SMOKE-17 ×2 + SMOKE-08 regression PASS) DONE
-Status: In progress — wave 2 plan 07-04 DONE on main (single-plan wave, direct commits)
-Last activity: 2026-09-21 — Completed 07-04-PLAN.md (checkpoint SAVE seams + SMOKE-18)
+Plan: 5 of 12 complete — 07-01 (GameWizard __reduce__ argless rebuilder — .pse wizard-drop landmine FIXED + SMOKE-17 phase-B flipped to strict restore compare PROVEN, zero Session-Warning) + 07-02 (pure checkpoint sidecar module — schema constants, four-gate parse chain replaying parse_game_data VERBATIM, sentinel-first reconcile_registry, .aamz zip I/O; 46-test battery, 873/873 suite green, PURE_MODULES = 19) + 07-03 (status_text Phase-7 handler-logged line builders: game_saved_line/game_imported_line/game_resumed_line, TDD RED 5b5feca → GREEN 548b82b, 834/834 WSL) + 07-04 (SAVE side — capture_checkpoint_snapshot + save_checkpoint cmd seams, FULL-session cmd.save → atomic .aamz {game.pse + state.json}, wizard books public snapshot, SMOKE-18 31/31 with REAL pickle-path wizard restore, 881/881 WSL, SMOKE-17 ×2 + SMOKE-08 regression PASS) + 07-06 (Game-tab Save button SCORE-08 UI — btn_save_game insert-before-stretch, gate-first _on_save_game with pre-dialog elapsed capture + 'game.aamz' default/auto-append + NO success box (handled-logged game_saved_line), box-free _save_game_to over the 07-04 seams, SMOKE-16 PART D 77/77 with verbatim elapsed_at_save==75.0 through the real read gates, SMOKE-14 regression PASS, 881/881 WSL) DONE
+Status: In progress — wave 3 plan 07-06 DONE on branch exec/07-06 (parallel worktree; orchestrator merges with 07-05)
+Last activity: 2026-09-21 — Completed 07-06-PLAN.md (Game-tab Save button + SMOKE-16 PART D)
 
-Progress: [████░░░░░░░░] 4/12 of Phase 7 · [█████████░] 90% of planned plans (72/80; 6/9 phases verified)
+Progress: [█████░░░░░░░] 5/12 of Phase 7 · [█████████░] 92% of planned plans (73/80; 6/9 phases verified)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 72 (Phase 1: 01-01…01-09; Phase 2: 02-01…02-15; Phase 3: 03-01…03-07; Phase 4: 04-01…04-15; Phase 5: 05-01…05-11; Phase 6: 06-01…06-10; Phase 7: 07-01, 07-02, 07-03, 07-04)
-- Average duration: ~11 min (02-03); 6 min (02-04); ~29 min (02-05); 23 min (02-06); 4 min (02-09); 11 min (02-07); 17 min (02-08); ~20 min (02-13); ~27 min (02-11); 16 min (02-14); 29 min (02-15); ~15 min (03-01); ~55 min (03-02); ~14 min (03-03); ~27 min (03-04); ~14 min (03-05); ~10 min (04-01); ~8 min (04-02); 16 min (04-04); ~9 min (04-03); 17 min (04-05); ~15 min (04-06); 16 min (04-07); 23 min (04-08); ~49 min (04-09); ~7 min (04-10); ~16 min (04-11); ~10 min (04-12); ~6 min (04-13); ~5 min (04-14 docs-only checkpoint record); ~15 min (04-15 fix + re-verify + checkpoint record); ~7 min (05-02) + 3 min (05-04) + ~7 min (05-05) + 5 min (05-07) + ~17 min (05-08) + ~10 min (05-09) + ~13 min (05-10) + ~20 min (05-11 fix + record); phase-6: 47 min (06-01) + ~12 min (06-03) + 13 min (06-05) + 17 min (06-06) + ~17 min (06-07) + 12 min (06-08) + 16 min (06-09) + ~12 min (06-10 checkpoint fix + record); phase-7: 7 min (07-01) + ~11 min (07-02) + 3 min (07-03) + 13 min (07-04); 05-01/05-03/05-06 + 06-02/06-04 durations unrecorded (agent reports omitted them)
+- Total plans completed: 73 (Phase 1: 01-01…01-09; Phase 2: 02-01…02-15; Phase 3: 03-01…03-07; Phase 4: 04-01…04-15; Phase 5: 05-01…05-11; Phase 6: 06-01…06-10; Phase 7: 07-01, 07-02, 07-03, 07-04, 07-06)
+- Average duration: ~11 min (02-03); 6 min (02-04); ~29 min (02-05); 23 min (02-06); 4 min (02-09); 11 min (02-07); 17 min (02-08); ~20 min (02-13); ~27 min (02-11); 16 min (02-14); 29 min (02-15); ~15 min (03-01); ~55 min (03-02); ~14 min (03-03); ~27 min (03-04); ~14 min (03-05); ~10 min (04-01); ~8 min (04-02); 16 min (04-04); ~9 min (04-03); 17 min (04-05); ~15 min (04-06); 16 min (04-07); 23 min (04-08); ~49 min (04-09); ~7 min (04-10); ~16 min (04-11); ~10 min (04-12); ~6 min (04-13); ~5 min (04-14 docs-only checkpoint record); ~15 min (04-15 fix + re-verify + checkpoint record); ~7 min (05-02) + 3 min (05-04) + ~7 min (05-05) + 5 min (05-07) + ~17 min (05-08) + ~10 min (05-09) + ~13 min (05-10) + ~20 min (05-11 fix + record); phase-6: 47 min (06-01) + ~12 min (06-03) + 13 min (06-05) + 17 min (06-06) + ~17 min (06-07) + 12 min (06-08) + 16 min (06-09) + ~12 min (06-10 checkpoint fix + record); phase-7: 7 min (07-01) + ~11 min (07-02) + 3 min (07-03) + 13 min (07-04) + ~10 min (07-06); 05-01/05-03/05-06 + 06-02/06-04 durations unrecorded (agent reports omitted them)
 - Total execution time: —
 
 **By Phase:**
@@ -33,10 +33,10 @@ Progress: [████░░░░░░░░] 4/12 of Phase 7 · [███�
 | 4 | 15/15 ✓ | ~10 min (04-01) + ~8 min (04-02) + 16 min (04-04) + ~9 min (04-03) + 17 min (04-05) + ~15 min (04-06) + 16 min (04-07) + 23 min (04-08) + ~49 min (04-09) + ~7 min (04-10) + ~16 min (04-11) + ~10 min (04-12) + ~6 min (04-13) + ~5 min (04-14 docs-only) + ~15 min (04-15 fix+record) | — |
 | 5 | 11/11 ✓ | ~7 min (05-02) + 3 min (05-04) + ~7 min (05-05) + 5 min (05-07) [wave 1: 6 parallel] + ~20 min (05-06) + ~17 min (05-08) + ~10 min (05-09) + ~13 min (05-10) [wave 4: 2 parallel] + ~20 min (05-11) | — |
 | 6 | 10/10 | 47 min (06-01) + ~12 min (06-03) + 13 min (06-05) + 17 min (06-06) + ~17 min (06-07) + 12 min (06-08) + 16 min (06-09) + ~12 min (06-10 checkpoint fix + record); 06-02/06-04 durations unrecorded (wave-1 agent reports omitted them) | — |
-| 7 | 4/12 | 7 min (07-01) + ~11 min (07-02) + 3 min (07-03) + 13 min (07-04) | — |
+| 7 | 5/12 | 7 min (07-01) + ~11 min (07-02) + 3 min (07-03) + 13 min (07-04) + ~10 min (07-06) | — |
 
 **Recent Trend:**
-- Last 5 plans: 06-10 (~12 min checkpoint fix + record), 07-01 (7 min), 07-02 (~11 min), 07-03 (3 min), 07-04 (13 min)
+- Last 5 plans: 07-01 (7 min), 07-02 (~11 min), 07-03 (3 min), 07-04 (13 min), 07-06 (~10 min)
 - Trend: steady ~5-20 min per plan; parallel waves via the AGENTS.md worktree protocol (phase 7 wave 1: 3 plans), STATE.md blended by the orchestrator on merge
 
 *Updated after each plan completion*
@@ -242,6 +242,8 @@ Decisions are logged in PROJECT.md Key Decisions table. Seeded from PROJECT.md a
 - (07-04) **SAVE-side seam laws (SCORE-08 save half DONE):** `gamestart.capture_checkpoint_snapshot(elapsed=None)` is scene-READ-ONLY (no I/O; the caller owns I/O) and returns the complete §2 sidecar dict via `checkpoint.build_checkpoint_data` — game block = full `make_game_data` verbatim (`_last_start` setup + `engine._payload` embedded BY IDENTITY + upload ligand re-encode), game_state verbatim, identity-only registry, wizard books, candidates. `gamestart.save_checkpoint(path, data)` = `to_windows_path` → in-process temp `.pse` (NO path conversion, S3-3) → FULL-session `cmd.save` (no selection arg — Recorded Decision 1: game-scoped save + full-replace load would DESTROY user objects) → `write_checkpoint_zip` (atomic temp+os.replace, members exactly {game.pse, state.json}) → temp unlink in `finally`. Timer doctrine: caller `elapsed` stored VERBATIM (07-06 captures pre-dialog); None → `max(0.0, now - timer_anchor)`; game_over → None + save ALLOWED (to_dict lossless).
 - (07-04) **snapshot_books = the sanctioned public books read:** plain data (current_slot/color_store/event_seq/last_event/error/saved_msm; `_result` omitted by design), zero viewer calls, lazy `copy`. PROVEN round-trip identity: restored-pickle books == captured sidecar 'wizard' block (SMOKE-18 PART E through the REAL `__reduce__` path — the books block is FIELD-verified content, not just schema).
 - (07-04, smoke-reconciliation laws — 02-12 implemented-semantics precedent) Skip's advance clears `_current_slot` via `_rebind_maps` (06-05 rebind law) — a smoke scripting a skip then asserting the books' current_slot must expect None; `read_checkpoint_zip` returns PARSED COMPONENTS, so a sidecar round-trip assert is field-wise, never raw-dict equality.
+- (07-06) **Game-tab Save wiring (SCORE-08 UI, wave 3):** `btn_save_game` inserted BEFORE the stretch (row Hint/Confirm/Skip-GiveUp/Restart/Reset/Save, the 05-06 OQ-1 no-reflow law — the class docstring's reserved Phase-7 slot). `_on_save_game` = the THIN wrapper: isinstance-gated silent no-op BEFORE any dialog (pre-GO/no-game/post-endgame ALL covered; NO game_over refusal — 07-04 Recorded Decision 3), elapsed captured BEFORE the QFileDialog via `_compute_elapsed()` (the v1 capture-before-dialog doctrine), 'game.aamz' default + '.aamz' auto-append (04-09 Decision-2), cancel = safe no-op, NO success box — the handler-logged `status_text.game_saved_line` (logged AFTER the impl returns) IS the feedback. `_save_game_to(path, elapsed)` = the box-free impl, a pure function of (path, elapsed) = capture_checkpoint_snapshot(elapsed) -> save_checkpoint(path, data); Qt tier keeps ZERO engine/wizard private access (grep law).
+- (07-06) **Smoke elapsed-determinism pattern:** re-anchor the live game via `engine._current_game().start_timer(time.time() - N)` (the GameState PUBLIC timer op — a sanctioned smoke seam), then drive the NON-MODAL impl with the explicit N and assert the written sidecar's `elapsed_at_save == N` VERBATIM through `checkpoint.read_checkpoint_zip` (pure-function-of-args proof; SMOKE-16 PART D). The wrapper's getSaveFileName path stays [HUMAN]-only (smoke-99; dialog drive NEVER headless).
 
 
 ### Pending Todos
@@ -306,8 +308,8 @@ Decisions are logged in PROJECT.md Key Decisions table. Seeded from PROJECT.md a
 
 ## Session Continuity
 
-Last session: 2026-09-21 (Phase 7 wave 2 plan 07-04 DONE on main: save side landed — `capture_checkpoint_snapshot`/`save_checkpoint` cmd seams, `GameWizard.snapshot_books()`, SMOKE-18 save E2E 31/31 PASS incl. REAL `__reduce__` in-process wizard restore; 881/881 WSL; SMOKE-17 ×2 + SMOKE-08 regression PASS)
-Stopped at: Completed 07-04-PLAN.md — Phase 7 in progress (4/12); next: 07-05 (load/reconstruct side per the wave schedule)
+Last session: 2026-09-21 (Phase 7 wave 3 plan 07-06 DONE on branch exec/07-06: Game-tab Save button wired — btn_save_game + gate-first _on_save_game + box-free _save_game_to over the 07-04 seams; SMOKE-16 PART D 77/77 incl. verbatim elapsed_at_save==75.0 through read_checkpoint_zip; SMOKE-14 regression PASS; 881/881 WSL. Parallel 07-05 merging separately)
+Stopped at: Completed 07-06-PLAN.md — Phase 7 in progress (5/12 on this branch); next per the wave schedule (07-07 import side UI / 07-10 re-arm / 07-11 battery)
 Resume file: None
 
 ## Next Actions

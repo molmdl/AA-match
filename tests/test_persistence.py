@@ -10,19 +10,24 @@ RED-first suite for plan 01-02 (PERSIST-01 format discipline). Covers:
   simulation leaves the original intact, NaN refusal, byte stability
 
 Runs under bare python3.6 in WSL with stdlib only (no pymol/Qt/numpy
-stubs needed -- the module under test is pure).
+stubs needed -- the module under test is pure). plan 07-10 adds the
+peek_kind battery: JSON containers AND real .aamz zips (built via the
+pure checkpoint writer -- checkpoint is pure, a pure<-test import).
 """
 
 import glob
+import json
 import os
 import shutil
 import sys
 import tempfile
 import unittest
+import zipfile
 from unittest import mock
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
+from aamatch import checkpoint, persistence
 from aamatch.persistence import (
     AAM_MAGIC,
     FORMAT_VERSION,
@@ -207,6 +212,101 @@ class TestContainerFileRoundTrip(unittest.TestCase):
         self.assertEqual(on_disk['magic'], AAM_MAGIC)
         self.assertEqual(on_disk['version'], FORMAT_VERSION)
         self.assertEqual(on_disk['kind'], 'setup')
+
+
+class TestPeekKind(unittest.TestCase):
+    """peek_kind (plan 07-10): the Import dispatch's header-exact kind
+    read -- JSON containers AND real .aamz zips (the zip branch has
+    mechanical teeth: a JSON-only peek cannot route the checkpoint
+    half).
+    """
+
+    def setUp(self):
+        self.tmp = tempfile.mkdtemp(prefix='aamatch-test-')
+        self.addCleanup(shutil.rmtree, self.tmp)
+
+    def test_returns_kind_for_saved_json_containers(self):
+        for kind in ('game', 'checkpoint', 'setup'):
+            path = os.path.join(self.tmp, 'x.%s.json' % kind)
+            save_container(path, kind, {'probe': kind})
+            self.assertEqual(persistence.peek_kind(path), kind)
+
+    def test_foreign_magic_refuses_with_the_house_message(self):
+        path = os.path.join(self.tmp, 'foreign.json')
+        write_json_atomic(path, {'magic': 'FOREIGN', 'kind': 'game'})
+        with self.assertRaises(FormatError) as ctx:
+            persistence.peek_kind(path)
+        self.assertIn("not an AA-match file (magic='FOREIGN', "
+                      "expected 'AAMATCH')", str(ctx.exception))
+
+    def test_unparseable_json_refuses_with_the_parse_message(self):
+        path = os.path.join(self.tmp, 'garbage.aamatch.json')
+        with open(path, 'wb') as fh:
+            fh.write(b'{ not json ~~')
+        with self.assertRaises(FormatError) as ctx:
+            persistence.peek_kind(path)
+        self.assertIn('could not parse AA-match JSON: ',
+                      str(ctx.exception))
+
+    def test_dict_without_magic_refuses_with_the_foreign_message(self):
+        path = os.path.join(self.tmp, 'nomagic.json')
+        write_json_atomic(path, {'version': 1, 'kind': 'game'})
+        with self.assertRaises(FormatError) as ctx:
+            persistence.peek_kind(path)
+        self.assertIn("not an AA-match file (magic=None, expected "
+                      "'AAMATCH')", str(ctx.exception))
+
+    def test_non_dict_json_refuses_with_the_foreign_message(self):
+        path = os.path.join(self.tmp, 'list.json')
+        write_json_atomic(path, [1, 2, 3])
+        with self.assertRaises(FormatError) as ctx:
+            persistence.peek_kind(path)
+        self.assertIn('not an AA-match file ', str(ctx.exception))
+
+    # ---- the real-zip battery (mechanical teeth for the zip branch) --
+
+    def _write_pse_bytes(self):
+        pse = os.path.join(self.tmp, 'blob.pse')
+        with open(pse, 'wb') as fh:
+            fh.write(b'\x00pse-bytes\x00')   # arbitrary: write only archives
+        return pse
+
+    def test_real_aamz_via_checkpoint_writer_returns_checkpoint(self):
+        # The REAL writer (07-02's impl): wraps the data in the
+        # 'checkpoint' container and archives the pse bytes; peek runs
+        # NO parse gates.
+        zip_path = os.path.join(self.tmp, 'game.aamz')
+        checkpoint.write_checkpoint_zip(
+            zip_path, {'probe': 1}, self._write_pse_bytes())
+        self.assertEqual(persistence.peek_kind(zip_path), 'checkpoint')
+
+    def test_zip_with_no_json_member_refuses_with_archive_message(self):
+        zip_path = os.path.join(self.tmp, 'nosidecar.aamz')
+        with zipfile.ZipFile(zip_path, 'w') as zf:
+            zf.writestr('game.pse', b'\x00pse-bytes\x00')
+        with self.assertRaises(FormatError) as ctx:
+            persistence.peek_kind(zip_path)
+        self.assertIn('not an AA-match archive (expected exactly one '
+                      '*.json sidecar member, found 0)',
+                      str(ctx.exception))
+
+    def test_zip_with_unparseable_sidecar_refuses_parse_message(self):
+        zip_path = os.path.join(self.tmp, 'badsidecar.aamz')
+        with zipfile.ZipFile(zip_path, 'w') as zf:
+            zf.writestr('state.json', b'{ not json ~~')
+        with self.assertRaises(FormatError) as ctx:
+            persistence.peek_kind(zip_path)
+        self.assertIn('could not parse AA-match JSON',
+                      str(ctx.exception))
+
+    def test_zip_with_game_kind_sidecar_returns_game(self):
+        # The sidecar member carries the FULL container, so ANY valid
+        # container kind peeks through the zip branch.
+        zip_path = os.path.join(self.tmp, 'gamezip.aamz')
+        with zipfile.ZipFile(zip_path, 'w') as zf:
+            zf.writestr('state.json', json.dumps(
+                persistence.make_container('game', {'a': 1})))
+        self.assertEqual(persistence.peek_kind(zip_path), 'game')
 
 
 if __name__ == '__main__':

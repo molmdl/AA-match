@@ -18,8 +18,9 @@ from .get() defaults. Any semantic change to an existing field requires a
 version bump. No header checksum by design: hand-editable educator files
 are a feature (corruption surfaces as a parse error with a clear message).
 
-Purity: module-level imports are stdlib (json, os, tempfile) plus the
-PURE sibling `setup_state` (validate_state -- a pure<-pure import,
+Purity: module-level imports are stdlib (json, os, tempfile, zipfile --
+already on the ALLOWED_STDLIB whitelist in tests/test_purity.py) plus
+the PURE sibling `setup_state` (validate_state -- a pure<-pure import,
 dependency direction B8). NO `pymol` / Qt / numpy import at module level
 OR inside any function body, so this module unit-tests in WSL with bare
 python3.6 and zero stubs.
@@ -28,6 +29,7 @@ python3.6 and zero stubs.
 import json
 import os
 import tempfile
+import zipfile
 
 from .setup_state import validate_state
 
@@ -126,6 +128,58 @@ def read_json_file(path):
         return json.loads(raw)
     except ValueError as exc:
         raise FormatError("could not parse AA-match JSON: %s" % exc)
+
+
+def peek_kind(path):
+    """Read ONLY the container kind from an AA-match file (JSON
+    container OR .aamz archive).
+
+    The Phase-7 Import dispatch reads the kind to route 'game' vs
+    'checkpoint' files through one button (header-exact -- never
+    extension guesswork; the v1 one-button model, PA-__init__:790-868).
+    .aamz checkpoints are ZIP archives whose single *.json member is
+    the sidecar container: zipfile.is_zipfile -> read that member ->
+    the SAME magic/kind check as the JSON branch (the read_json_file
+    branch keeps serving .aamatch.json). Foreign/unparseable files
+    raise the SAME FormatError classes as load_container (the refusal
+    messages are shared verbatim: 'not an AA-match file (...)' from
+    check_container's wording, 'not an AA-match archive (...)' shared
+    with read_checkpoint_zip, 'could not parse AA-match JSON: ...'
+    shared with read_json_file). A structurally-valid container returns
+    its kind string WITHOUT running any kind-specific validation (no
+    version gate -- a wrong version must not refuse a PEEK; the kind's
+    own consumer gates it).
+    """
+    if zipfile.is_zipfile(path):
+        try:
+            with zipfile.ZipFile(path, 'r') as zf:
+                members = [n for n in zf.namelist()
+                           if n.lower().endswith('.json')]
+                if len(members) != 1:
+                    raise FormatError(
+                        'not an AA-match archive (expected exactly '
+                        'one *.json sidecar member, found %d)'
+                        % len(members))
+                raw = json.loads(zf.read(members[0]).decode('utf-8'))
+        except zipfile.BadZipFile as exc:
+            raise FormatError(
+                'not an AA-match archive (unreadable zip: %s)' % exc)
+        except FormatError:
+            raise      # FormatError subclasses ValueError -- re-raise
+                       # VERBATIM before the generic clause (the house
+                       # exception-ordering discipline: the zip-refusal
+                       # wording must not be re-wrapped)
+        except ValueError as exc:
+            raise FormatError(
+                'could not parse AA-match JSON: %s' % exc)
+    else:
+        raw = read_json_file(path)
+    if not isinstance(raw, dict) or raw.get('magic') != AAM_MAGIC:
+        magic = raw.get('magic') if isinstance(raw, dict) else raw
+        raise FormatError(
+            "not an AA-match file (magic=%r, expected %r)"
+            % (magic, AAM_MAGIC))
+    return raw.get('kind')
 
 
 def save_container(path, kind, data):

@@ -598,6 +598,29 @@ def capture_checkpoint_snapshot(elapsed=None):
         candidates=_last_start['candidates'], created_at=created_at)
 
 
+def _canonical_registry(reg):
+    """Deep tuple->list normalizer for the ADOPT-WITH-VERIFY compare.
+
+    Identity equality, not representation equality: ``_sorted_ids``
+    (placement.py:133-138) returns a sorted LIST, so the materialize
+    registry the pickled wizard carries is (name, [ids]); the
+    reconciled registry (checkpoint.reconcile_registry) normalizes the
+    SAME ids into TUPLES ((name, (ids))). A bare 'plain-dict equality'
+    would therefore NEVER hold even for an exact-identity restore --
+    the verify must compare the canonical form, which this helper
+    produces WITHOUT touching the values (object names and atom ids
+    are the identity contract; only their container type is
+    normalized).
+    """
+    if isinstance(reg, tuple):
+        return [_canonical_registry(v) for v in reg]
+    if isinstance(reg, list):
+        return [_canonical_registry(v) for v in reg]
+    if isinstance(reg, dict):
+        return dict((k, _canonical_registry(v)) for k, v in reg.items())
+    return reg
+
+
 def load_checkpoint(path):
     """Resume a game from ONE .aamz checkpoint archive (plan 07-09).
 
@@ -645,7 +668,10 @@ def load_checkpoint(path):
        checkpoint resumes where the player left off.
     7. Wizard ADOPT-OR-REBUILD (RECORDED DECISION 5): if the pickled
        wizard restored (any identity) AND its ``_registry`` equals the
-       reconciled registry (plain-dict equality), ADOPT it as-is
+       reconciled registry (canonicalized identity equality --
+       ``_canonical_registry``; materialize's ids are sorted LISTS and
+       reconcile's are TUPLES, so a bare plain-dict compare would be a
+       false mismatch on every exact-identity restore), ADOPT it as-is
        (books intact, the scene already shows the saved colors -- the
        restored wizard's ``_saved_msm`` already holds the user's true
        pre-game value, so it needs nothing more). On None / a user
@@ -717,7 +743,8 @@ def load_checkpoint(path):
         adopted = False
         restored = cmd.get_wizard()
         if wizard_mod.is_game_wizard_any_identity(restored):
-            if getattr(restored, '_registry', None) == registry:
+            if _canonical_registry(getattr(restored, '_registry', None)) \
+                    == _canonical_registry(registry):
                 adopted = True
             else:
                 cmd.set_wizard()        # registry verified stale: pop

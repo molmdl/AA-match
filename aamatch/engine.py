@@ -44,8 +44,15 @@ OPS (each count-asserted; plain-data in/out):
 2. ``materialize(payload, level_index=0) -> registry`` -- delegates to
    placement.materialize; payload + registry kept module-side so the
    later ops need no bookkeeping from callers.
-3. ``place_aa(slot_id, position)`` -- translate_to over the registry's
-   object for that slot (baked, count-asserted).
+3. ``place_aa(slot_id, position, molecule_index=None)`` -- translate_to
+   over the registry's object for that slot (baked, count-asserted).
+   Slot ids are PER-MOLECULE scoped (generator.py:524 -- 'r0c0'
+   repeats across the molecules of one level), so the resolution is
+   molecule-aware: ``molecule_index`` pins the molecule's slots
+   EXACTLY (the wizard's scripted move_to passes its LIVE molecule
+   index -- first-match across molecules would silently move the WRONG
+   AA); None keeps the Phase-2 cross-molecule first-match search for
+   the legacy single-molecule call sites.
 4. ``reset_to_grid()`` -- spec REPLAY via placement.reset_to_grid
    (never matrix_reset).
 5. ``detect() -> records`` -- geometry.extract_game_atoms() +
@@ -385,24 +392,40 @@ def adopt_game(payload, registry, game_state_dict, ligand_content,
     return game
 
 
-def _slot_object(registry, slot_id):
-    """The object name registered for ``slot_id`` (fail-closed)."""
-    for mol in registry['molecules']:
+def _slot_object(registry, slot_id, molecule_index=None):
+    """The object name registered for ``slot_id`` (fail-closed).
+
+    Slot ids are PER-MOLECULE scoped by design (generator.py:524 --
+    'r0c0' repeats across the molecules of one level), so the lookup
+    is molecule-aware: ``molecule_index`` resolves within THAT
+    molecule's slots exactly; None keeps the Phase-2 cross-molecule
+    first-match search for the legacy single-molecule call sites
+    (07-10 Rule-1 record -- a first-match hit on a shadowed slot id
+    silently moved the wrong molecule's AA)."""
+    if molecule_index is not None:
+        molecules = [registry['molecules'][molecule_index]]
+    else:
+        molecules = registry['molecules']
+    for mol in molecules:
         entry = mol['slots'].get(slot_id)
         if entry is not None:
             return entry[0]
     raise EngineError(
         'engine.place_aa: slot %r is not in the materialized registry '
         '[%s]' % (slot_id, sorted(
-            sid for m in registry['molecules'] for sid in m['slots'])))
+            sid for m in molecules for sid in m['slots'])))
 
 
-def place_aa(slot_id, position):
+def place_aa(slot_id, position, molecule_index=None):
     """Op 3: baked placement -- the object's centroid lands on
     ``position`` (3 floats) via placement.translate_to (count- and
-    pose-asserted; camera=0, world frame)."""
+    pose-asserted; camera=0, world frame). Pass ``molecule_index``
+    whenever the caller knows the slot's molecule (the per-molecule
+    slot_id scoping law) -- the wizard's scripted move_to always
+    does."""
     registry = _current_registry()
-    placement.translate_to(_slot_object(registry, slot_id), position)
+    placement.translate_to(
+        _slot_object(registry, slot_id, molecule_index), position)
 
 
 def reset_to_grid():

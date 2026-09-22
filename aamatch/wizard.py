@@ -746,7 +746,11 @@ class GameWizard(Wizard):
         identity assert. This is the scripted-pose path (SMOKE-07 uses
         it for the exact 4.5 A pi-stacking pose, with the explicit
         baked ring-alignment step scripted there first -- the 02-14
-        decision: fragments carry no guaranteed ring orientation)."""
+        decision: fragments carry no guaranteed ring orientation).
+        The op is called with molecule_index=self._molecule_index --
+        slot ids are PER-MOLECULE scoped, so a molecule-scoped resolve
+        is the only correct one for any current molecule beyond the
+        first (the 07-10 Rule-1 fix)."""
         self._guard(self._move_to_impl, position)
 
     def _move_to_impl(self, position):
@@ -755,7 +759,8 @@ class GameWizard(Wizard):
         if obj is None:
             return
         from . import engine
-        engine.place_aa(self._current_slot, position)
+        engine.place_aa(self._current_slot, position,
+                        molecule_index=self._molecule_index)
         self._assert_identity(obj)
         cmd.refresh_wizard()
 

@@ -87,10 +87,23 @@ final elapsed, and pop the wizard via the local ``_pop_game_wizard``
     EMBEDDED payload is the truth -- never regenerated) -> countdown
     -> the 'Game imported: <path>.' line logged AFTER the arm (the
     restart D7 law). 07-07 also routes Restart through the ADDITIVE
-    '_last_start['payload']' entry (the c2 decision): the replay goes
-    payload-direct whenever the store carries a payload, with the
-    legacy start_game call kept as the defensive fallback branch for
-    a payload-less direct-construction tuple.
+ '_last_start['payload']' entry (the c2 decision): the replay goes
+     payload-direct whenever the store carries a payload, with the
+     legacy start_game call kept as the defensive fallback branch for
+     a payload-less direct-construction tuple. Plan 07-10 turns the
+     Import button into the ONE load surface for BOTH file kinds (the
+     v1 one-button model): the filter grows to
+     'AA-match (*.aamatch.json *.aamz);;All Files (*)' and
+     ``_on_import`` dispatches on the header-exact container kind --
+     kind 'game' routes the 07-07 fresh-import flow, kind 'checkpoint'
+     routes the 07-09 ``gamestart.load_checkpoint`` resume through
+     ``_resume_checkpoint_from`` (P-2 cancel -> load_checkpoint -> the
+     full tab re-arm: the ``_last_status`` silent-poll seed, the
+     required label, the timer started iff not game_over with the
+     label set from the rebased ``_compute_elapsed()``, and the
+     handler-logged 'Game resumed from <path>.' line AFTER the re-arm
+     -- NO countdown on resume), and every other kind refuses with
+     the pinned wording through ``_guard``.
 
 LAWS this module enforces (05-RESEARCH-window-start-timer.md):
 
@@ -149,8 +162,12 @@ class GameTab(QtWidgets.QWidget):
          the Setup tab's game-setup ``btn_reset`` per the restart-reset
          D7 naming law), 'Save' (07-06, SCORE-08 -- checkpoint the
          running game to an .aamz archive; wrapper+impl factored per the
-         04-09 _X_impl law), and 'Import' (07-07, PERSIST-02 -- start a
-         game from an exported .aamatch.json game file; attribute
+         04-09 _X_impl law), and 'Import'   (07-07, PERSIST-02; 07-10 turned it
+         into the ONE load surface for BOTH file kinds -- the v1
+         one-button model, PA-__init__:790-868: the container kind is
+         read header-exact via ``persistence.peek_kind`` and the
+         'game' branch starts fresh while the 'checkpoint' branch
+         resumes via ``_resume_checkpoint_from``; attribute
          ``btn_import`` bare, no naming collision anywhere per the D7
          logic that left ``btn_restart`` bare). The button row keeps
          its stretch LAST (insertions go BEFORE the stretch) so a
@@ -258,15 +275,15 @@ class GameTab(QtWidgets.QWidget):
             'Save the running game (PyMOL session + game state) to a '
             'checkpoint file.')
         btn_row.insertWidget(btn_row.count() - 1, self.btn_save_game)
-        # Import button (07-07, PERSIST-02 -- spec.md:39): start a game
-        # from an exported .aamatch.json game file (the 04-12 export's
-        # EXACT filter). Bare attribute -- no naming collision anywhere
-        # (the D7 logic that left btn_restart bare). Inserted BEFORE
-        # the stretch, which stays LAST.
+        # Import button (07-07 PERSIST-02, 07-10 one-button dispatch --
+        # spec.md:39): the ONE load surface for BOTH file kinds.
+        # Bare attribute -- no naming collision anywhere (the D7 logic
+        # that left btn_restart bare). Inserted BEFORE the stretch,
+        # which stays LAST.
         self.btn_import = QtWidgets.QPushButton('Import', self)
         self.btn_import.setToolTip(
-            'Load a game file exported by Generate and export and '
-            'start playing it.')
+            'Load a saved checkpoint (.aamz) to resume playing, or an '
+            'exported game file (.aamatch.json) to start it fresh.')
         btn_row.insertWidget(btn_row.count() - 1, self.btn_import)
         layout.addLayout(btn_row)
         self.btn_hint.clicked.connect(self._on_hint)
@@ -890,12 +907,14 @@ class GameTab(QtWidgets.QWidget):
         data = gamestart.capture_checkpoint_snapshot(elapsed)
         return gamestart.save_checkpoint(path, data)
 
-    # ---- the Import handler (07-07: PERSIST-02) ----
+    # ---- the Import handler (07-07 PERSIST-02 + 07-10 one-button dispatch) ----
 
     def _on_import(self):
-        """Import button: load an exported game file and start it via
-        _guard. The THIN wrapper owns the ONLY modal (the file dialog);
-        the impl is box-free (the 04-09 _X_impl law).
+        """Import button: the ONE load surface for BOTH file kinds
+        (07-10 Recorded Decision 1 -- the v1 one-button model,
+        PA-__init__:790-868). The THIN wrapper owns the ONLY modal
+        (the file dialog); the dispatch impl is box-free (the 04-09
+        _X_impl law).
 
         GATE-FREE (07-RESEARCH-import.md I2): unlike every other tab
         handler there is NO isinstance gate upfront -- Import is legal
@@ -905,20 +924,49 @@ class GameTab(QtWidgets.QWidget):
         (07-07 Recorded Decision 2): house law -- spec warnings exist
         ONLY for Skip/Give Up (spec.md:43-45, restart-reset D9); a
         mid-game Import discards the running game exactly like Start
-        does. The filter is the 04-12 export's EXACT filter ('AA-match
-        Game (*.aamatch.json);;All Files (*)' -- the game-files-only
-        half; the .aamz checkpoint extension + kind dispatch land in
-        the later plan, no dead branch here). Cancel is a silent
-        no-op. NO success box: the countdown + armed wizard + the
-        after-arm info-box line ARE the feedback (the _on_start
-        precedent). Refusals surface VERBATIM through _guard (no
-        catch-and-humanize layer -- the 04-13/06-08 convention)."""
+        does. The filter lists BOTH extensions (07-10 Recorded
+        Decision 3): 'AA-match (*.aamatch.json *.aamz);;All Files (*)'.
+        Cancel is a silent no-op. NO success box: the countdown +
+        armed wizard (game branch) or the re-armed tab (checkpoint
+        branch) + the after-the-fact info-box line ARE the feedback.
+        Refusals surface VERBATIM through ONE ``_guard`` around the
+        whole dispatch (no catch-and-humanize layer -- the
+        04-13/06-08 convention)."""
         path, _filter = QtWidgets.QFileDialog.getOpenFileName(
             self, 'Import AA-match Game', '',
-            'AA-match Game (*.aamatch.json);;All Files (*)')
+            'AA-match (*.aamatch.json *.aamz);;All Files (*)')
         if not path:
             return
-        self._guard(lambda: self._import_game_from(path))
+        self._guard(lambda: self._import_by_kind(path))
+
+    def _import_by_kind(self, path):
+        """Non-modal dispatch impl (07-10): read the container kind
+        header-exact and route the file to its branch.
+
+        The kind read comes BEFORE any branch: ``persistence.peek_kind``
+        (ZIP-AWARE -- .aamz archives peek through their single *.json
+        sidecar member, never extension guesswork). kind 'game' ->
+        the 07-07 fresh-import flow; kind 'checkpoint' -> the 07-09
+        resume flow. Every OTHER kind (including a missing-kind
+        ``None``) refuses with the PINNED wording -- one raise site,
+        so the wrapper's single ``_guard`` boxes peek refusals and
+        unknown kinds alike (the 07-10 in-flight fix: the plan sketch's
+        two-``_guard`` shape gave peek's ``None`` return an ambiguous
+        refusal sentinel that would have SILENTLY swallowed a
+        kind-less valid container; routing the whole dispatch under
+        one ``_guard`` removes the ambiguity -- every non-game/
+        non-checkpoint kind gets the pinned refusal). Returns the
+        branch impl's return; raises the ValueError/OSError family on
+        refusal (the wrapper boxes it verbatim)."""
+        from . import paths, persistence
+        kind = persistence.peek_kind(paths.to_windows_path(path))
+        if kind == 'checkpoint':
+            return self._resume_checkpoint_from(path)
+        if kind == 'game':
+            return self._import_game_from(path)
+        raise ValueError(
+            'expected an AA-match game or checkpoint file, '
+            'found kind=%r' % (kind,))
 
     def _import_game_from(self, path):
         """Non-modal import impl (07-07, PERSIST-02): materialize the
@@ -982,6 +1030,73 @@ class GameTab(QtWidgets.QWidget):
         self.start_countdown(wiz)
         self._log(status_text.game_imported_line(path))
         return True
+
+    def _resume_checkpoint_from(self, path):
+        """Non-modal checkpoint-resume impl (07-10): run the 07-09
+        load seam and RE-ARM the Game tab from its summary.
+
+        SEQUENCE (07-RESEARCH-state.md section 4 step 9):
+        ``cancel_pending_start()`` FIRST (P-2 -- an in-flight
+        countdown's GO must never fire over the resumed game), then
+        ``gamestart.load_checkpoint`` -- ALL parse/refusal gates run
+        inside it BEFORE any scene touch (refusals propagate verbatim),
+        and it owns the any-identity GameWizard pop, the full-session
+        ``cmd.load``, the sentinel-sweep registry reconciliation, the
+        engine adopt + timer REBASE (a checkpoint resumes where the
+        player left off), and the wizard adopt-or-rebuild with a plain
+        ``activate(replace=0)`` push. NO countdown on resume (07-10
+        Recorded Decision 2 / 07-09 Recorded Decision 3): the resumed
+        wizard is ALREADY on the stack, so the tab re-arms INSTANTLY
+        instead of passing through ``start_countdown``/``_begin_play``.
+
+        TAB RE-ARM (the _begin_play pattern, minus activation):
+        ``_last_status`` seeds the resumed wizard's get_status() so
+        the poll's first observation is SILENT (the status_events
+        None case is never triggered -- the scene and books came back
+        intact); the required label renders from the STATE's
+        'required' list through the pure status_text.required_display
+        (the :324/:445 house shape); the TIMER: game_over pin the
+        label to the EXACT frozen final_time (the sanctioned
+        ``engine.game_status()`` read) and keep the 1 Hz timer
+        STOPPED (a completed checkpoint stays frozen -- the same
+        shape as _endgame_sequence), else set the label from
+        ``_compute_elapsed()`` (the rebased anchor already reads the
+        true resumed elapsed -- the elapsed_at_save value ticked
+        forward, never a placeholder '0:00') and restart the 1 Hz
+        timer (defensive stop + start, the _begin_play shape).
+
+        LOG AFTER the re-arm (the handler-logged law, 07-03): the
+        pure status_text.game_resumed_line is the LAST line appended
+        -- the reserved game_imported kind stays for FRESH imports
+        only; a resume never logs it. NO boxes here (the smoke-99 law
+        -- headless smokes drive this impl directly). Returns the
+        summary dict {'path','adopted','level_pos','molecule_pos',
+        'game_over','elapsed_at_save'}; raises the ValueError/OSError
+        family on refusal or viewer failure (the wrapper's _guard
+        boxes it verbatim). The disk path routes paths.to_windows_path
+        (the AGENTS path law)."""
+        from pymol import cmd
+        from . import engine, gamestart, paths, status_text
+        self.cancel_pending_start()
+        summary = gamestart.load_checkpoint(paths.to_windows_path(path))
+        wiz = cmd.get_wizard()
+        state = wiz.get_status()
+        self._last_status = state
+        self._required_label.setText(
+            status_text.required_display(state['required']))
+        if summary['game_over']:
+            self._timer.stop()
+            self._timer_label.setText(
+                status_text.format_mss(
+                    engine.game_status()['final_time']))
+        else:
+            self._last_shown_elapsed = self._compute_elapsed()
+            self._timer_label.setText(
+                self._format_mss(self._last_shown_elapsed))
+            self._timer.stop()
+            self._timer.start(1000)
+        self._log(status_text.game_resumed_line(path))
+        return summary
 
     # ---- the endgame sequence (06-07: the shared game-over tail) ----
 

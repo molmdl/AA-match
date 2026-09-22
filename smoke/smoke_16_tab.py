@@ -1,5 +1,6 @@
 """Headless SMOKE-16 - the Game tab lifecycle controls (plans
-06-07/06-08/06-09) + the Save button (07-06, SCORE-08 UI), T1b.
+06-07/06-08/06-09) + the Save button (07-06, SCORE-08 UI) + the
+one-button Import resume dispatch (07-10, PERSIST-03 UI), T1b.
 
 Run (from WSL, repo root):
     bash smoke/run_smoke.sh smoke/smoke_16_tab.py 240
@@ -162,6 +163,62 @@ PART D  (07-06, SCORE-08 UI): the Save button T1b drive:
         driven headless (smoke-99). NO success box exists to verify
         (Recorded Decision 3 -- the info-box line IS the feedback).
         D5 restore - timers stopped, done pop, prefix cleanup,
+        gamestart._last_start = None -> the baseline scene EXACTLY.
+
+PART E  (07-10): the one-button resume -- the tab-impl resume drive +
+        the REAL _on_import dispatch drive + the unknown-kind refusal:
+        E1 live game via the countdown drive -> scripted pick + move +
+        skip (real accrued state) -> _save_game_to(zip_path, 42.0)
+        (the 07-06 impl, a pure function of its args) -> fingerprints
+        captured: engine.game_status() minus timer_anchor (the resume
+           REBASES it -- comparison discipline) and the molecule-2
+           slot centroid.
+        E2 mutate the live game further (another move on the molecule-2
+           slot) so the resume must actually REPLACE state.
+        E3 tab._resume_checkpoint_from(zip_path) -> the summary carries
+           the adopted resume (level_pos 1 / molecule_pos 2 / game_over
+           False / elapsed_at_save 42.0 VERBATIM); engine.game_status()
+           minus timer_anchor == the AT-SAVE fingerprint EXACTLY (the
+           07-09 guarantees seen through the tab); _last_status == the
+           resumed wizard's get_status() (the silent-first-poll seed);
+           _required_label == status_text.required_display(<resumed
+           wizard>.get_status()['required']); _timer ACTIVE and
+           _timer_label == _format_mss(_compute_elapsed()) with
+           _compute_elapsed() ~= 42 s (the <=1 s coarse granularity --
+           the rebased anchor reads the true resumed elapsed, never a
+           '0:00' placeholder); the LAST info-box line ==
+           status_text.game_resumed_line(path); tab._pending_wizard is
+           None (NO countdown arms on resume); the mutation is
+           provably REPLACED (the mutated centroid returns within the
+           float32 slack class of the at-save fingerprint).
+        E4 DISPATCH-TEETH (the wiring assert): patch the STATIC
+           QtWidgets.QFileDialog.getOpenFileName to return tuple
+           (zip_path, '') -- original saved first, restored in finally
+           (the SMOKE-17 part-C in-memory patch shape) -- then drive
+           tab._on_import() (the REAL wiring: dialog -> cancel check
+           -> peek_kind -> the kind branch) -> the CHECKPOINT branch
+           ran: game_resumed_line is the LAST info-box line AGAIN,
+           engine.game_status() minus timer_anchor STILL == the saved
+           fingerprint, NO 'Game imported:' line anywhere (the fresh-
+           import fingerprint is absent), _pending_wizard None (NO
+           countdown armed), the 1 Hz _timer ACTIVE. (A JSON-only
+           peek_kind raises 'could not parse AA-match JSON' AT THE
+           DISPATCH here and the smoke FAILS -- this drive is the
+           mechanical proof the zip branch is live in production.)
+        E5 unknown-kind refusal THROUGH THE SAME DISPATCH: write a
+           kind 'manifest' container via persistence.save_container to
+           a temp file; patch the STATIC getOpenFileName to return it
+           AND the STATIC QtWidgets.QMessageBox.warning to a recorder
+           (both restored in finally -- _guard boxes refusals through
+           exactly that call) -> drive _on_import() -> returns None
+           and the recorder holds EXACTLY the pinned 'expected an
+           AA-match game or checkpoint file, found kind='manifest''
+           message; the direct impl drive tab._import_by_kind(path)
+           RAISES the same pinned wording; the scene, the info log,
+           the engine state (full dict INCLUDING the anchor), and the
+           live wizard are UNTOUCHED (the refusal fires at the kind
+           read, before any branch).
+        E6 restore - timers stopped, done pop, prefix cleanup,
         gamestart._last_start = None -> the baseline scene EXACTLY.
 
 Conventions (frozen Phase 1, kept): anchor repo root via sys.argv
@@ -1099,6 +1156,254 @@ except Exception:
     except Exception:
         traceback.print_exc()
 
+# ============================================================
+# PART E (07-10): the one-button Import resume. ZERO modals: the smoke
+# drives the NON-MODAL impl _resume_checkpoint_from directly and the
+# REAL _on_import wrapper ONLY with the STATIC dialog + warning box
+# patched (in-memory, originals restored in finally) -- an unpatched
+# static call under offscreen would hang per the smoke-99 receipt.
+# ============================================================
+part_d_checks = REC['checks']
+
+dlg5 = None
+try:
+    import shutil as shutil_e
+    import tempfile as tempfile_e
+
+    from aamatch import persistence as persistence_e
+
+    dlg5 = setup_window.SetupWindow()
+    tab5 = dlg5.game_tab
+    baseline_e = cmd.get_names('objects')
+
+    def _gs_minus_anchor(d):
+        """game_status fingerprint: the resume REBASES timer_anchor
+        (now - elapsed_at_save), so compare every other key exactly."""
+        out = dict(d)
+        out.pop('timer_anchor', None)
+        return out
+
+    # ---- E1: real accrued state + the 07-06 save impl ----------------
+    wiz_e = gamestart.start_game(activate=False)
+    tab5.start_countdown(wiz_e)
+    for _ in range(4):
+        tab5._countdown_tick()
+    check('E1: live game via the countdown drive (that wizard on the '
+          'stack, 1 Hz running)',
+          cmd.get_wizard() is wiz_e and tab5._timer.isActive(), '')
+    slot_e0 = sorted(engine._registry['molecules'][0]['slots'])[0]
+    obj_e0, target_e = _slot_geometry_b(slot_e0)
+    cmd.select('sele', '%s and name CA' % obj_e0)
+    wiz_e.do_select('sele')
+    wiz_e.move_to((target_e[0] + 3.0, target_e[1] + 5.0,
+                   target_e[2] - 2.0))
+    skip_e = tab5._skip_now()
+    check('E1: scripted pick + move + skip accrued real state (score '
+          'recorded, skip_count 1, advanced to molecule 2)',
+          isinstance(skip_e, dict) and skip_e.get('game_over') is False
+          and engine.game_status().get('skip_count') == 1
+          and len(engine.game_status().get('molecule_scores')
+                  or []) == 1
+          and engine.game_status().get('current_molecule_index') == 1,
+          'skip=%r' % (skip_e,))
+    tmp_dir_e = tempfile_e.mkdtemp(prefix='aamatch_smoke16_resume_')
+    path_e = os.path.join(tmp_dir_e, 'smoke16_resume.aamz')
+    final_e = None
+    try:
+        final_e = tab5._save_game_to(path_e, 42.0)
+        check('E1: _save_game_to wrote the checkpoint at the final '
+              'path (the pure (path, elapsed) function, 07-06)',
+              isinstance(final_e, str) and os.path.exists(final_e),
+              'final=%r' % (final_e,))
+        gs_saved_e = engine.game_status()
+        slot_e1 = sorted(engine._registry['molecules'][1]['slots'])[0]
+        obj_e1 = engine._registry['molecules'][1]['slots'][slot_e1][0]
+        cen_e_save = geometry.centroid_of(obj_e1)
+
+        # ---- E2: mutate further so the resume MUST replace ----------
+        cmd.select('sele', '%s and name CA' % obj_e1)
+        wiz_e.do_select('sele')
+        wiz_e.move_to((cen_e_save[0] + 3.0, cen_e_save[1] + 5.0,
+                       cen_e_save[2] - 2.0))
+        cen_e_mut = geometry.centroid_of(obj_e1)
+        dev_e_mut = max(abs(cen_e_mut[i] - cen_e_save[i])
+                        for i in range(3))
+        check('E2: the post-save mutation moved the molecule-2 AA '
+              'off its at-save pose pre-resume (> 1 A)',
+              dev_e_mut > 1.0, 'dev=%g' % (dev_e_mut,))
+
+        # ---- E3: the resume drive through the tab impl --------------
+        summary_e = tab5._resume_checkpoint_from(final_e)
+        check('E3: _resume_checkpoint_from returns the summary dict '
+              '(same-session exact restore ADOPTS the restored wizard; '
+              'positions + elapsed_at_save VERBATIM)',
+              isinstance(summary_e, dict)
+              and summary_e.get('adopted') is True
+              and summary_e.get('level_pos') == 1
+              and summary_e.get('molecule_pos') == 2
+              and summary_e.get('game_over') is False
+              and summary_e.get('elapsed_at_save') == 42.0,
+              'summary=%r' % (summary_e,))
+        gs_now_e = engine.game_status()
+        check('E3: engine.game_status() == the AT-SAVE fingerprint '
+              '(scores/skip_count/positions -- the 07-09 guarantees '
+              'through the tab; timer_anchor rebased and excluded)',
+              _gs_minus_anchor(gs_now_e)
+              == _gs_minus_anchor(gs_saved_e),
+              'diff=%s'
+              % (sorted(k for k in _gs_minus_anchor(gs_now_e)
+                        if _gs_minus_anchor(gs_now_e).get(k)
+                        != _gs_minus_anchor(gs_saved_e).get(k)),))
+        wiz_e_res = cmd.get_wizard()
+        check('E3: the resumed wizard is ACTIVE and _last_status == '
+              'its get_status() EXACTLY (the silent-first-poll seed)',
+              isinstance(wiz_e_res, wizard.GameWizard)
+              and tab5._last_status == wiz_e_res.get_status(), '')
+        check('E3: _required_label == required_display(<resumed '
+              "state>['required']) (the :324/:445 house shape)",
+              tab5._required_label.text()
+              == status_text.required_display(
+                  wiz_e_res.get_status()['required']),
+              'label=%r' % (tab5._required_label.text(),))
+        elapsed_e = tab5._compute_elapsed()
+        check('E3: _timer ACTIVE and _timer_label reflects the resumed '
+              'elapsed (_compute_elapsed() ~= 42 s; the rebased anchor '
+              '-- never a placeholder)',
+              tab5._timer.isActive()
+              and 42.0 <= elapsed_e <= 44.5
+              and tab5._timer_label.text()
+              == tab5._format_mss(elapsed_e),
+              'elapsed=%.3f label=%r'
+              % (elapsed_e, tab5._timer_label.text()))
+        lines_e3 = tab5._info_log.toPlainText().splitlines()
+        check('E3: the LAST info-box line == game_resumed_line(path) '
+              '(handler-logged AFTER the re-arm; NO countdown '
+              'pending)',
+              bool(lines_e3)
+              and lines_e3[-1] == status_text.game_resumed_line(final_e)
+              and tab5._pending_wizard is None,
+              'last=%r pending=%r'
+              % (lines_e3[-1] if lines_e3 else None,
+                 tab5._pending_wizard))
+        cen_e_res = geometry.centroid_of(obj_e1)
+        dev_e_res = 0.0
+        tol_e_res = 0.0
+        for i in range(3):
+            dev_e_res = max(dev_e_res, abs(cen_e_res[i]
+                                           - cen_e_save[i]))
+            tol_e_res = max(tol_e_res,
+                            placement.POSE_TOLERANCE
+                            + placement.FLOAT32_ULP_REL
+                            * max(abs(cen_e_res[i]),
+                                  abs(cen_e_save[i])))
+        check('E3: the mutation was REPLACED -- the molecule-2 AA is '
+              'back at its at-save pose (float32 slack class)',
+              dev_e_res <= tol_e_res,
+              'dev=%g tol=%g' % (dev_e_res, tol_e_res))
+
+        # ---- E4: the REAL dispatch drive (patched static dialog) ----
+        orig_open_e = QtWidgets.QFileDialog.getOpenFileName
+        try:
+            QtWidgets.QFileDialog.getOpenFileName = (
+                lambda *a, **k: (final_e, ''))
+            tab5._on_import()
+        finally:
+            QtWidgets.QFileDialog.getOpenFileName = orig_open_e
+        text_e4 = tab5._info_log.toPlainText()
+        lines_e4 = text_e4.splitlines()
+        check('E4: dispatch through _on_import routed the REAL .aamz '
+              'to the checkpoint branch (resumed line LAST again; a '
+              'JSON-only peek_kind would FAIL at the dispatch)',
+              bool(lines_e4)
+              and lines_e4[-1] == status_text.game_resumed_line(final_e),
+              'last=%r' % (lines_e4[-1] if lines_e4 else None,))
+        check('E4: the live state STILL equals the saved fingerprint '
+              '(no fresh-zeros game-branch fingerprint)',
+              _gs_minus_anchor(engine.game_status())
+              == _gs_minus_anchor(gs_saved_e), '')
+        check('E4: NO game-branch fingerprints -- no game_imported '
+              'line, no countdown armed, 1 Hz still running',
+              'Game imported: ' not in text_e4
+              and tab5._pending_wizard is None
+              and tab5._timer.isActive()
+              and isinstance(cmd.get_wizard(), wizard.GameWizard), '')
+
+        # ---- E5: unknown-kind refusal through the dispatch ----------
+        manifest_path_e = os.path.join(tmp_dir_e, 'bogus.aamatch.json')
+        persistence_e.save_container(manifest_path_e, 'manifest',
+                                     {'probe': 1})
+        expected_e5 = ('expected an AA-match game or checkpoint '
+                       "file, found kind='manifest'")
+        names_pre_e5 = cmd.get_names('objects')
+        log_pre_e5 = tab5._info_log.toPlainText()
+        gs_pre_e5 = engine.game_status()
+        wiz_pre_e5 = cmd.get_wizard()
+        recorded_e5 = []
+        orig_open2_e = QtWidgets.QFileDialog.getOpenFileName
+        orig_warn_e = QtWidgets.QMessageBox.warning
+        try:
+            QtWidgets.QFileDialog.getOpenFileName = (
+                lambda *a, **k: (manifest_path_e, ''))
+            QtWidgets.QMessageBox.warning = (
+                lambda *a, **k: recorded_e5.append(a[2]))
+            r_e5 = tab5._on_import()
+        finally:
+            QtWidgets.QFileDialog.getOpenFileName = orig_open2_e
+            QtWidgets.QMessageBox.warning = orig_warn_e
+        check('E5: the dispatch BOXED the unknown-kind refusal through '
+              '_guard (wrapper returns None; recorder holds EXACTLY '
+              'the pinned message)',
+              r_e5 is None and recorded_e5 == [expected_e5],
+              'rec=%r' % (recorded_e5,))
+        exc_e5 = None
+        try:
+            tab5._import_by_kind(manifest_path_e)
+        except ValueError as exc_caught:
+            exc_e5 = exc_caught
+        check('E5: the direct impl drive RAISES the same pinned '
+              'wording (the single raise site in _import_by_kind)',
+              exc_e5 is not None and str(exc_e5) == expected_e5,
+              'exc=%r' % (exc_e5,))
+        check('E5: the refusal left scene + log + FULL engine state '
+              '(anchor included) + live wizard UNTOUCHED (the refusal '
+              'fires at the kind read, before any branch)',
+              cmd.get_names('objects') == names_pre_e5
+              and tab5._info_log.toPlainText() == log_pre_e5
+              and engine.game_status() == gs_pre_e5
+              and cmd.get_wizard() is wiz_pre_e5
+              and tab5._pending_wizard is None, '')
+    finally:
+        shutil_e.rmtree(tmp_dir_e, ignore_errors=True)
+
+    # ---- E6: restore -> the baseline scene EXACTLY -------------------
+    tab5.cancel_pending_start()
+    tab5._timer.stop()
+    cmd.set_wizard()
+    placement.cleanup_game_objects()
+    gamestart._last_start = None
+    check('E6: teardown returns the baseline scene EXACTLY + stack '
+          'empty',
+          list(cmd.get_names('objects')) == list(baseline_e)
+          and cmd.get_wizard() is None
+          and gamestart._last_start is None,
+          'post=%r baseline=%r'
+          % (cmd.get_names('objects'), baseline_e))
+    app.processEvents()
+    dlg5.close()
+except Exception:
+    traceback.print_exc()
+    check('part E one-button resume drive', False,
+          'raised (see traceback above)')
+    try:
+        if dlg5 is not None:
+            dlg5.game_tab.cancel_pending_start()
+            dlg5.game_tab._timer.stop()
+        cmd.set_wizard()
+        placement.cleanup_game_objects()
+        gamestart._last_start = None
+    except Exception:
+        traceback.print_exc()
+
 # --- Phase regression record (the 06-09 contract): one 'SMOKE-0N:
 # PASS/NOT-RUN' line per smoke of the six-smoke battery for the
 # orchestrator to grep; a standalone run only knows its own verdict --
@@ -1109,10 +1414,12 @@ print('SMOKE-16: %s' % ('PASS' if not failures else 'FAIL'), flush=True)
 
 # --- Verdict marker (the SOLE verdict carrier) ------------------------
 print('SMOKE-16 PART A: %d checks; PART B: %d checks; PART C: %d '
-      'checks; PART D: %d checks; total %d, %d failure(s)'
+      'checks; PART D: %d checks; PART E: %d checks; total %d, '
+      '%d failure(s)'
       % (part_a_checks, part_b_checks - part_a_checks,
          part_c_checks - part_b_checks,
-         REC['checks'] - part_c_checks, REC['checks'], len(failures)),
+         part_d_checks - part_c_checks,
+         REC['checks'] - part_d_checks, REC['checks'], len(failures)),
       flush=True)
 print('=== SMOKE-16 %s ==='
       % ('FAIL: ' + ', '.join(failures) if failures else 'PASS'),

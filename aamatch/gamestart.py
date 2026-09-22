@@ -598,6 +598,162 @@ def capture_checkpoint_snapshot(elapsed=None):
         candidates=_last_start['candidates'], created_at=created_at)
 
 
+def load_checkpoint(path):
+    """Resume a game from ONE .aamz checkpoint archive (plan 07-09).
+
+    The sentinel-first reconstruction orchestration
+    (07-RESEARCH-state.md sec. 4 end-to-end load order). Reconstruction
+    model (RECORDED DECISION 1): EXACT-SCENE RESTORE -- the loaded
+    ``.pse`` atoms are the truth; the sidecar repairs Python-side
+    metadata only. NO regeneration at load, ZERO pose data in the
+    sidecar, the engine is rehydrated from JSON (plugin-reload
+    survivable), and every parse gate re-runs on every load.
+
+    1. GATES FIRST: ``checkpoint.read_checkpoint_zip`` runs the whole
+       refusal chain (zip namelist + container kind + checkpoint
+       version + the embedded-game five-gate chain incl. the
+       exact-match detector_version gate + the GameState validator)
+       BEFORE any scene mutation -- a foreign/corrupt/newer/
+       incomplete checkpoint NEVER touches the session. A bare ``.pse``
+       (RECORDED DECISION 4 -- the degraded sidecar-less adopt path is
+       NOT built) refuses right here at the zip open
+       ('not an AA-match archive'); its documented recovery is the
+       game's own Import affordance with the real ``.aamz``.
+    2. Pop the live GameWizard of EITHER module identity (via the
+       module-attribute predicate -- monkeypatch-interceptable) so its
+       cleanup runs (msm/colors/pk1 restore); ``cmd.load`` would
+       otherwise replace the wizard stack WITHOUT running the outgoing
+       wizard's cleanup.
+    3. ``cmd.load`` the extracted ``game.pse`` -- full session replace
+       (partial=0 default): objects + view + settings + the pickled
+       wizard stack (07-01's argless-``__reduce__`` fix makes a
+       same-identity session restore the armed GameWizard).
+    4. Sentinel sweep: ``observed = {object: sorted ids}`` over the
+       prefixed game objects, keeping ONLY objects whose
+       ``segi AAM and b < 0`` count matches the whole-object count
+       (the b<0 selector discipline, placement.py:50) -- a mismatching
+       object is excluded and therefore reported as DROPPED by the
+       reconcile (fail-closed through the completeness gate).
+    5. ``checkpoint.reconcile_registry`` -- THE NEVER-GHOST-ENTRY LAW
+       (a non-verifying entry is dropped, never registered) +
+       the CURRENT-LEVEL COMPLETENESS GATE (the first missing piece
+       names the molecule/slot and refuses).
+    6. ``engine.adopt_game`` with the sidecar payload / reconciled
+       registry / game_state / ligand_texts -- rebinds ALL FOUR engine
+       globals and (RECORDED DECISION 2, TIMER = REBASE) rebases the
+       timer from ``elapsed_at_save`` iff the game is not over: a
+       checkpoint resumes where the player left off.
+    7. Wizard ADOPT-OR-REBUILD (RECORDED DECISION 5): if the pickled
+       wizard restored (any identity) AND its ``_registry`` equals the
+       reconciled registry (plain-dict equality), ADOPT it as-is
+       (books intact, the scene already shows the saved colors -- the
+       restored wizard's ``_saved_msm`` already holds the user's true
+       pre-game value, so it needs nothing more). On None / a user
+       wizard / a registry MISMATCH (pop it first so its cleanup runs)
+       REBUILD from the sidecar: ``GameWizard(payload, registry, level,
+       molecule)`` + ``resume_from(data['wizard'])`` + the msm REPAIR
+       (``cmd.set('mouse_selection_mode', books['saved_msm'])`` BEFORE
+       ``activate(...)`` -- the session only carried the save-time
+       defensive 0, and activate() snapshots the CURRENT msm into
+       ``_saved_msm`` after the push, so the repaired value is what the
+       rebuilt wizard's cleanup will restore) + ``activate(replace=0)``
+       -- a plain push (a user wizard underneath is preserved,
+       stack-native), NEVER ``activate_game`` (RECORDED DECISION 3: NO
+       countdown on resume and no from-zero timer re-anchor; the
+       rebase in step 6 owns the clock). The 07-10 tab re-arm consumes
+       the returned summary.
+    8. ``_last_start`` rebuild: the 5-key tuple {'setup', 'seed',
+       'candidates', 'ligand_content', 'payload'} (payload BY IDENTITY
+       from the sidecar parse) -- Restart-after-resume replays
+       payload-direct through start_game_from_payload.
+    9. Best-effort rmtree of the extracted-pse temp dir (owned by this
+       caller per read_checkpoint_zip's contract) and return a plain
+       summary dict::
+
+           {'path', 'adopted', 'level_pos', 'molecule_pos',
+            'game_over', 'elapsed_at_save'}
+
+    Fail-closed: refusals are the ValueError family (FormatError /
+    EngineError / PlacementError / WizardError) and propagate to the
+    caller's ``_guard``; unexpected exceptions propagate (bug
+    surfacing). A dictated rebuild with a MISSING wizard books block
+    refuses loudly rather than resuming with silently lost colors/msm
+    (never partially reconstruct in silence). The temp dir is cleaned
+    on EVERY exit path (refusals included).
+    """
+    import os
+    import shutil
+    from . import checkpoint, paths
+    from . import wizard as wizard_mod
+    final = paths.to_windows_path(path)
+    pse_path, data = checkpoint.read_checkpoint_zip(final)   # ALL gates
+    temp_dir = os.path.dirname(pse_path)
+    try:
+        parsed_payload = data['payload']
+        gs = data['game_state']
+        # -- step 2: pop any live GameWizard (cleanup must run) --------
+        prior = cmd.get_wizard()
+        if wizard_mod.is_game_wizard_any_identity(prior):
+            cmd.set_wizard()
+        # -- step 3: full session replace ------------------------------
+        cmd.load(pse_path)
+        # -- step 4: sentinel sweep (verified objects only) ------------
+        observed = {}
+        for name in geometry.game_object_names():
+            ids = []
+            cmd.iterate(name, 'stored.append(ID)', space={'stored': ids})
+            tagged = cmd.count_atoms('%s and segi AAM and b < 0' % name)
+            if tagged == cmd.count_atoms(name):
+                observed[name] = sorted(int(i) for i in ids)
+        # -- step 5: never-ghost + completeness gates -------------------
+        registry, _report = checkpoint.reconcile_registry(
+            data['registry'], observed, parsed_payload,
+            gs['current_level_index'])
+        # -- step 6: engine adopt + timer REBASE ------------------------
+        game = engine.adopt_game(parsed_payload, registry,
+                                 data['game_state'], data['ligand_texts'],
+                                 elapsed_at_save=data['elapsed_at_save'])
+        # -- step 7: wizard adopt (with registry verify) or rebuild -----
+        adopted = False
+        restored = cmd.get_wizard()
+        if wizard_mod.is_game_wizard_any_identity(restored):
+            if getattr(restored, '_registry', None) == registry:
+                adopted = True
+            else:
+                cmd.set_wizard()        # registry verified stale: pop
+        if not adopted:
+            books = data.get('wizard')
+            if not isinstance(books, dict):
+                raise ValueError(
+                    'checkpoint resume cannot rebuild the wizard: the '
+                    'sidecar is missing the wizard books block -- '
+                    're-save the checkpoint with a current AA-match.')
+            wiz = GameWizard(parsed_payload, registry,
+                             gs['current_level_index'],
+                             gs['current_molecule_index'])
+            wiz.resume_from(books)
+            saved_msm = books.get('saved_msm')
+            if saved_msm is not None:
+                cmd.set('mouse_selection_mode', int(saved_msm))
+            wiz.activate(replace=0)
+        # -- step 8: _last_start rebuild (payload-direct Restart) -------
+        global _last_start
+        _last_start = {'setup': data['setup'],
+                       'seed': parsed_payload['seed'],
+                       'candidates': data['candidates'],
+                       'ligand_content': data['ligand_texts'] or None,
+                       'payload': parsed_payload}
+        # -- step 9: summary for the tab re-arm (07-10) ------------------
+        return {'path': path,
+                'adopted': adopted,
+                'level_pos': gs['current_level_index'] + 1,
+                'molecule_pos': gs['current_molecule_index'] + 1,
+                'game_over': game.game_over,
+                'elapsed_at_save': data['elapsed_at_save']}
+    finally:
+        shutil.rmtree(temp_dir, ignore_errors=True)
+
+
 def save_checkpoint(path, data):
     """Write ONE atomic .aamz checkpoint archive; return the final path.
 

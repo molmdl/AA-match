@@ -217,10 +217,20 @@ Plans:
   3. [HUMAN] DATA_SOURCES.md covers every bundled file: download source, PDB ID + DOI, protonation/interaction provenance from known binding databases, and a verified license permitting bundling/redistribution. (HELP-02)
   4. [HEADLESS] Every-manifest-id smoke passes: each demo loads through the path helper with atom/bond counts matching the versioned manifest; on a ligand+ions+water demo, Cleanup leaves exactly the original object set. (verifies GEN-06 supply + PITFALL 13 in the field)
 **Research notes**: PITFALLS topics *demos*. Multi-state ligand policy (state 1 vs collapse) decided here with the curated data; strip waters/solvent before bundling; SDF-first for ligand chemistry (bond orders + explicit H).
-**Plans**: TBD
+**Plans**: 11 plans in 7 waves
 
 Plans:
-- [ ] 08-01: (TBD)
+- [ ] 08-01-PLAN.md — bundling pipeline: committed scripts/build_demos.py (multi-set, derived counts, sha256-in-run, single-record) + data-integrity tests (wave 1)
+- [ ] 08-02-PLAN.md — dropdown tier grouping: pure manifest_sets_grouped + Qt separators + 3 hazard fixes (wave 1)
+- [ ] 08-03-PLAN.md — smoke de-hardcoding: data-relative entry counts / largest-entry (wave 1)
+- [ ] 08-04-PLAN.md — [GATE] demo proposal document (08-PROPOSALS.md) + human approval checkpoint BEFORE any fetch/commit (wave 2)
+- [ ] 08-05-PLAN.md — bundle Easy sets: demo-easy-1/2/3 (aspirin, benzoic acid, citric acid, acetate, caffeine) (wave 3)
+- [ ] 08-06-PLAN.md — bundle Hard sets: demo-hard-1/2/3 (benzamidine, guanidinium, glutamic acid, acetylcholine, ATP, NAD) (wave 4)
+- [ ] 08-07-PLAN.md — bundle Challenge + Very-challenging sets (chloramphenicol, quinine, folic acid, thyroxine, heme) (wave 5)
+- [ ] 08-08-PLAN.md — SMOKE-02 curated-coverage extension + messy-scene cleanup field smoke smoke_21 (wave 6)
+- [ ] 08-09-PLAN.md — docs/DATA_SOURCES.md consolidation (HELP-02 gate-doc format) (wave 6)
+- [ ] 08-10-PLAN.md — (conditional) curated-manifest supply measurement + SIZE_S1/S2 re-tune verdict (wave 6)
+- [ ] 08-11-PLAN.md — [HUMAN] GUI checkpoint (grouped dropdown + DATA_SOURCES sign-off) + full regression battery + detector-coverage verdict (wave 7)
 
 ### Phase 9: Help, Docs & Release Audit
 **Goal**: A new user can learn the game from in-game help alone; every user-facing document matches shipped reality; performance budgets are confirmed on the final build.
@@ -272,7 +282,7 @@ Lifted from PITFALLS.md "Pitfall-to-Phase Mapping" (topic names → this roadmap
 | 5. Game Status Tab & Start Sequence | 11/11 | Complete (verified 2026-09-20 — 05-VERIFICATION.md passed 88/88) | 2026-09-20 |
 | 6. Scoring Lifecycle & Endgame | 10/10 | Complete (verified 2026-09-21 — 06-VERIFICATION.md passed 39/39) | 2026-09-21 |
 | 7. Checkpoint & Game-File Persistence | 0/TBD | Not started | - |
-| 8. Demo Curation & Citations | 0/TBD | Not started | - |
+| 8. Demo Curation & Citations | 0/11 | Not started | - |
 | 9. Help, Docs & Release Audit | 0/TBD | Not started | - |
 
 ## Coverage

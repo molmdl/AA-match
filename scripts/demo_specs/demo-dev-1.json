@@ -1,0 +1,39 @@
+{
+  "set_id": "demo-dev-1",
+  "tier": "easy",
+  "title": "Phase-2 development set",
+  "license": "",
+  "provenance": {},
+  "entries": [
+    {
+      "entry_id": "benzamide",
+      "local_path": "aamatch/data/ligands/benzamide.sdf",
+      "file": "ligands/benzamide.sdf",
+      "protonation": "as-recorded",
+      "expect_atom_count": 16,
+      "provenance": {
+        "source_url": "",
+        "pdb_id": "",
+        "entry_doi": "",
+        "paper_doi": "",
+        "plip": "",
+        "notes": "development fixture built by 02-04 (script-built), NOT curated demo data"
+      }
+    },
+    {
+      "entry_id": "acetate",
+      "local_path": "aamatch/data/ligands/acetate.sdf",
+      "file": "ligands/acetate.sdf",
+      "protonation": "as-recorded",
+      "expect_atom_count": 7,
+      "provenance": {
+        "source_url": "",
+        "pdb_id": "",
+        "entry_doi": "",
+        "paper_doi": "",
+        "plip": "",
+        "notes": "development fixture built by 02-04 (script-built), NOT curated demo data"
+      }
+    }
+  ]
+}

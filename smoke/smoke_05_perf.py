@@ -178,9 +178,15 @@ try:
         _ROOT, 'aamatch', 'data', 'MANIFEST.json'))
     entries = enumerate_entries(parse_manifest_dict(container))
     biggest = largest_entry(entries)
+    # Data-relative target: the max-heavy cross-check alone proves
+    # largest_entry semantics (DETECT-05 targets the largest bundled molecule
+    # whatever its name).  With the Phase-8 manifest the largest entry is
+    # expected to be a medium ligand (NAD/heme class, aromatic — the
+    # pi_stacking block_exclusive game below needs its ligand ring; the
+    # feature extraction at ~259 fail-closes visibly if a future largest
+    # entry lacks one).
     check('largest_entry selects the target',
           biggest is not None
-          and biggest['entry_id'] == 'benzamide'
           and biggest['heavy_atom_count'] == max(
               row['heavy_atom_count'] for row in entries),
           'target=%s heavy=%d of %d entries'

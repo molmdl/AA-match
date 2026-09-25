@@ -97,7 +97,9 @@ try:
         _ROOT, 'aamatch', 'data', 'MANIFEST.json'))
     payload_manifest = parse_manifest_dict(container)
     entries = enumerate_entries(payload_manifest)
-    check('manifest parse', len(entries) == 2,
+    # Data-relative count: the manifest grows additively (Phase 8 curation);
+    # the benzamide candidate restriction below stays (seed-robust, 02-13 law).
+    check('manifest parse', len(entries) >= 2,
           'entries=%d' % len(entries))
     benz_rows = [row for row in entries
                  if row['entry_id'] == 'benzamide']

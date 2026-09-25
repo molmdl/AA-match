@@ -75,7 +75,9 @@ try:
     container = read_json_file(manifest_path)
     payload = parse_manifest_dict(container)
     entries = enumerate_entries(payload)
-    check('manifest parse', len(entries) == 2,
+    # Data-relative count: the manifest grows additively (Phase 8 curation);
+    # the anti-drift proof is the per-entry loop below, not an absolute count.
+    check('manifest parse', len(entries) >= 2,
           'entries=%d' % len(entries))
 except Exception:
     traceback.print_exc()

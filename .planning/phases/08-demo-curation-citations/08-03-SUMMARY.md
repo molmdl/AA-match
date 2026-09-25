@@ -63,7 +63,7 @@ Each task was committed atomically on branch `exec/08-03` (worktree `tmp/exec-08
 2. **Task 2: smoke_05 largest-entry literal → data-relative** — `7359790` (fix)
 3. **Task 3: prove all three smokes green on the current tree** — `1892e79` (test; explicitly-requested empty commit — zero fixes were needed, the commit records the proof verdicts)
 
-**Plan metadata:** recorded below (docs: complete smoke de-hardcoding plan).
+**Plan metadata:** `docs(08-03): complete smoke de-hardcoding plan` (SUMMARY.md + STATE.md; see branch log tail).
 
 ## Files Created/Modified
 

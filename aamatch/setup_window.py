@@ -328,10 +328,17 @@ class SetupWindow(QtWidgets.QDialog):
         Reads exactly the way the engine's manifest flow reads
         (read_json_file over paths.package_data_path, then
         parse_manifest_dict); dropdown rows come from the pure
-        setup_form.manifest_sets helper (set_id as userData, title as
-        label, tier suffix). A failure to parse (e.g. a newer manifest
-        version) degrades to a placeholder item plus a visible note --
-        the window must never crash the menu action.
+        setup_form.manifest_sets_grouped helper (08-02): sets grouped by
+        tier (Easy -> Hard -> Challenge -> Very challenging), one
+        QComboBox separator inserted BETWEEN groups and only between
+        groups (a single-group manifest -- today's dev-only bundle --
+        renders byte-identically to the old flat list). Data rows keep
+        set_id as userData and the title-with-tier-suffix label.
+        setCurrentIndex(0) stays safe because index 0 can never be a
+        separator (separators are only ever inserted after >= 1 data
+        rows). A failure to parse (e.g. a newer manifest version)
+        degrades to a placeholder item plus a visible note -- the window
+        must never crash the menu action.
         """
         try:
             from . import manifest, paths
@@ -339,17 +346,39 @@ class SetupWindow(QtWidgets.QDialog):
             from . import setup_form
             payload = manifest.parse_manifest_dict(read_json_file(
                 paths.package_data_path('data', 'MANIFEST.json')))
-            for (set_id, title, tier) in setup_form.manifest_sets(payload):
-                label = title or set_id
-                if tier:
-                    label = '%s (%s)' % (label, tier)
-                self.demo_combo.addItem(label, set_id)
+            first_group = True
+            for (_group_label, rows) in \
+                    setup_form.manifest_sets_grouped(payload):
+                if first_group:
+                    first_group = False
+                else:
+                    self.demo_combo.insertSeparator(self.demo_combo.count())
+                for (set_id, title, tier) in rows:
+                    label = title or set_id
+                    if tier:
+                        label = '%s (%s)' % (label, tier)
+                    self.demo_combo.addItem(label, set_id)
             self.demo_combo.setCurrentIndex(0)
         except Exception as e:
             self.demo_combo.clear()
             self.demo_combo.addItem('(no bundled sets)', '')
             self.source_note.setText(
                 'Could not read the bundled demo list: %s' % e)
+
+    def _known_demo_set_ids(self):
+        """Dropdown set ids, SEPARATOR-EXCLUDED (08-02 hazard fix).
+
+        A tier separator row carries NO userData (itemData -> None);
+        str()-ing it would put the literal string 'None' into
+        known_set_ids, and build_state's membership check would then
+        happily accept demo_set_id == 'None'. Only rows with real data
+        are set ids. The export/start known_ids sites AND smoke_11's
+        mirror loop all route through this one helper.
+        """
+        combo = self.demo_combo
+        return tuple(str(combo.itemData(i))
+                     for i in range(combo.count())
+                     if combo.itemData(i) is not None)
 
     # UI-only display labels for the canonical interaction enum strings
     # (the stored values stay the enum strings from
@@ -516,6 +545,10 @@ class SetupWindow(QtWidgets.QDialog):
         return {
             'source_mode': 'upload' if self.src_upload.isChecked()
             else 'demo',
+            # currentData() is a real set id or None; correctness relies
+            # on the current index NEVER being a tier separator --
+            # guaranteed by popup non-selectability plus apply_state's
+            # first-selectable-row fallback (08-02).
             'demo_set_id': str(self.demo_combo.currentData() or ''),
             'upload': upload,
             'molecules_per_level': int(self.molecules_spin.value()),
@@ -553,9 +586,16 @@ class SetupWindow(QtWidgets.QDialog):
                 if idx >= 0:
                     self.demo_combo.setCurrentIndex(idx)
                 else:
-                    # Fallback to the first row, with a visible note --
-                    # never a crash on a stale/named set id.
-                    self.demo_combo.setCurrentIndex(0)
+                    # Fallback to the first SELECTABLE data row, never a
+                    # separator (a stale saved id landing on a separator
+                    # would silently mean 'all sets': the separator's
+                    # itemData is None and collect maps currentData() ->
+                    # None -> ''), with a visible note -- never a crash
+                    # on a stale/named set id.
+                    first_data = next(
+                        (i for i in range(self.demo_combo.count())
+                         if self.demo_combo.itemData(i) is not None), -1)
+                    self.demo_combo.setCurrentIndex(first_data)
                     self.source_note.setText(
                         'set %r is not in the bundled list' % set_id)
             else:
@@ -678,6 +718,9 @@ class SetupWindow(QtWidgets.QDialog):
         upload None back into the widgets automatically. Non-modal.
         """
         from . import setup_form
+        # currentData() can never be a separator's None here either --
+        # popup non-selectability + apply_state's fallback (08-02) keep
+        # the current index on a data row.
         current = str(self.demo_combo.currentData() or '')
         state = setup_form.usable_randomized_state(demo_set_id=current)
         self.apply_state(state)
@@ -924,8 +967,7 @@ class SetupWindow(QtWidgets.QDialog):
         from . import setup_form
         form = self.collect_state()
         form['upload_ready'] = self.upload_ready_for(form)
-        known_ids = tuple(str(self.demo_combo.itemData(i))
-                          for i in range(self.demo_combo.count()))
+        known_ids = self._known_demo_set_ids()
         state = setup_form.build_state(form, known_set_ids=known_ids)
         seed = random.randint(0, 2 ** 31 - 1)
         if state['source_mode'] == 'upload':
@@ -1000,8 +1042,7 @@ class SetupWindow(QtWidgets.QDialog):
         from . import setup_form, gamestart
         form = self.collect_state()
         form['upload_ready'] = self.upload_ready_for(form)
-        known_ids = tuple(str(self.demo_combo.itemData(i))
-                          for i in range(self.demo_combo.count()))
+        known_ids = self._known_demo_set_ids()
         state = setup_form.build_state(form, known_set_ids=known_ids)
         last = self._last_export
         if last is not None and last['setup'] == state:

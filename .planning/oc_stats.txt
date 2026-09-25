@@ -1,21 +1,21 @@
 ┌────────────────────────────────────────────────────────┐
 │                       OVERVIEW                         │
 ├────────────────────────────────────────────────────────┤
-│Sessions                                            176 │
-│Messages                                          5,610 │
-│Days                                                 20 │
+│Sessions                                            180 │
+│Messages                                          5,776 │
+│Days                                                 21 │
 └────────────────────────────────────────────────────────┘
 
 ┌────────────────────────────────────────────────────────┐
 │                    COST & TOKENS                       │
 ├────────────────────────────────────────────────────────┤
-│Total Cost                                      $159.05 │
-│Avg Cost/Day                                      $7.95 │
+│Total Cost                                      $165.83 │
+│Avg Cost/Day                                      $7.90 │
 │Avg Tokens/Session                                 2.9M │
 │Median Tokens/Session                              2.1M │
-│Input                                             43.3M │
-│Output                                             5.7M │
-│Cache Read                                       466.9M │
+│Input                                             43.8M │
+│Output                                             5.8M │
+│Cache Read                                       479.3M │
 │Cache Write                                           0 │
 └────────────────────────────────────────────────────────┘
 
@@ -23,20 +23,20 @@
 │                      MODEL USAGE                       │
 ├────────────────────────────────────────────────────────┤
 │ synthetic/hf:zai-org/GLM-5.3-Flash                     │
-│  Messages                                        3,060 │
-│  Input Tokens                                    34.5M │
-│  Output Tokens                                    4.0M │
-│  Cache Read                                     266.2M │
+│  Messages                                        3,092 │
+│  Input Tokens                                    34.8M │
+│  Output Tokens                                    4.1M │
+│  Cache Read                                     268.8M │
 │  Cache Write                                         0 │
-│  Cost                                         $17.8432 │
+│  Cost                                         $17.9915 │
 ├────────────────────────────────────────────────────────┤
 │ synthetic/hf:moonshotai/Kimi-K3                        │
-│  Messages                                        2,292 │
-│  Input Tokens                                     8.7M │
-│  Output Tokens                                    1.6M │
-│  Cache Read                                     200.1M │
+│  Messages                                        2,421 │
+│  Input Tokens                                     9.0M │
+│  Output Tokens                                    1.7M │
+│  Cache Read                                     210.0M │
 │  Cache Write                                         0 │
-│  Cost                                        $140.2165 │
+│  Cost                                        $146.8472 │
 ├────────────────────────────────────────────────────────┤
 │ synthetic/hf:zai-org/GLM-5.2                           │
 │  Messages                                           10 │
@@ -51,12 +51,12 @@
 ┌────────────────────────────────────────────────────────┐
 │                      TOOL USAGE                        │
 ├────────────────────────────────────────────────────────┤
-│ bash               ████████████████████ 3220 (45.6%)   │
-│ read               ███████████          1870 (26.5%)   │
-│ edit               ███████              1130 (16.0%)   │
-│ write              █                    302 ( 4.3%)    │
-│ grep               █                    233 ( 3.3%)    │
-│ task               █                    167 ( 2.4%)    │
+│ bash               ████████████████████ 3302 (45.6%)   │
+│ read               ███████████          1906 (26.3%)   │
+│ edit               ███████              1182 (16.3%)   │
+│ write              █                    311 ( 4.3%)    │
+│ grep               █                    235 ( 3.2%)    │
+│ task               █                    170 ( 2.3%)    │
 │ webfetch           █                     73 ( 1.0%)    │
 │ glob               █                     43 ( 0.6%)    │
 │ invalid            █                     13 ( 0.2%)    │

@@ -134,3 +134,32 @@ def manifest_sets(payload):
     rows = [(s.get('set_id'), s.get('title', s.get('set_id')),
              s.get('tier', '')) for s in sets]
     return sorted(rows, key=lambda row: row[0])
+
+
+# Canonical tier vocabulary (08-RESEARCH-sourcing handoff #5; the manifest
+# strings are exact tokens, display order is EASY first). Tiers outside
+# this tuple land in the trailing 'Other' group of manifest_sets_grouped.
+TIER_ORDER = ('easy', 'hard', 'challenge', 'very_challenging')
+TIER_LABELS = {'easy': 'Easy', 'hard': 'Hard',
+               'challenge': 'Challenge',
+               'very_challenging': 'Very challenging'}
+
+
+def manifest_sets_grouped(payload):
+    """Return dropdown GROUPS [(display_label, rows)] for a manifest payload.
+
+    rows are the manifest_sets tuples [(set_id, title, tier)] (already
+    sorted by set_id); groups appear in TIER_ORDER sequence, empty groups
+    omitted; tiers outside TIER_ORDER (incl. missing/'') land in a final
+    'Other' group, omitted when empty. Non-dict payload -> []. No I/O.
+    """
+    rows = manifest_sets(payload)
+    groups = []
+    for tier in TIER_ORDER:
+        group = [row for row in rows if row[2] == tier]
+        if group:
+            groups.append((TIER_LABELS[tier], group))
+    other = [row for row in rows if row[2] not in TIER_ORDER]
+    if other:
+        groups.append(('Other', other))
+    return groups

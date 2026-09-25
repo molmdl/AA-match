@@ -254,5 +254,90 @@ class TestManifestSets(unittest.TestCase):
         self.assertEqual(manifest_sets({}), [])
 
 
+class TestManifestSetsGrouped(unittest.TestCase):
+    """Tier-grouped dropdown rows (08-02): groups follow TIER_ORDER with
+    display labels, rows stay the manifest_sets tuples (sorted by set_id
+    within a group), tiers outside the vocabulary (incl. missing/'')
+    collapse into ONE final 'Other' group, and empty groups are omitted
+    entirely (a single-group manifest yields zero separators at runtime).
+    manifest_sets itself stays byte-identical -- the grouping is ONE call
+    plus list-comprehension partitioning, no re-sort."""
+
+    def test_multi_tier_groups_follow_tier_order(self):
+        from aamatch import setup_form
+        payload = {
+            'manifest_version': 1,
+            'sets': [
+                {'set_id': 's-vc', 'title': 'VC', 'tier': 'very_challenging'},
+                {'set_id': 's-easy', 'title': 'E', 'tier': 'easy'},
+                {'set_id': 's-chal', 'title': 'C', 'tier': 'challenge'},
+                {'set_id': 's-hard', 'title': 'H', 'tier': 'hard'},
+            ],
+        }
+        groups = setup_form.manifest_sets_grouped(payload)
+        self.assertEqual([label for (label, _rows) in groups],
+                         ['Easy', 'Hard', 'Challenge', 'Very challenging'])
+
+    def test_within_group_rows_sorted_by_set_id(self):
+        from aamatch import setup_form
+        payload = {
+            'sets': [
+                {'set_id': 'z-easy', 'title': 'Z', 'tier': 'easy'},
+                {'set_id': 'a-easy', 'title': 'A', 'tier': 'easy'},
+                {'set_id': 'm-easy', 'tier': 'easy'},   # title -> set_id
+            ],
+        }
+        groups = setup_form.manifest_sets_grouped(payload)
+        self.assertEqual(groups, [('Easy', [('a-easy', 'A', 'easy'),
+                                            ('m-easy', 'm-easy', 'easy'),
+                                            ('z-easy', 'Z', 'easy')])])
+
+    def test_unknown_missing_tiers_collapse_into_one_other_group(self):
+        from aamatch import setup_form
+        payload = {
+            'sets': [
+                {'set_id': 's-z', 'tier': 'weird'},
+                {'set_id': 's-easy', 'title': 'E', 'tier': 'easy'},
+                {'set_id': 's-y'},                       # tier -> ''
+                {'set_id': 's-x', 'tier': ''},
+            ],
+        }
+        groups = setup_form.manifest_sets_grouped(payload)
+        # 'Other' lands LAST, after every known-tier group, and the rows
+        # of ALL three collateral tiers live in ONE group (set_id order).
+        self.assertEqual([label for (label, _rows) in groups],
+                         ['Easy', 'Other'])
+        other_rows = groups[1][1]
+        self.assertEqual(other_rows, [('s-x', 's-x', ''),
+                                      ('s-y', 's-y', ''),
+                                      ('s-z', 's-z', 'weird')])
+
+    def test_empty_groups_omitted(self):
+        from aamatch import setup_form
+        payload = {
+            'sets': [
+                {'set_id': 'only-easy', 'title': 'OE', 'tier': 'easy'},
+            ],
+        }
+        # EXACTLY one group -> zero separators at runtime today.
+        self.assertEqual(setup_form.manifest_sets_grouped(payload),
+                         [('Easy', [('only-easy', 'OE', 'easy')])])
+        # No unknown tiers -> no 'Other' group either.
+        hard_only = {'sets': [{'set_id': 'h', 'tier': 'hard'}]}
+        self.assertEqual(setup_form.manifest_sets_grouped(hard_only),
+                         [('Hard', [('h', 'h', 'hard')])])
+
+    def test_empty_or_missing_sets_gives_empty_groups(self):
+        from aamatch import setup_form
+        self.assertEqual(setup_form.manifest_sets_grouped({'sets': []}), [])
+        self.assertEqual(setup_form.manifest_sets_grouped({}), [])
+
+    def test_non_dict_payload_gives_empty_groups(self):
+        from aamatch import setup_form
+        for bad in (None, [], 'x', 42, ['sets']):
+            with self.subTest(bad=bad):
+                self.assertEqual(setup_form.manifest_sets_grouped(bad), [])
+
+
 if __name__ == '__main__':
     unittest.main()

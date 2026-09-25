@@ -33,7 +33,14 @@ PART B  (T1b -- the 04-01 probe verdict is PASS (platform=offscreen),
         difficulty 2, block mode, h_bond + pi_stacking checked,
         upload toggle and back, demo set re-selected) lands in
         collect_state field-by-field with demo_combo carrying userData
-        'demo-dev-1'; processEvents; finish dlg.close(). ZERO modals
+        'demo-dev-1'; then the 08-02 tier-grouped-population asserts
+        (data-relative: the expected shape re-derived through the same
+        read_json_file + parse_manifest_dict + manifest_sets_grouped
+        pure chain the window used -- data-row count == total group
+        rows, separator count == (groups - 1), every None-data row is a
+        flag-disabled separator, the known-ids helper excludes
+        separators, findData/currentData round-trip); processEvents;
+        finish dlg.close(). ZERO modals
         (PITFALL P5): no .exec_(), no QFileDialog, no QMessageBox
         anywhere in this script.
 PART C  (T1b, 04-09 SETUP-07 setup-button drives -- success paths
@@ -338,6 +345,66 @@ try:
           sel >= 0
           and dlg.demo_combo.currentData() == 'demo-dev-1',
           'currentData=%r' % (dlg.demo_combo.currentData(),))
+
+    # ---- 08-02 grouped-population asserts (data-relative, T1b) ----
+    # Re-derive the expected shape through the EXACT pure chain the
+    # window used (read_json_file + parse_manifest_dict, the engine's
+    # read path), so these stay green when the curated manifest lands.
+    from aamatch import manifest, paths, persistence, setup_form
+    payload_b = manifest.parse_manifest_dict(persistence.read_json_file(
+        paths.package_data_path('data', 'MANIFEST.json')))
+    groups_b = setup_form.manifest_sets_grouped(payload_b)
+    total_rows_b = sum(len(rows) for (_lbl, rows) in groups_b)
+    data_rows_b = sum(1 for i in range(dlg.demo_combo.count())
+                      if dlg.demo_combo.itemData(i) is not None)
+    sep_rows_b = dlg.demo_combo.count() - data_rows_b
+    expected_seps_b = len(groups_b) - 1 if len(groups_b) > 1 else 0
+    check('part B: combo data-row count == total rows across groups '
+          '(08-02)',
+          dlg.demo_combo.itemData(0) is not None
+          and data_rows_b == total_rows_b,
+          'data=%r groups=%r' % (data_rows_b, total_rows_b))
+    check('part B: separator count == (groups - 1) -- BETWEEN groups '
+          'only (08-02)',
+          sep_rows_b == expected_seps_b,
+          'seps=%r groups=%r' % (sep_rows_b, len(groups_b)))
+    # Falsifiable amid any checklist defect: with today's dev-only
+    # manifest (1 easy set) the dropdown is byte-identical to the old
+    # flat list -- one data row, zero separators.
+    try:
+        from pymol.Qt import QtCore
+        model_b = dlg.demo_combo.model()
+        sep_flags_ok_b = True
+        nonflagged_b = []
+        for i in range(dlg.demo_combo.count()):
+            if dlg.demo_combo.itemData(i) is None:
+                item_b = model_b.item(i)
+                if item_b is None \
+                        or (item_b.flags() & QtCore.Qt.ItemIsEnabled):
+                    sep_flags_ok_b = False
+                    nonflagged_b.append(i)
+    except Exception:
+        traceback.print_exc()
+        sep_flags_ok_b = False
+        nonflagged_b = 'raised'
+    check('part B: every None-data row IS a separator (enabled flag '
+          'cleared -- 08-02)',
+          sep_flags_ok_b, 'nonflagged rows=%r' % (nonflagged_b,))
+    check('part B: known-ids helper yields NO None/str(None) (08-02)',
+          dlg._known_demo_set_ids() == tuple(
+              dlg.demo_combo.itemData(i)
+              for i in range(dlg.demo_combo.count())
+              if dlg.demo_combo.itemData(i) is not None),
+          'known=%r' % (dlg._known_demo_set_ids(),))
+    idx_dev_b = dlg.demo_combo.findData('demo-dev-1')
+    if idx_dev_b >= 0:
+        dlg.demo_combo.setCurrentIndex(idx_dev_b)
+    check('part B: findData(demo-dev-1) resolves + currentData '
+          'round-trips (08-02)',
+          idx_dev_b >= 0
+          and not dlg.demo_combo.itemData(idx_dev_b) is None
+          and dlg.demo_combo.currentData() == 'demo-dev-1',
+          'idx=%r data=%r' % (idx_dev_b, dlg.demo_combo.currentData()))
 
     app.processEvents()
     dlg.close()
@@ -726,8 +793,9 @@ try:
     # its GO -- the game prepared IS the game shared.
     form_g = dlg.collect_state()
     form_g['upload_ready'] = dlg.upload_ready_for(form_g)
-    known_g = tuple(str(dlg.demo_combo.itemData(i))
-                    for i in range(dlg.demo_combo.count()))
+    # 08-02: the mirror uses the SAME separator-aware helper the window
+    # uses (a raw str(itemData) loop would yield 'None' for separators).
+    known_g = dlg._known_demo_set_ids()
     state_g = setup_form.build_state(form_g, known_set_ids=known_g)
     dlg._last_export = {'setup': state_g, 'seed': 31337,
                         'candidates': None, 'ligand_content': None}

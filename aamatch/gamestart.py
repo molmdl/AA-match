@@ -170,6 +170,23 @@ from .wizard import GameWizard
 # unambiguous parallax with zero occlusion).
 _FRONT_LEAD = 5.0
 
+# Front-offset idempotence floor (08-11 Rule-1 fix): PyMOL stores
+# coordinates as float32, so a translate that buys EXACTLY _FRONT_LEAD
+# in float64 arithmetic is re-read with up to ~1-ulp per-atom rounding;
+# the next call's recomputed `need` is then a tiny POSITIVE number (head
+# measured 6.0e-07 A at the seed-4242 curated-manifest scene magnitudes
+# -- coords well under ~50 A, ulp ~ 2e-6; worst-case ~1e-5) and the
+# previous `need <= 0.0` early return no longer fired, so the second
+# compose issued a physically meaningless sub-noise translate instead of
+# the documented idempotent no-op. Needs below this floor are
+# indistinguishable from float32 storage noise: return without
+# translating. The floor is deliberately HALF the placement pose
+# tolerance (1e-4) -- skipping a translate below it leaves the lead at
+# >= _FRONT_LEAD - 5e-5 = 4.99995 A, comfortably above the smoke's
+# 4.9999 A lead floor, while giving the measured noise (<= ~1e-5)
+# a 5x margin.
+_FRONT_NOISE_FLOOR = 5e-5
+
 # SETUP-11 initial-state store (plan 05-05, extended 07-05): after
 # every successful start, start_game captures the materialization
 # INPUT tuple here -- {'setup' (DEEP-COPIED so later widget/export
@@ -299,7 +316,8 @@ def _move_ligand_in_front(registry, molecule_index=0):
     the AAM/Z sentinels (segi, b=-999) are untouched -- and it is
     viewer-relative: the needed distance is recomputed per call from
     the LIVE view and geometry. Idempotent by construction: a ligand
-    already in front by _FRONT_LEAD is a no-op (need <= 0), and every
+    already in front by _FRONT_LEAD (to within _FRONT_NOISE_FLOOR --
+    see the constant's comment) is a no-op, and every
     start runs it on FRESH materialize output, so restarts reproduce
     the same composed scene. Fail-soft: an empty/second-generation
     degenerate scene (no ligand rows or no grid rows) just keeps the
@@ -334,8 +352,12 @@ def _move_ligand_in_front(registry, molecule_index=0):
            sum(a['z'] for a in lig) / len(lig))
     nearest_grid = max(cam_z((a['x'], a['y'], a['z'])) for a in grid)
     need = nearest_grid + _FRONT_LEAD - cam_z(cpt)
-    if need <= 0.0:
-        return                  # already in front: idempotent no-op
+    if need < _FRONT_NOISE_FLOOR:
+        # Already in front (or short by less than float32 storage
+        # noise -- re-read of an exactly-at-target translate): the
+        # idempotent no-op. A translate below the floor is physically
+        # meaningless AND defeats the exact-equality idempotence smoke.
+        return
     # scene-to-camera world direction = R row 2 (unit, R orthonormal)
     cmd.translate([need * view[6], need * view[7], need * view[8]],
                   lig_name, state=1, camera=0)

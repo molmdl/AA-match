@@ -70,6 +70,7 @@ _MANUAL_METALS = frozenset(
 _MANUAL_HALOGENS = frozenset(('CL', 'BR', 'I'))
 
 entries = []
+payload = None
 try:
     manifest_path = os.path.join(_ROOT, 'aamatch', 'data', 'MANIFEST.json')
     container = read_json_file(manifest_path)
@@ -84,6 +85,65 @@ except Exception:
     check('manifest parse', False, 'raised (see traceback above)')
 
 print('SMOKE-ENV entries: %d' % len(entries), flush=True)
+
+# --- 08-08 curated-coverage census -----------------------------------
+# Computed from the parsed payload (data-relative; the only literals are
+# the stable curation contracts -- the canonical set ids inc. the dev
+# set, and the full-manifest tier census). Mirrors the WSL-side battery
+# (tests/test_demo_data.py) so the PyMOL tier pins the same floor.
+EXPECTED_SET_IDS = frozenset((
+    'demo-dev-1',
+    'demo-easy-1', 'demo-easy-2', 'demo-easy-3',
+    'demo-hard-1', 'demo-hard-2', 'demo-hard-3',
+    'demo-challenge-1',
+    'demo-veryhard-1', 'demo-veryhard-2',
+))
+DEV_SET_ID = 'demo-dev-1'
+# Tier census over ALL sets (the dev set counts in 'easy').
+EXPECTED_TIER_CENSUS = {
+    'easy': 4, 'hard': 3, 'challenge': 1, 'very_challenging': 2,
+}
+if payload is not None:
+    set_ids = sorted(set_dict['set_id'] for set_dict in payload['sets'])
+    check('coverage set census',
+          set(set_ids) == EXPECTED_SET_IDS,
+          'got %s' % (set_ids,))
+
+    empty = sorted(set_dict['set_id'] for set_dict in payload['sets']
+                   if not set_dict['entries'])
+    check('coverage every set non-empty', not empty,
+          'empty sets: %s' % empty)
+
+    tier_census = {}
+    for set_dict in payload['sets']:
+        tier_census[set_dict['tier']] = tier_census.get(
+            set_dict['tier'], 0) + 1
+    check('coverage tier census', tier_census == EXPECTED_TIER_CENSUS,
+          'got %s want %s'
+          % (sorted(tier_census.items()),
+             sorted(EXPECTED_TIER_CENSUS.items())))
+
+    # Flag-branch coverage: the per-entry loop's element-scan cross-check
+    # below must exercise BOTH branches every run (heme carries FE;
+    # chloramphenicol/thyroxine carry CL/I).
+    metal_rows = sorted('%s/%s' % (row['set_id'], row['entry_id'])
+                        for row in entries if row.get('metal_present'))
+    halogen_rows = sorted('%s/%s' % (row['set_id'], row['entry_id'])
+                          for row in entries if row.get('halogen_present'))
+    check('coverage metal branch', bool(metal_rows),
+          '%d: %s' % (len(metal_rows), ', '.join(metal_rows)))
+    check('coverage halogen branch', bool(halogen_rows),
+          '%d: %s' % (len(halogen_rows), ', '.join(halogen_rows)))
+
+    # Curated truthfulness echo (runtime side): every NON-DEV set's
+    # license is non-empty (mirrors tests/test_demo_data.py truth-2).
+    unlicensed = sorted(set_dict['set_id'] for set_dict in payload['sets']
+                        if set_dict['set_id'] != DEV_SET_ID
+                        and not set_dict.get('license'))
+    check('coverage curated license',
+          not unlicensed, 'empty license sets: %s' % unlicensed)
+else:
+    check('coverage set census', False, 'skipped: manifest parse failed')
 
 for entry in entries:
     label = str(entry.get('entry_id', '?'))

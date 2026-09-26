@@ -1,8 +1,8 @@
 # Phase 8 — Demo Curation [GATE] Proposals
 
 - **Phase:** 08-demo-curation-citations · **Plan:** 08-04 · **Date:** 2026-09-26
-- **Status:** **PENDING APPROVAL** — approval is recorded here (`APPROVED <date>, human` in this header) **and** as a dated `[GATE] APPROVED` line in `.planning/STATE.md` **after** the human verdict, **before** any candidate data is fetched into the repo or committed (DETECT-03 precedent).
-- **Approval line:** PENDING — *(no approval yet; executor must not write `APPROVED` here until the human approves)*
+- **Status:** **APPROVED 2026-09-26, human** — approval recorded here **and** as a dated `[GATE] APPROVED` line in `.planning/STATE.md`, **before** any candidate data is fetched into the repo or committed (DETECT-03 precedent; fetch boundary below remains binding until 08-05..08-07 run the 08-01 pipeline).
+- **Approval line:** **APPROVED 2026-09-26, human** — the human conditioned approval on an independent executor re-verification of the atom counts against source ("for the atom count, do again yourself and re-verify against source"); that re-verification was performed 2026-09-26 and **PASSED: 16/16 MATCH** (see *Approval-time re-verification* section). C1 accepted ("1 ok"); aspirin CID 2244 independently spot-verified by the human (verdict 3); U1–U4 RESOLVED as recorded in the UNVERIFIED section; all 10 decision defaults ACCEPTED as-is with the human's re-check-later caveat ("4 accept first lets chk later"). Full verbatim verdicts in the *Approval record* section. 08-05..08-07 are UNBLOCKED.
 - **Fetch boundary (binding, from 08-04-PLAN):** proposal-time URL evidence fetches (property JSON, SDF counts-line reads, RCSB search/Data API) are sanctioned — they ARE the proposal evidence. **FORBIDDEN before the approval line exists:** downloading any candidate SDF into the repo, writing any file under `aamatch/data/`, and any git commit of candidate data. This session honored the boundary: ~80 evidence fetches went to stdout/temp only; `git status` verifies no `aamatch/data/` change and no new SDF anywhere in the tree.
 - **Protocol:** proposes ~9 curated demo sets → human approves → 08-05..08-07 mechanically transcribe the APPROVED rows into `scripts/demo_specs/*.json` and fetch/commit through the 08-01 pipeline only. Nothing below changes code or data.
 
@@ -22,6 +22,31 @@
 | UNVERIFIED-now items | 4 items (U1–U4 below), each with the exact human check |
 
 **Corrections discovered vs 08-RESEARCH-sourcing.md (all re-verified this session):** see section *"Evidence corrections"* — including the benzoic-acid CID error (research's 3979 is a different compound; correct CID is 243) and heavy-atom recounts. All corrected values below are the session-verified ones.
+
+## Approval-time re-verification (2026-09-26) — demanded by human verdict 1
+
+The human's first verdict was: **"for the atom count, do again yourself and re-verify against source."** A fresh, independent fetch+parse pass was run after the checkpoint verdict (NOT trusting the earlier same-session pass): for every primary candidate, the PubChem property JSON (MolecularFormula, MolecularWeight, Title, Charge) and the 3D SDF were re-fetched via curl, the SDF counts line was parsed, and heavy atoms were recomputed from the atom block. Three-way cross-check per candidate: (a) SDF counts-line atom count == number of atom-block lines parsed; (b) heavy atoms (atom block, symbol ≠ H) == this proposal's C2-corrected heavy count; (c) heavy-atom total computed from the fetched formula == the same number; plus exactly ONE `$$$$` record per SDF. Script output reproduced verbatim:
+
+| entry | CID | formula | MW | charge | SDF atoms/bonds | `$$$$` | sdf_atoms==blk | heavy(SDF) | heavy(formula) | proposal heavy | VERDICT |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| aspirin | 2244 | C9H8O4 | 180.16 | 0 | 21/21 | 1 | True | 13 | 13 | 13 | **MATCH** |
+| benzoic_acid | 243 | C7H6O2 | 122.12 | 0 | 15/15 | 1 | True | 9 | 9 | 9 | **MATCH** |
+| citric_acid | 311 | C6H8O7 | 192.12 | 0 | 21/20 | 1 | True | 13 | 13 | 13 | **MATCH** |
+| acetate | 175 | C2H3O2− | 59.04 | −1 | 7/6 | 1 | True | 4 | 4 | 4 | **MATCH** |
+| caffeine | 2519 | C8H10N4O2 | 194.19 | 0 | 24/25 | 1 | True | 14 | 14 | 14 | **MATCH** |
+| benzamidine | 2332 | C7H8N2 | 120.15 | 0 | 17/17 | 1 | True | 9 | 9 | 9 | **MATCH** |
+| guanidinium | 32838 | CH6N3+ | 60.08 | +1 | 10/9 | 1 | True | 4 | 4 | 4 | **MATCH** |
+| glutamic_acid | 33032 | C5H9NO4 | 147.13 | 0 | 19/18 | 1 | True | 10 | 10 | 10 | **MATCH** |
+| acetylcholine | 187 | C7H16NO2+ | 146.21 | +1 | 26/25 | 1 | True | 10 | 10 | 10 | **MATCH** |
+| atp | 5957 | C10H16N5O13P3 | 507.18 | 0 | 47/49 | 1 | True | 31 | 31 | 31 | **MATCH** |
+| nad | 5892 | C21H27N7O14P2 | 663.4 | 0 | 71/75 | 1 | True | 44 | 44 | 44 | **MATCH** |
+| chloramphenicol | 5959 | C11H12Cl2N2O5 | 323.13 | 0 | 32/32 | 1 | True | 20 | 20 | 20 | **MATCH** |
+| quinine | 3034034 | C20H24N2O2 | 324.4 | 0 | 48/51 | 1 | True | 24 | 24 | 24 | **MATCH** |
+| folic_acid | 135398658 | C19H19N7O6 | 441.4 | 0 | 51/53 | 1 | True | 32 | 32 | 32 | **MATCH** |
+| thyroxine | 5819 | C15H11I4NO4 | 776.87 | 0 | 35/36 | 1 | True | 24 | 24 | 24 | **MATCH** |
+| heme | HEM (RCSB `HEM_ideal.sdf`) | C34H32FeN4O4 | n/a | 0 | 75/82 | 1 | True | 43 | 43 | 43 | **MATCH** |
+
+**Verdict: ALL 16 CANDIDATES MATCH** (three-way cross-check + single-record check, fresh fetches 2026-09-26). No proposal number was changed; the C2-corrected heavy counts are source-confirmed. The `expect_atom_count` guards above (aspirin 21, benzoic 15, citric 21, acetate 7, caffeine 24, benzamidine 17, guanidinium 10, glutamate 19, acetylcholine 26, ATP 47, NAD 71, chloramphenicol 32, quinine 48, folate 51, thyroxine 35, heme 75) are likewise re-confirmed.
 
 ---
 

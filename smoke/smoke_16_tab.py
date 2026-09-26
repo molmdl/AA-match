@@ -218,8 +218,35 @@ PART E  (07-10): the one-button resume -- the tab-impl resume drive +
            the engine state (full dict INCLUDING the anchor), and the
            live wizard are UNTOUCHED (the refusal fires at the kind
            read, before any branch).
-        E6 restore - timers stopped, done pop, prefix cleanup,
-        gamestart._last_start = None -> the baseline scene EXACTLY.
+         E6 restore - timers stopped, done pop, prefix cleanup,
+         gamestart._last_start = None -> the baseline scene EXACTLY.
+
+PART F  (2026-09-27 diag fix): the PANEL-Confirm natural end with a
+        LIVE Game tab -- the human's exact reported path (the wizard
+        panel's own Confirm button routes through NO tab impl, so the
+        endgame trio is completed by the tick's game_over transition,
+        never by an impl). ZERO modals (the smoke-99 law); drives the
+        public wizard op + direct _on_tick:
+        F1 live game via the countdown drive; five blind panel
+           confirms (wiz.confirm_molecule() -- zero-score records
+           sufficient, the PART C doctrine) -> game_over False.
+        F2 the sixth blind panel confirm -> game_over True + summary.
+        F3 the pre-tick symptom state pinned (the mechanism, not a
+           bug in itself): the 1 Hz timer is STILL ACTIVE and the
+           wizard STILL on the stack straight after the panel op --
+           the panel op alone never runs any endgame trio; a motion
+           nudge in this window is gated 'The game is over.'
+        F4 ONE _on_tick -> the transition completes the trio: timer
+           STOPPED, _timer_label == format_mss(summary['final_time'])
+           EXACT, wizard POPPED, the endgame block logged EXACTLY
+           once ('You win!' headline count 1).
+        F5 a second tick: no double-log (block count still 1), timer
+           still stopped, label unchanged.
+        F6 post-completion inertness (impls None behind the gate,
+           scene untouched) + the Restart composition arms a fresh
+           countdown (the endgame state is never a dead end, the
+           C10/C11 law).
+        F7 restore -> the baseline scene EXACTLY.
 
 Conventions (frozen Phase 1, kept): anchor repo root via sys.argv
 first / cwd fallback (never __file__); import aamatch directly (module
@@ -1404,6 +1431,130 @@ except Exception:
     except Exception:
         traceback.print_exc()
 
+# ============================================================
+# PART F (2026-09-27 diag fix): the PANEL-Confirm natural end with a
+# LIVE Game tab -- the human's exact reported path. ZERO modals; the
+# public wizard op + direct _on_tick drive only.
+# ============================================================
+part_e_checks = REC['checks']
+
+dlg6 = None
+try:
+    dlg6 = setup_window.SetupWindow()
+    tab6 = dlg6.game_tab
+    baseline_f = cmd.get_names('objects')
+
+    # ---- F1: live game + five blind panel confirms ------------------
+    wiz_f = gamestart.start_game(activate=False)
+    tab6.start_countdown(wiz_f)
+    for _ in range(4):
+        tab6._countdown_tick()
+    check('F1: GO pushed the wizard; 1 Hz timer running',
+          cmd.get_wizard() is wiz_f and tab6._timer.isActive(), '')
+    mids_f = []
+    for _i in range(5):
+        mids_f.append(wiz_f.confirm_molecule())
+    check('F1: five blind PANEL confirms -> dicts, game_over False '
+          '(zero-score records, the PART C doctrine)',
+          all(isinstance(r, dict) and r.get('game_over') is False
+              and r.get('score') == 0.0 for r in mids_f), '')
+
+    # ---- F2: the sixth blind panel confirm completes the game -------
+    last_f = wiz_f.confirm_molecule()
+    summ_f = last_f.get('summary') if isinstance(last_f, dict) else None
+    check('F2: the sixth blind PANEL confirm -> game_over True + '
+          "summary end_state 'completed'",
+          isinstance(last_f, dict) and last_f.get('game_over') is True
+          and isinstance(summ_f, dict)
+          and summ_f.get('end_state') == 'completed', '')
+
+    # ---- F3: the pre-tick symptom state (the mechanism, honestly) ---
+    wiz_f.nudge_cam(1, 0, 0)
+    check('F3: straight after the panel op the timer is STILL active, '
+          "the wizard STILL on the stack, motion gated 'The game is "
+          "over.' (the panel op alone runs no endgame trio)",
+          tab6._timer.isActive()
+          and cmd.get_wizard() is wiz_f
+          and wiz_f._error == 'The game is over.',
+          'error=%r' % (wiz_f._error,))
+
+    # ---- F4: ONE tick completes the endgame trio --------------------
+    tab6._on_tick()
+    check('F4: the tick transition STOPS the 1 Hz timer',
+          not tab6._timer.isActive(), '')
+    label_f4 = (tab6._timer_label.text()
+                == status_text.format_mss(summ_f['final_time']))
+    check('F4: _timer_label pinned to the EXACT final M:SS',
+          label_f4, 'label=%r' % (tab6._timer_label.text(),))
+    check('F4: the wizard is POPPED by the transition (panel end gets '
+          'the full endgame state)',
+          cmd.get_wizard() is None, '')
+    text_f4 = tab6._info_log.toPlainText()
+    check('F4: the endgame block logged EXACTLY once (one transition '
+          'home)',
+          text_f4.count('You win! All 3 level(s) finished in') == 1,
+          'count=%d' % (
+              text_f4.count('You win! All 3 level(s) finished in'),))
+
+    # ---- F5: a second tick is inert ----------------------------------
+    tab6._on_tick()
+    check('F5: second tick -- no double-log, still stopped, label '
+          'unchanged',
+          tab6._info_log.toPlainText().count(
+              'You win! All 3 level(s) finished in') == 1
+          and not tab6._timer.isActive()
+          and tab6._timer_label.text()
+          == status_text.format_mss(summ_f['final_time']), '')
+
+    # ---- F6: post-completion inertness + the Restart composition ----
+    log_pre_f6 = tab6._info_log.toPlainText()
+    names_pre_f6 = cmd.get_names('objects')
+    inert_f = (tab6._confirm_now() is None
+               and tab6._skip_now() is None
+               and tab6._giveup_now() is None)
+    check('F6: post-completion inertness -- impls None behind the '
+          'gate; scene/log untouched',
+          inert_f
+          and cmd.get_wizard() is None
+          and tab6._info_log.toPlainText() == log_pre_f6
+          and cmd.get_names('objects') == names_pre_f6, '')
+    r_restart_f = tab6._restart_now()
+    check('F6: the panel-ended state COMPOSES with Restart (fresh '
+          'countdown armed, the C10/C11 law)',
+          r_restart_f is True
+          and isinstance(tab6._pending_wizard, wizard.GameWizard)
+          and tab6._info_log.toPlainText().splitlines()[-2:]
+          == ['Get ready...', 'Game restarted.'], '')
+
+    # ---- F7: restore -> the baseline scene EXACTLY -------------------
+    tab6.cancel_pending_start()
+    tab6._timer.stop()
+    cmd.set_wizard()
+    placement.cleanup_game_objects()
+    gamestart._last_start = None
+    check('F7: teardown returns the baseline scene EXACTLY + stack '
+          'empty',
+          list(cmd.get_names('objects')) == list(baseline_f)
+          and cmd.get_wizard() is None
+          and gamestart._last_start is None,
+          'post=%r baseline=%r'
+          % (cmd.get_names('objects'), baseline_f))
+    app.processEvents()
+    dlg6.close()
+except Exception:
+    traceback.print_exc()
+    check('part F panel-Confirm natural-end drive', False,
+          'raised (see traceback above)')
+    try:
+        if dlg6 is not None:
+            dlg6.game_tab.cancel_pending_start()
+            dlg6.game_tab._timer.stop()
+        cmd.set_wizard()
+        placement.cleanup_game_objects()
+        gamestart._last_start = None
+    except Exception:
+        traceback.print_exc()
+
 # --- Phase regression record (the 06-09 contract): one 'SMOKE-0N:
 # PASS/NOT-RUN' line per smoke of the six-smoke battery for the
 # orchestrator to grep; a standalone run only knows its own verdict --
@@ -1414,12 +1565,13 @@ print('SMOKE-16: %s' % ('PASS' if not failures else 'FAIL'), flush=True)
 
 # --- Verdict marker (the SOLE verdict carrier) ------------------------
 print('SMOKE-16 PART A: %d checks; PART B: %d checks; PART C: %d '
-      'checks; PART D: %d checks; PART E: %d checks; total %d, '
-      '%d failure(s)'
+      'checks; PART D: %d checks; PART E: %d checks; PART F: %d '
+      'checks; total %d, %d failure(s)'
       % (part_a_checks, part_b_checks - part_a_checks,
          part_c_checks - part_b_checks,
          part_d_checks - part_c_checks,
-         REC['checks'] - part_d_checks, REC['checks'], len(failures)),
+         part_e_checks - part_d_checks,
+         REC['checks'] - part_e_checks, REC['checks'], len(failures)),
       flush=True)
 print('=== SMOKE-16 %s ==='
       % ('FAIL: ' + ', '.join(failures) if failures else 'PASS'),

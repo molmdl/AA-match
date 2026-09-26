@@ -511,13 +511,43 @@ class GameTab(QtWidgets.QWidget):
         # SYNCHRONOUS refresh; panel-triggered ends (the wizard's own
         # Confirm) reach it via the 1 Hz tick. Transition-only (prev
         # game_over False -> curr True), so the block logs exactly once
-        # per game end with no double-log.
+        # per game end with no double-log. 2026-09-27: the transition
+        # also COMPLETES the endgame state trio (timer stop, exact
+        # label pin, wizard pop) -- the first-observer completion for
+        # panel-triggered ends, idempotent with _endgame_sequence on
+        # the tab path (see the inline note below).
         prev_go = bool(prev.get('game_over')) if prev else False
         if state.get('game_over') and not prev_go:
             from . import engine
-            for line in status_text.endgame_lines(
-                    engine.endgame_summary()):
+            summary = engine.endgame_summary()
+            for line in status_text.endgame_lines(summary):
                 self._log(line)
+            # 2026-09-27 diag fix (human GUI report): a PANEL-triggered
+            # end (the wizard panel's own Confirm button,
+            # wizard_text.py -- it routes through NO tab impl) is FIRST
+            # observed HERE, by this transition. Without this trio the
+            # endgame sequence never ran for panel ends: the 1 Hz
+            # timer kept advancing the label past the frozen
+            # final_time forever (GameState.stop_timer freezes
+            # final_time but never touches timer_anchor) and the inert
+            # wizard lingered on the stack ('The game is over.' on
+            # every motion) -- the exact 2026-09-27 report. So the
+            # transition completes the same trio _endgame_sequence
+            # owns for tab-triggered ends: stop the timer, pin the
+            # EXACT final M:SS, pop the wizard (the 06-06 'inert until
+            # the endgame sequence pops it' law; the 06-RESEARCH-
+            # endgame-ui anticipation that the natural end can fire
+            # from the panel's Confirm). The TAB path is unchanged in
+            # outcome: its sync refresh lands here one statement
+            # BEFORE _confirm_now/_skip_now/_giveup_now call
+            # _endgame_sequence, which then re-runs the trio
+            # idempotently (stop/stop, pin/pin, pop finds no
+            # GameWizard). The endgame MODAL stays wrapper-owned --
+            # the smoke-99/P-6 law keeps boxes out of the tick.
+            self._timer.stop()
+            self._timer_label.setText(
+                status_text.format_mss(summary['final_time']))
+            self._pop_game_wizard()
         self._last_status = state
 
     # ---- the Hint handler (05-08 PLAY-05) ----

@@ -461,6 +461,40 @@
         "set_id": "demo-veryhard-1",
         "tier": "very_challenging",
         "title": "Big & iodinated"
+      },
+      {
+        "entries": [
+          {
+            "atom_count": 75,
+            "bond_count": 82,
+            "bond_order_counts": {
+              "1": 67,
+              "2": 15
+            },
+            "entry_id": "heme",
+            "file": "ligands/demo-veryhard-2-heme.sdf",
+            "formal_charge_sum": -4,
+            "format": "sdf",
+            "halogen_present": false,
+            "heavy_atom_count": 43,
+            "metal_present": true,
+            "protonation": "as-recorded",
+            "sha256": "414ee8fbc00b4920edbb6d53788e8a6fa38ddfe2cd442a1a3574d1098b1eebbf",
+            "size_class": "medium",
+            "states_expected": 1
+          }
+        ],
+        "license": "CC0 1.0 (wwPDB)",
+        "provenance": {
+          "complex_license": "CC0 1.0 (wwPDB) - https://www.wwpdb.org/about/usage-policies",
+          "fetched": "2026-09-26",
+          "license_url": "https://www.wwpdb.org/about/usage-policies",
+          "notes": "Very-challenging-tier metal-debut set (08-PROPOSALS.md Set 9, APPROVED 2026-09-26): heme - the ONLY verified metal-bearing candidate in the sourcing research; RCSB CCD HEM ideal coordinates SDF (plain '.sdf' 404s - '_ideal' required, research-verified; header name line reads 'HEM' per approved C7; CCD chemical name 'PROTOPORPHYRIN IX CONTAINING FE' VERIFIED via chemcomp endpoint). A lone metal ion as a ligand is DESIGN-REJECTED (degenerate bounding sphere, sourcing RQ7 item 4) - the in-molecule Fe is the correct carrier. wwPDB usage policy VERIFIED 2026-09-26 verbatim: 'Data files contained in the PDB archive are available under the CC0 1.0 Universal (CC0 1.0) Public Domain Dedication. Users of PDB data are encouraged to attribute the original authors of the PDB structure data where possible.'",
+          "source_url": "https://files.rcsb.org/ligands/view/HEM_ideal.sdf"
+        },
+        "set_id": "demo-veryhard-2",
+        "tier": "very_challenging",
+        "title": "Metalloporphyrin"
       }
     ]
   },

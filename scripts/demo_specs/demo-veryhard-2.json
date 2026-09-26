@@ -1,0 +1,29 @@
+{
+  "set_id": "demo-veryhard-2",
+  "tier": "very_challenging",
+  "title": "Metalloporphyrin",
+  "license": "CC0 1.0 (wwPDB)",
+  "provenance": {
+    "source_url": "https://files.rcsb.org/ligands/view/HEM_ideal.sdf",
+    "license_url": "https://www.wwpdb.org/about/usage-policies",
+    "complex_license": "CC0 1.0 (wwPDB) - https://www.wwpdb.org/about/usage-policies",
+    "fetched": "2026-09-26",
+    "notes": "Very-challenging-tier metal-debut set (08-PROPOSALS.md Set 9, APPROVED 2026-09-26): heme - the ONLY verified metal-bearing candidate in the sourcing research; RCSB CCD HEM ideal coordinates SDF (plain '.sdf' 404s - '_ideal' required, research-verified; header name line reads 'HEM' per approved C7; CCD chemical name 'PROTOPORPHYRIN IX CONTAINING FE' VERIFIED via chemcomp endpoint). A lone metal ion as a ligand is DESIGN-REJECTED (degenerate bounding sphere, sourcing RQ7 item 4) - the in-molecule Fe is the correct carrier. wwPDB usage policy VERIFIED 2026-09-26 verbatim: 'Data files contained in the PDB archive are available under the CC0 1.0 Universal (CC0 1.0) Public Domain Dedication. Users of PDB data are encouraged to attribute the original authors of the PDB structure data where possible.'"
+  },
+  "entries": [
+    {
+      "entry_id": "heme",
+      "url": "https://files.rcsb.org/ligands/view/HEM_ideal.sdf",
+      "protonation": "as-recorded",
+      "expect_atom_count": 75,
+      "provenance": {
+        "source_url": "https://files.rcsb.org/ligands/view/HEM_ideal.sdf",
+        "pdb_id": "1MBN",
+        "entry_doi": "https://doi.org/10.2210/pdb1mbn/pdb",
+        "paper_doi": "",
+        "plip": "PLIP (doi:10.1093/nar/gkaf361) reference complex 1MBN",
+        "notes": "Heme (protoporphyrin IX-Fe), RCSB CCD HEM ideal SDF (C34H32FeN4O4, 43 heavy, medium; counts 75/82 verified at proposal AND approval-time re-verification MATCH 2026-09-26; atom-block element tally VERIFIED C34 H32 N4 O4 Fe1; header name line 'HEM' per approved C7). Complex: 1MBN Kendrew's sperm-whale myoglobin - the heme classic (HEM confirmed in nonpolymer inventory; OH also present, 2026-09-26); entry DOI resolves 200; primary paper DOI NONE recorded in the RCSB data (1960 structure - honest absence). THE METAL DEBUT: Fe in-molecule -> metal_present true via the detector's metal gate (FE in the DETECT-03 approved metal list {MG, ZN, FE, CA, MN, CU, NI, CO, CD}) - first real-data exercise of the whole 02-07b metal branch + the 02-08 supply target (>=1 metal-present entry). Also pi_stacking (porphyrin macrocycle aromatic bonds), h_bond (propionate OH donors per capability typing), hydrophobic. Protonation 'as-recorded': the RCSB ideal SDF as published. CHARGE DELTA RECORDED 2026-09-26: the proposal narrative's '(propionate carboxyls protonated ... charge field 0)' parenthetical does NOT match the file - the ideal SDF carries M CHG annotations summing to formal_charge_sum -4 (carboxylates deprotonated; builder-derived and SMOKE-02/PyMOL-agreed -4 == -4). Counts/atoms/flags/identity all match the approved row exactly (75 atoms / 82 bonds / 43 heavy / Fe1 / header 'HEM'); the derived -4 is the honest truth of the approved file and ships as-recorded. Feeds Decision 8 (DETECT-03 revisit trigger - headless coverage check in 08-11; the -4 heme propionates/porphyrin charge model is one of its review inputs)."
+      }
+    }
+  ]
+}

@@ -1,0 +1,44 @@
+{
+  "set_id": "demo-veryhard-1",
+  "tier": "very_challenging",
+  "title": "Big & iodinated",
+  "license": "Public domain (NCBI PubChem)",
+  "provenance": {
+    "source_url": "https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/cid/<CID>/SDF?record_type=3d",
+    "license_url": "https://www.ncbi.nlm.nih.gov/home/about/policies/",
+    "pubchem_citation": "Kim S, Chen J, Cheng T, et al. PubChem 2025 update. Nucleic Acids Res. 2025;53(D1):D1516-D1525. doi:10.1093/nar/gkae1059",
+    "complex_license": "CC0 1.0 (wwPDB) - https://www.wwpdb.org/about/usage-policies",
+    "fetched": "2026-09-26",
+    "notes": "Very-challenging-tier set (08-PROPOSALS.md Set 8, APPROVED 2026-09-26): folic_acid CID 135398658 (C19H19N7O6, 32 heavy per approved C2 correction - MEDIUM bucket) + thyroxine CID 5819 (C15H11I4NO4, 24 heavy per C2 - 1 below the SIZE_S1=25 boundary; the iodine halogen case via 4x C-I). No alternates for either row. Per-record citation per U1: 'PubChem Identifier: CID <CID>; URL: https://pubchem.ncbi.nlm.nih.gov/compound/<CID>'. Complex reference metadata: CC0 1.0 (wwPDB)."
+  },
+  "entries": [
+    {
+      "entry_id": "folic_acid",
+      "url": "https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/cid/135398658/SDF?record_type=3d",
+      "protonation": "as-recorded",
+      "expect_atom_count": 51,
+      "provenance": {
+        "source_url": "https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/cid/135398658/SDF?record_type=3d",
+        "pdb_id": "4KMZ",
+        "entry_doi": "https://doi.org/10.2210/pdb4kmz/pdb",
+        "paper_doi": "https://doi.org/10.1073/pnas.1308827110",
+        "plip": "PLIP (doi:10.1093/nar/gkaf361) reference complex 4KMZ",
+        "notes": "Folic acid, PubChem CID 135398658 (C19H19N7O6, 32 heavy per approved C2 correction from research's 38; Charge 0 as recorded; approval-time re-verification MATCH 2026-09-26, counts 51/53). Complex: 4KMZ human folate receptor beta (FOLR2)-folate (FOL confirmed in nonpolymer inventory; K/Cl ions also present, 2026-09-26); entry DOI resolves 200; primary paper DOI 10.1073/pnas.1308827110 VERIFIED at rcsb.org (doi.org = 403 bot-block, U2 - recorded at rcsb and transcribed honestly). Interaction profile: h_bond prolific (pterin N/NH donors + acceptors, glutamate COOH donors), pi_stacking x2 (pterin + p-aminobenzoate), hydrophobic, cation_pi (AA-cation-over-rings). Tail COOHs NOT salt-bridge-typed as-recorded (Decision-5-parallel policy: free-acid COOHs, neprotonated-as-registered). The vitamin; medium-bucket mass atop two coplanar-ish ring systems."
+      }
+    },
+    {
+      "entry_id": "thyroxine",
+      "url": "https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/cid/5819/SDF?record_type=3d",
+      "protonation": "as-recorded",
+      "expect_atom_count": 35,
+      "provenance": {
+        "source_url": "https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/cid/5819/SDF?record_type=3d",
+        "pdb_id": "2RIW",
+        "entry_doi": "https://doi.org/10.2210/pdb2riw/pdb",
+        "paper_doi": "https://doi.org/10.1074/jbc.M110.171082",
+        "plip": "PLIP (doi:10.1093/nar/gkaf361) reference complex 2RIW",
+        "notes": "Thyroxine (LT4), PubChem CID 5819 (C15H11I4NO4, 24 heavy per approved C2 correction from research's 21; Charge 0 as recorded; approval-time re-verification MATCH 2026-09-26, counts 35/36). Complex: 2RIW reactive-loop-cleaved human thyroxine-binding globulin + thyroxine (T44 confirmed - chemcomp name queried: T44 = 3,5,3',5'-TETRAIODO-L-THYRONINE, 2026-09-26); entry DOI + primary paper DOI 10.1074/jbc.M110.171082 both resolve 200 (VERIFIED 2026-09-26). THE IODINE HALOGEN CASE: 4x C-I donors in one ligand (iodine count cross-checked against the proposal evidence: C15H11I4NO4 = exactly 4 iodines, all ring-bound aryl halogen donors) - I is in the approved halogen donor list (Cl/Br/I; C-F excluded per DETECT-03); the heaviest-halogen stress case beside chloramphenicol's Cl debut. Also h_bond (phenolic OH donor; ether + amino-acid head acceptors/donor), pi_stacking (2 aryl rings), hydrophobic. Neutral as registered (head NH2 + COOH; zwitterion NOT synthesized - same free-acid policy). Feeds Decision 8 (DETECT-03 revisit trigger)."
+      }
+    }
+  ]
+}

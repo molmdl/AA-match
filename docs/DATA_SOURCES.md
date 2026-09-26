@@ -1,8 +1,10 @@
 # Demo Data Sources (AA-match)
 
 **Last verified:** 2026-09-26 (all policy quotes and per-entry provenance re-verified at the
-08-04 GATE). Paper-DOI resolution spot-checks from this environment on 2026-09-26 (3 samples
-across 3 sets, see below).
+08-04 GATE). Paper-DOI resolution spot-checks from this environment on **2026-09-26** (3 samples
+across 3 sets, all HTTP 200 at doi.org): entry DOI `10.2210/pdb1oxr/pdb` (demo-easy-1) and paper
+DOIs `10.1016/j.chembiol.2017.08.021` (demo-hard-1, 5NWQ) and `10.1016/j.str.2016.08.010`
+(demo-hard-3, 5IT5).
 
 **Verification protocol:** every factual claim in this document carries a fetched URL plus
 a verification date. Human approval for every bundled ligand is recorded in

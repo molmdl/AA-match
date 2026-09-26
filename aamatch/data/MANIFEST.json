@@ -353,6 +353,60 @@
         "set_id": "demo-hard-3",
         "tier": "hard",
         "title": "Cofactors"
+      },
+      {
+        "entries": [
+          {
+            "atom_count": 32,
+            "bond_count": 32,
+            "bond_order_counts": {
+              "1": 27,
+              "2": 5
+            },
+            "entry_id": "chloramphenicol",
+            "file": "ligands/demo-challenge-1-chloramphenicol.sdf",
+            "formal_charge_sum": 0,
+            "format": "sdf",
+            "halogen_present": true,
+            "heavy_atom_count": 20,
+            "metal_present": false,
+            "protonation": "as-recorded",
+            "sha256": "9145d94a48e226a154eca8d5950067f620175c551fe24ccce8f000f353884a19",
+            "size_class": "small",
+            "states_expected": 1
+          },
+          {
+            "atom_count": 48,
+            "bond_count": 51,
+            "bond_order_counts": {
+              "1": 45,
+              "2": 6
+            },
+            "entry_id": "quinine",
+            "file": "ligands/demo-challenge-1-quinine.sdf",
+            "formal_charge_sum": 0,
+            "format": "sdf",
+            "halogen_present": false,
+            "heavy_atom_count": 24,
+            "metal_present": false,
+            "protonation": "as-recorded",
+            "sha256": "3e43700d0924178c0611d12d5fa6f7cbf14b05f4cddffc2e279166df87c5cb99",
+            "size_class": "small",
+            "states_expected": 1
+          }
+        ],
+        "license": "Public domain (NCBI PubChem)",
+        "provenance": {
+          "complex_license": "CC0 1.0 (wwPDB) - https://www.wwpdb.org/about/usage-policies",
+          "fetched": "2026-09-26",
+          "license_url": "https://www.ncbi.nlm.nih.gov/home/about/policies/",
+          "notes": "Challenge-tier halogen-debut set (08-PROPOSALS.md Set 7, APPROVED 2026-09-26): chloramphenicol CID 5959 (C11H12Cl2N2O5, 20 heavy, Charge 0 - the bundle's halogen DEBUT via 2x C-Cl; chlorine compound, correctly NOT fluoro - C-F excluded per DETECT-03) + quinine CID 3034034 (C20H24N2O2, 24 heavy, neutral free base as-registered - quinuclidine N unprotonated). No alternates for either row. Per-record citation per U1: 'PubChem Identifier: CID <CID>; URL: https://pubchem.ncbi.nlm.nih.gov/compound/<CID>'. Complex reference metadata: CC0 1.0 (wwPDB).",
+          "pubchem_citation": "Kim S, Chen J, Cheng T, et al. PubChem 2025 update. Nucleic Acids Res. 2025;53(D1):D1516-D1525. doi:10.1093/nar/gkae1059",
+          "source_url": "https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/cid/<CID>/SDF?record_type=3d"
+        },
+        "set_id": "demo-challenge-1",
+        "tier": "challenge",
+        "title": "Halogen & alkaloids"
       }
     ]
   },

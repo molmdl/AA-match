@@ -191,6 +191,60 @@
         "set_id": "demo-easy-3",
         "tier": "easy",
         "title": "Caffeine"
+      },
+      {
+        "entries": [
+          {
+            "atom_count": 17,
+            "bond_count": 17,
+            "bond_order_counts": {
+              "1": 13,
+              "2": 4
+            },
+            "entry_id": "benzamidine",
+            "file": "ligands/demo-hard-1-benzamidine.sdf",
+            "formal_charge_sum": 0,
+            "format": "sdf",
+            "halogen_present": false,
+            "heavy_atom_count": 9,
+            "metal_present": false,
+            "protonation": "as-recorded",
+            "sha256": "484b30982d943fca6a7e92342167898cf8a525588cedef8178f4b8545ffcad00",
+            "size_class": "small",
+            "states_expected": 1
+          },
+          {
+            "atom_count": 10,
+            "bond_count": 9,
+            "bond_order_counts": {
+              "1": 8,
+              "2": 1
+            },
+            "entry_id": "guanidinium",
+            "file": "ligands/demo-hard-1-guanidinium.sdf",
+            "formal_charge_sum": 1,
+            "format": "sdf",
+            "halogen_present": false,
+            "heavy_atom_count": 4,
+            "metal_present": false,
+            "protonation": "as-recorded",
+            "sha256": "709a650d6a809530619f07de9c2587a26439db6347084f3126d7a86cbebedfc9",
+            "size_class": "small",
+            "states_expected": 1
+          }
+        ],
+        "license": "Public domain (NCBI PubChem)",
+        "provenance": {
+          "complex_license": "CC0 1.0 (wwPDB) - https://www.wwpdb.org/about/usage-policies",
+          "fetched": "2026-09-26",
+          "license_url": "https://www.ncbi.nlm.nih.gov/home/about/policies/",
+          "notes": "Hard-tier trypsin-classics pair (08-PROPOSALS.md Set 4, APPROVED 2026-09-26): benzamidine CID 2332 (neutral free base as-registered per C3; the charged benzamidinium chloride CID 444655 alternate NOT substituted - plan's default row followed) + guanidinium CID 32838 (+1, 3D status resolved VERIFIED during 08-04 per C4; no alternate needed). Per-record citation per U1: 'PubChem Identifier: CID <CID>; URL: https://pubchem.ncbi.nlm.nih.gov/compound/<CID>'. Complex reference metadata: CC0 1.0 (wwPDB).",
+          "pubchem_citation": "Kim S, Chen J, Cheng T, et al. PubChem 2025 update. Nucleic Acids Res. 2025;53(D1):D1516-D1525. doi:10.1093/nar/gkae1059",
+          "source_url": "https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/cid/<CID>/SDF?record_type=3d"
+        },
+        "set_id": "demo-hard-1",
+        "tier": "hard",
+        "title": "Trypsin classics"
       }
     ]
   },

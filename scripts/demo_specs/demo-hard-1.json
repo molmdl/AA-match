@@ -1,0 +1,44 @@
+{
+  "set_id": "demo-hard-1",
+  "tier": "hard",
+  "title": "Trypsin classics",
+  "license": "Public domain (NCBI PubChem)",
+  "provenance": {
+    "source_url": "https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/cid/<CID>/SDF?record_type=3d",
+    "license_url": "https://www.ncbi.nlm.nih.gov/home/about/policies/",
+    "pubchem_citation": "Kim S, Chen J, Cheng T, et al. PubChem 2025 update. Nucleic Acids Res. 2025;53(D1):D1516-D1525. doi:10.1093/nar/gkae1059",
+    "complex_license": "CC0 1.0 (wwPDB) - https://www.wwpdb.org/about/usage-policies",
+    "fetched": "2026-09-26",
+    "notes": "Hard-tier trypsin-classics pair (08-PROPOSALS.md Set 4, APPROVED 2026-09-26): benzamidine CID 2332 (neutral free base as-registered per C3; the charged benzamidinium chloride CID 444655 alternate NOT substituted - plan's default row followed) + guanidinium CID 32838 (+1, 3D status resolved VERIFIED during 08-04 per C4; no alternate needed). Per-record citation per U1: 'PubChem Identifier: CID <CID>; URL: https://pubchem.ncbi.nlm.nih.gov/compound/<CID>'. Complex reference metadata: CC0 1.0 (wwPDB)."
+  },
+  "entries": [
+    {
+      "entry_id": "benzamidine",
+      "url": "https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/cid/2332/SDF?record_type=3d",
+      "protonation": "as-recorded",
+      "expect_atom_count": 17,
+      "provenance": {
+        "source_url": "https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/cid/2332/SDF?record_type=3d",
+        "pdb_id": "1S0R",
+        "entry_doi": "https://doi.org/10.2210/pdb1s0r/pdb",
+        "paper_doi": "",
+        "plip": "PLIP (doi:10.1093/nar/gkaf361) reference complex 1S0R",
+        "notes": "Benzamidine, PubChem CID 2332 (C7H8N2, 9 heavy, Charge 0 as recorded per approved C3 - the research's '+1 amidinium' claim is INCORRECT for this CID; the charged benzamidinium chloride CID 444655 alternate is approved but NOT substituted). Complex: 1S0R bovine trypsin-benzamidine, atomic resolution - THE classic serine-protease system (BEN confirmed in nonpolymer inventory; CA ion also present, second cleanup-analog datapoint, verified 2026-09-26); primary paper DOI NONE recorded in the RCSB data (honest absence; title verified 'Bovine Pancreatic Trypsin inhibited with Benzamidine at Atomic resolution'). Carries h_bond (amidine N-H donors + ring-N acceptors), pi_stacking (benzene), hydrophobic, cation_pi in the AA-cation-over-lig-ring direction only (ligand neutral)."
+      }
+    },
+    {
+      "entry_id": "guanidinium",
+      "url": "https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/cid/32838/SDF?record_type=3d",
+      "protonation": "as-recorded",
+      "expect_atom_count": 10,
+      "provenance": {
+        "source_url": "https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/cid/32838/SDF?record_type=3d",
+        "pdb_id": "5NWQ",
+        "entry_doi": "https://doi.org/10.2210/pdb5nwq/pdb",
+        "paper_doi": "https://doi.org/10.1016/j.chembiol.2017.08.021",
+        "plip": "PLIP (doi:10.1093/nar/gkaf361) reference complex 5NWQ",
+        "notes": "Guanidinium, PubChem CID 32838 (CH6N3+, 4 heavy, Charge +1 as recorded; 3D record VERIFIED during 08-04 approval re-verification per C4 - research's '3D unverified' resolved). Complex: 5NWQ Thermobifida fusca guanidine III riboswitch + guanidine (GAI confirmed in inventory, chemcomp GAI = GUANIDINE - note CCD GUN = GUANINE, recorded pitfall, verified 2026-09-26). The +1 C(N)3 charged group makes this the set's salt_bridge carrier AND the ligand-side cation_pi showcase; per the 02-06 recorded detector law the ligand guanidino center is the centroid of the 3 bonded Ns (the gate's 'midpoint of 2 Ns' is the protein-side Arg pattern; isolated guanidinium has 3 equivalent Ns) - this ligand exercises that real-world geometry. Ammonium-veto boundary: the PLIP veto targets ammonium N with exactly 3 non-H substituents; guanidinium's C-centered cation sits on the boundary, a live boundary-case demo. Also h_bond donors (6 N-H). The cation (+1) chosen deliberately: salt-bridge + ligand-cation carrier."
+      }
+    }
+  ]
+}

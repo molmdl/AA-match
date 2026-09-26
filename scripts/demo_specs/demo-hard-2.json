@@ -1,0 +1,44 @@
+{
+  "set_id": "demo-hard-2",
+  "tier": "hard",
+  "title": "Charged messengers",
+  "license": "Public domain (NCBI PubChem)",
+  "provenance": {
+    "source_url": "https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/cid/<CID>/SDF?record_type=3d",
+    "license_url": "https://www.ncbi.nlm.nih.gov/home/about/policies/",
+    "pubchem_citation": "Kim S, Chen J, Cheng T, et al. PubChem 2025 update. Nucleic Acids Res. 2025;53(D1):D1516-D1525. doi:10.1093/nar/gkae1059",
+    "complex_license": "CC0 1.0 (wwPDB) - https://www.wwpdb.org/about/usage-policies",
+    "fetched": "2026-09-26",
+    "notes": "Hard-tier charged-messengers pair (08-PROPOSALS.md Set 5, APPROVED 2026-09-26): glutamic acid CID 33032 (neutral free acid as-registered per C3 - physiological zwitterion deliberately NOT synthesized; parallel policy to citrate Decision 5) + acetylcholine CID 187 (+1 quaternary N - the DEFAULT approved pick; imidazolium CID 444234 and tetramethylammonium CID 6380 alternates NOT substituted). Per-record citation per U1: 'PubChem Identifier: CID <CID>; URL: https://pubchem.ncbi.nlm.nih.gov/compound/<CID>'. Complex reference metadata: CC0 1.0 (wwPDB)."
+  },
+  "entries": [
+    {
+      "entry_id": "glutamic_acid",
+      "url": "https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/cid/33032/SDF?record_type=3d",
+      "protonation": "as-recorded",
+      "expect_atom_count": 19,
+      "provenance": {
+        "source_url": "https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/cid/33032/SDF?record_type=3d",
+        "pdb_id": "2JFO",
+        "entry_doi": "https://doi.org/10.2210/pdb2jfo/pdb",
+        "paper_doi": "https://doi.org/10.1038/nature05689",
+        "plip": "PLIP (doi:10.1093/nar/gkaf361) reference complex 2JFO",
+        "notes": "L-Glutamic acid, PubChem CID 33032 (C5H9NO4, 10 heavy, Charge 0 as recorded per approved C3 - the research's '-1' claim is INCORRECT for this CID). Complex: 2JFO Enterococcus faecalis glutamate racemase with D- and L-glutamate (GLU confirmed as a bound nonpolymer ligand - hits 2CT6/1J0F rejected at confirmation, verified 2026-09-26; paper DOI resolves 200). Neutral free acid: physiological zwitterion deliberately NOT synthesized; parallel policy to citrate (Decision 5). Carries h_bond rich (NH2 donor + 2 COOH donors; carboxyl + amino N/O acceptors), hydrophobic (C3 spacer). No salt bridge as-recorded; the set's salt-bridge slot is carried by acetylcholine."
+      }
+    },
+    {
+      "entry_id": "acetylcholine",
+      "url": "https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/cid/187/SDF?record_type=3d",
+      "protonation": "as-recorded",
+      "expect_atom_count": 26,
+      "provenance": {
+        "source_url": "https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/cid/187/SDF?record_type=3d",
+        "pdb_id": "9E3E",
+        "entry_doi": "https://doi.org/10.2210/pdb9e3e/pdb",
+        "paper_doi": "https://doi.org/10.1126/science.adw1264",
+        "plip": "PLIP (doi:10.1093/nar/gkaf361) reference complex 9E3E",
+        "notes": "Acetylcholine, PubChem CID 187 (C7H16NO2+, 10 heavy, Charge +1 as recorded - permanently charged quaternary ammonium; no pKa choice exists). The DEFAULT approved pick over imidazolium CID 444234 (both 3D-verified during 08-04). Complex: 9E3E Torpedo nicotinic acetylcholine receptor, diliganded (ACH confirmed in inventory - eight higher-ranked hits lacked ACH, walk recorded, verified 2026-09-26; paper DOI verified at rcsb.org, doi.org 403 bot-block per U2). Carries salt_bridge (permanently +1 quaternary N vs AA carboxylates - the set's salt-bridge carrier), cation_pi ligand-side (the NMe3+ quaternary case sits OUTSIDE the PLIP tertamine veto - veto requires exactly 3 non-H substituents; the boundary complement to guanidinium's boundary case), h_bond (carbonyl + ester O acceptors), hydrophobic."
+      }
+    }
+  ]
+}

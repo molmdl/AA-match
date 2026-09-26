@@ -245,6 +245,60 @@
         "set_id": "demo-hard-1",
         "tier": "hard",
         "title": "Trypsin classics"
+      },
+      {
+        "entries": [
+          {
+            "atom_count": 19,
+            "bond_count": 18,
+            "bond_order_counts": {
+              "1": 16,
+              "2": 2
+            },
+            "entry_id": "glutamic_acid",
+            "file": "ligands/demo-hard-2-glutamic_acid.sdf",
+            "formal_charge_sum": 0,
+            "format": "sdf",
+            "halogen_present": false,
+            "heavy_atom_count": 10,
+            "metal_present": false,
+            "protonation": "as-recorded",
+            "sha256": "d30a909cad9f3e7e3d3f20fb4ad4f8c5417686537f03c92bee6ed003eed7e16c",
+            "size_class": "small",
+            "states_expected": 1
+          },
+          {
+            "atom_count": 26,
+            "bond_count": 25,
+            "bond_order_counts": {
+              "1": 24,
+              "2": 1
+            },
+            "entry_id": "acetylcholine",
+            "file": "ligands/demo-hard-2-acetylcholine.sdf",
+            "formal_charge_sum": 1,
+            "format": "sdf",
+            "halogen_present": false,
+            "heavy_atom_count": 10,
+            "metal_present": false,
+            "protonation": "as-recorded",
+            "sha256": "4d0e29a7fff01316bad50cc677e620c937d0cbf8566cf66a1fa174b2b45b53e3",
+            "size_class": "small",
+            "states_expected": 1
+          }
+        ],
+        "license": "Public domain (NCBI PubChem)",
+        "provenance": {
+          "complex_license": "CC0 1.0 (wwPDB) - https://www.wwpdb.org/about/usage-policies",
+          "fetched": "2026-09-26",
+          "license_url": "https://www.ncbi.nlm.nih.gov/home/about/policies/",
+          "notes": "Hard-tier charged-messengers pair (08-PROPOSALS.md Set 5, APPROVED 2026-09-26): glutamic acid CID 33032 (neutral free acid as-registered per C3 - physiological zwitterion deliberately NOT synthesized; parallel policy to citrate Decision 5) + acetylcholine CID 187 (+1 quaternary N - the DEFAULT approved pick; imidazolium CID 444234 and tetramethylammonium CID 6380 alternates NOT substituted). Per-record citation per U1: 'PubChem Identifier: CID <CID>; URL: https://pubchem.ncbi.nlm.nih.gov/compound/<CID>'. Complex reference metadata: CC0 1.0 (wwPDB).",
+          "pubchem_citation": "Kim S, Chen J, Cheng T, et al. PubChem 2025 update. Nucleic Acids Res. 2025;53(D1):D1516-D1525. doi:10.1093/nar/gkae1059",
+          "source_url": "https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/cid/<CID>/SDF?record_type=3d"
+        },
+        "set_id": "demo-hard-2",
+        "tier": "hard",
+        "title": "Charged messengers"
       }
     ]
   },

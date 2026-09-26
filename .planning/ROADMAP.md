@@ -205,7 +205,7 @@ Plans:
 - [x] 07-09-PLAN.md — load_checkpoint sentinel-first orchestration + SMOKE-20 two-process E2E (wave 5)
 - [x] 07-10-PLAN.md — Import kind-dispatch + checkpoint-resume tab re-arm + persistence.peek_kind (wave 6)
 - [x] 07-11-PLAN.md — Full regression battery (WSL + smokes 01-20) + verdict recording (wave 7)
-- [ ] 07-12-PLAN.md — [HUMAN] consolidated GUI checkpoint (criteria 1-3) (wave 8)
+- [x] 07-12-PLAN.md — [HUMAN] consolidated GUI checkpoint (criteria 1-3) (wave 8)
 
 ### Phase 8: Demo Curation & Citations
 **Goal**: ~9 curated demo sets ship with full, human-verified provenance under the propose → human-approve → fetch/commit protocol — content is gated by truthfulness, not by code.

@@ -1,0 +1,44 @@
+{
+  "set_id": "demo-easy-2",
+  "tier": "easy",
+  "title": "Metabolites & ions",
+  "license": "Public domain (NCBI PubChem)",
+  "provenance": {
+    "source_url": "https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/cid/<CID>/SDF?record_type=3d",
+    "license_url": "https://www.ncbi.nlm.nih.gov/home/about/policies/",
+    "pubchem_citation": "Kim S, Chen J, Cheng T, et al. PubChem 2025 update. Nucleic Acids Res. 2025;53(D1):D1516-D1525. doi:10.1093/nar/gkae1059",
+    "complex_license": "CC0 1.0 (wwPDB) - https://www.wwpdb.org/about/usage-policies",
+    "fetched": "2026-09-26",
+    "notes": "Easy-tier central metabolite + minimal charged ion (08-PROPOSALS.md Set 2, APPROVED 2026-09-26): citric acid CID 311 (free acid as-recorded per Decision 5; deprotonatized citrate sourcing REJECTED for v1) + acetate anion CID 175 (the set's salt-bridge carrier, formal charge -1). Per-record citation per U1: 'PubChem Identifier: CID <CID>; URL: https://pubchem.ncbi.nlm.nih.gov/compound/<CID>'. Complex reference metadata: CC0 1.0 (wwPDB)."
+  },
+  "entries": [
+    {
+      "entry_id": "citric_acid",
+      "url": "https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/cid/311/SDF?record_type=3d",
+      "protonation": "as-recorded",
+      "expect_atom_count": 21,
+      "provenance": {
+        "source_url": "https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/cid/311/SDF?record_type=3d",
+        "pdb_id": "8FUY",
+        "entry_doi": "https://doi.org/10.2210/pdb8fuy/pdb",
+        "paper_doi": "",
+        "plip": "PLIP (doi:10.1093/nar/gkaf361) reference complex 8FUY",
+        "notes": "Citric acid, PubChem CID 311 (C6H8O7, 13 heavy, Charge 0 as recorded). Complex: 8FUY Crithidia fasciculata G6PDH citrate-bound (CIT + CL in inventory; research's top hit 1O7X REJECTED at confirmation - no nonpolymer entities, C5). Primary paper DOI: NONE RECORDED in the RCSB data - honest absence, not an omission to invent. Neutral free acid per Decision 5: COOH-never-anion guard, carboxylates NOT salt-bridge-typed; the set's salt-bridge slot is acetate. Carries rich h_bond (4 OH-type donors - 3 COOH + 1 alcohol; 7 O acceptors), hydrophobic."
+      }
+    },
+    {
+      "entry_id": "acetate",
+      "url": "https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/cid/175/SDF?record_type=3d",
+      "protonation": "as-recorded",
+      "expect_atom_count": 7,
+      "provenance": {
+        "source_url": "https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/cid/175/SDF?record_type=3d",
+        "pdb_id": "5YS8",
+        "entry_doi": "https://doi.org/10.2210/pdb5ys8/pdb",
+        "paper_doi": "https://doi.org/10.1038/s41422-018-0032-8",
+        "plip": "PLIP (doi:10.1093/nar/gkaf361) reference complex 5YS8",
+        "notes": "Acetate anion, PubChem CID 175 (C2H3O2-, 4 heavy, Charge -1 as recorded - the deprotonated anion CHOSEN over acetic acid deliberately: it is the salt-bridge carrier; carboxylate charge-group typing requires the recorded charge). Complex: 5YS8 succinate-acetate permease (ACT in inventory; paper DOI resolves 200). Carries salt_bridge (carboxylate -1 charged group), h_bond (carboxylate O acceptors), hydrophobic (methyl). FILE is the set-scoped demo-easy-2-acetate.sdf; the dev set's legacy ligands/acetate.sdf is a different script-built file and stays untouched."
+      }
+    }
+  ]
+}

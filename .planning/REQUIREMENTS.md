@@ -59,15 +59,15 @@ Requirements for initial release. Each maps to roadmap phases.
 - [x] **SCORE-05**: Skip Molecule (with confirmation warning) stores the partial score and moves to the next molecule
 - [x] **SCORE-06**: Give Up (with confirmation warning) ends the game at the current stage and shows the endgame screen
 - [x] **SCORE-07**: After all levels: per-level scores + total score, stopped timer, and a winning message with time taken, total molecules and levels, and skip/give-up counts
-- [ ] **SCORE-08**: Save button checkpoints the game (PyMOL session + game-state sidecar) so the user can load/resume any time
+- [x] **SCORE-08**: Save button checkpoints the game (PyMOL session + game-state sidecar) so the user can load/resume any time
 - [x] **SCORE-09**: Restart button restarts the game from the stored initial state
 - [x] **SCORE-10**: Reset button places all amino acids back to their grid positions
 
 ### Persistence
 
 - [x] **PERSIST-01**: Setup parameters save to / load from a file (versioned format)
-- [ ] **PERSIST-02**: Generate-and-export writes a shareable game file that the Game status tab's Import button can load
-- [ ] **PERSIST-03**: Checkpoint save/restore fully reconstructs the game (placed positions/orientations, scores, counters)
+- [x] **PERSIST-02**: Generate-and-export writes a shareable game file that the Game status tab's Import button can load
+- [x] **PERSIST-03**: Checkpoint save/restore fully reconstructs the game (placed positions/orientations, scores, counters)
 
 ### Help & Attribution
 
@@ -150,12 +150,12 @@ Which phases cover which requirements. Updated during roadmap creation (2026-09-
 | SCORE-05 | Phase 6 | Complete |
 | SCORE-06 | Phase 6 | Complete |
 | SCORE-07 | Phase 6 | Complete |
-| SCORE-08 | Phase 7 | Pending |
+| SCORE-08 | Phase 7 | Complete |
 | SCORE-09 | Phase 6 | Complete |
 | SCORE-10 | Phase 6 | Complete |
 | PERSIST-01 | Phase 1 | Complete |
-| PERSIST-02 | Phase 7 | Pending |
-| PERSIST-03 | Phase 7 | Pending |
+| PERSIST-02 | Phase 7 | Complete |
+| PERSIST-03 | Phase 7 | Complete |
 | HELP-01 | Phase 9 | Pending |
 | HELP-02 | Phase 8 | Pending |
 | DOCS-01 | Phase 9 | Pending |

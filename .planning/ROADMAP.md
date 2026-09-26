@@ -23,7 +23,7 @@ AA-match ships as a standard PyMOL 2.5.0 plugin implementing an educational smal
 - [x] **Phase 4: Qt Setup Window** — modeless setup window: demo dropdown, upload, params, the seven bottom buttons
 - [x] **Phase 5: Game Status Tab & Start Sequence** — start sequence, live status tab (info box / timer / required interactions), Hint
 - [x] **Phase 6: Scoring Lifecycle & Endgame** — confirm/debrief/advance, skip/give-up, endgame screen, restart/reset
-- [ ] **Phase 7: Checkpoint & Game-File Persistence** — save/restore round-trip, Import of exported games
+- [x] **Phase 7: Checkpoint & Game-File Persistence** — save/restore round-trip, Import of exported games
 - [ ] **Phase 8: Demo Curation & Citations** — ~9 curated tier slots under propose → approve → fetch/commit; DATA_SOURCES.md
 - [ ] **Phase 9: Help, Docs & Release Audit** — in-game help, README, final docs audit, perf budgets
 
@@ -281,7 +281,7 @@ Lifted from PITFALLS.md "Pitfall-to-Phase Mapping" (topic names → this roadmap
 | 4. Qt Setup Window | 15/15 | Complete (verified 2026-09-16 — 04-VERIFICATION.md passed 58/58) | 2026-09-16 |
 | 5. Game Status Tab & Start Sequence | 11/11 | Complete (verified 2026-09-20 — 05-VERIFICATION.md passed 88/88) | 2026-09-20 |
 | 6. Scoring Lifecycle & Endgame | 10/10 | Complete (verified 2026-09-21 — 06-VERIFICATION.md passed 39/39) | 2026-09-21 |
-| 7. Checkpoint & Game-File Persistence | 0/TBD | Not started | - |
+| 7. Checkpoint & Game-File Persistence | 12/12 | Complete (verified 2026-09-26 — 07-VERIFICATION.md passed 51/51) | 2026-09-26 |
 | 8. Demo Curation & Citations | 0/11 | Not started | - |
 | 9. Help, Docs & Release Audit | 0/TBD | Not started | - |
 

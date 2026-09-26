@@ -14,7 +14,7 @@ Plan: **08-01 + 08-02 + 08-03 complete** — 08-01 (worktree exec/08-01): the bu
 Status: In progress — 08-04 [GATE] checkpoint **REACHED, approval PENDING** (08-PROPOSALS.md + 10 default decisions committed; session corrections C1–C7 + deferrals U1–U4 recorded); approval line goes into 08-PROPOSALS.md + this file ONLY after the human verdict; 08-05..08-07 content plans remain BLOCKED until it exists and run ONLY through the 08-01 pipeline
 Last activity: 2026-09-26 — 08-04 [GATE] proposals drafted (same-session re-verification of every candidate), checkpoint presented to the human, awaiting verdict
 
-Progress: [████████████] 12/12 of Phase 7 · [███░░░░░░░░] 3/11 of Phase 8 · 83/92 planned plans (wave-1 blend; 6/9 phases verified)
+Progress: [████████████] 12/12 of Phase 7 · [███░░░░░░░░] 3/11 of Phase 8 · 83/92 planned plans (wave-1 blend; 7/9 phases verified)
 
 ## Performance Metrics
 
@@ -236,6 +236,8 @@ Decisions are logged in PROJECT.md Key Decisions table. Seeded from PROJECT.md a
 - (07-02) .aamz = ONE zip, two fixed members (game.pse + state.json); sidecar member = the FULL container JSON (check_container gate 1 applies on read); write = sort_keys/indent-2 JSON + temp-mkstemp + os.replace (write_json_atomic discipline); read = refusal-FIRST — zip/sidecar/parse gates ALL run BEFORE extraction hand-off (BadZipFile -> FormatError, never bare; caller owns the extracted-temp rmtree).
 
 ### Phase 7 Decisions & Laws (Checkpoint & Game-File Persistence)
+
+- (07 close-out, 2026-09-26) **Phase 7 COMPLETE + VERIFIED:** 07-VERIFICATION.md status `passed` (51/51 must-haves across 12 plans — artifacts/wiring/key-links inspected in code, not SUMMARY claims); ROADMAP 07-01..07-12 all ticked; REQUIREMENTS.md traceability flips PERSIST-02/PERSIST-03/SCORE-08 Pending → Complete. Matrix round-trip verdict (07-11, standing): object matrices survive `.pse` bit-exactly (SMOKE-17 max_delta=0.000e+00); the sidecar carries NO matrices by design. Optional Phase-9 polish note: bare-`.pse` Import refusal wording (approved as-is).
 
 - (07-05) **Payload-direct start law (embed-don't-regenerate at START):** Import must NOT ride `start_game` — setup+seed regeneration is manifest-content-dependent (Phase 8 will silently re-bucket the same seed) and IMPOSSIBLE for uploaded games on the importer machine. `gamestart.start_game_from_payload(payload, ligand_content, setup, candidates, activate=False)` mirrors start_game's cleanup-first ordering verbatim (cleanup → materialize(payload,0) → adopt_game(fresh GameState) → GameWizard(payload, registry, 0, 0) → compose → `_last_start` → optional activate); the embedded level_spec payload is THE TRUTH and is stored in `_last_start['payload']` BY IDENTITY (never re-serialized).
 - (07-05) **One adopt seam for both consumers:** `engine.adopt_game(payload, registry, game_state_dict, ligand_content, elapsed_at_save=None)` rebinds ALL FOUR engine globals; malformed state → EngineError naming the cause; the timer rebases via the P-4 `rebase_timer` single anchor iff `elapsed_at_save is not None and not game.game_over`. Import passes a fresh `GameState().to_dict()` + None (timer from zero at GO); resume passes the sidecar state + elapsed. The rebase path has NO headless exercise yet — 07-09's SMOKE-20 run 2 is its first proof; note the resumed game must NOT `start_timer` after the adopt or the rebase is lost.

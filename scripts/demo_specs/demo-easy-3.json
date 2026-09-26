@@ -1,0 +1,30 @@
+{
+  "set_id": "demo-easy-3",
+  "tier": "easy",
+  "title": "Caffeine",
+  "license": "Public domain (NCBI PubChem)",
+  "provenance": {
+    "source_url": "https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/cid/<CID>/SDF?record_type=3d",
+    "license_url": "https://www.ncbi.nlm.nih.gov/home/about/policies/",
+    "pubchem_citation": "Kim S, Chen J, Cheng T, et al. PubChem 2025 update. Nucleic Acids Res. 2025;53(D1):D1516-D1525. doi:10.1093/nar/gkae1059",
+    "complex_license": "CC0 1.0 (wwPDB) - https://www.wwpdb.org/about/usage-policies",
+    "fetched": "2026-09-26",
+    "notes": "Easy-tier one-molecule set showcasing acceptor-only h_bond + pi_stacking (08-PROPOSALS.md Set 3, APPROVED 2026-09-26): caffeine CID 2519. Per-record citation per U1: 'PubChem Identifier: CID 2519; URL: https://pubchem.ncbi.nlm.nih.gov/compound/2519'. Complex reference metadata: CC0 1.0 (wwPDB)."
+  },
+  "entries": [
+    {
+      "entry_id": "caffeine",
+      "url": "https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/cid/2519/SDF?record_type=3d",
+      "protonation": "as-recorded",
+      "expect_atom_count": 24,
+      "provenance": {
+        "source_url": "https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/cid/2519/SDF?record_type=3d",
+        "pdb_id": "3G6M",
+        "entry_doi": "https://doi.org/10.2210/pdb3g6m/pdb",
+        "paper_doi": "https://doi.org/10.1099/mic.0.043653-0",
+        "plip": "PLIP (doi:10.1093/nar/gkaf361) reference complex 3G6M",
+        "notes": "Caffeine (1,3,7-trimethylxanthine), PubChem CID 2519 (C8H10N4O2, 14 heavy, Charge 0 as recorded). Complex: 3G6M chitinase CrChi1-caffeine (CFF in inventory, verified 2026-09-26; paper DOI human-verified via PDB website). h_bond ACCEPTOR-ONLY (2 carbonyl O + 4 ring N; every ring N methylated so no N-H donor - a clean direction-refined-typing teaching case), pi_stacking (fused purine rings), hydrophobic. GEN-06 diversity: the acceptor-only case has no other easy-tier carrier."
+      }
+    }
+  ]
+}

@@ -34,10 +34,10 @@ Progress: [████████████] 12/12 of Phase 7 · [███�
 | 5 | 11/11 ✓ | ~7 min (05-02) + 3 min (05-04) + ~7 min (05-05) + 5 min (05-07) [wave 1: 6 parallel] + ~20 min (05-06) + ~17 min (05-08) + ~10 min (05-09) + ~13 min (05-10) [wave 4: 2 parallel] + ~20 min (05-11) | — |
 | 6 | 10/10 | 47 min (06-01) + ~12 min (06-03) + 13 min (06-05) + 17 min (06-06) + ~17 min (06-07) + 12 min (06-08) + 16 min (06-09) + ~12 min (06-10 checkpoint fix + record); 06-02/06-04 durations unrecorded (wave-1 agent reports omitted them) | — |
 | 7 | 12/12 | 7 min (07-01) + ~11 min (07-02) + 3 min (07-03) + 13 min (07-04) + ~40 min (07-05) + ~10 min (07-06) + 24 min (07-07) + 9 min (07-08) + 69 min (07-09) + ~20 min (07-10) + ~7 min (07-11 battery) + ~5 min (07-12 docs-only checkpoint record) | — |
-| 8 | 4/11 | 19 min (08-01 pipeline) + ~14 min (08-02 dropdown) + duration unrecorded (08-03 smokes) [wave-1 parallel worktrees] + ~25 min (08-04 continuation: re-verification + verdict record; drafting session unrecorded) | — |
+| 8 | 4/11 | 19 min (08-01 pipeline) + ~14 min (08-02 dropdown) + duration unrecorded (08-03 smokes) [wave-1 parallel worktrees] + ~13 min (08-04 continuation: re-verification + verdict record; drafting session unrecorded) | — |
 
 **Recent Trend:**
-- Last 5 plans: 08-04 (~25 min continuation: human-demanded atom-count re-verification 16/16 MATCH + U1–U4 resolutions + approval record, solo main-line, zero deviations), 08-01 (19 min, wave-1 worktree, bundling pipeline + dry-run oracle, zero deviations), 08-02 (~14 min, wave-1 worktree, TDD RED/GREEN + Qt separators + SMOKE-11 offscreen, zero deviations), 08-03 (wave-1 worktree, smoke de-hardcoding, zero fixes needed), 07-12 (~5 min docs-only verdict record: [HUMAN] checkpoint APPROVED 2026-09-22, 6/6 PASS, zero fix-batch, solo main-line)
+- Last 5 plans: 08-04 (~13 min continuation: human-demanded atom-count re-verification 16/16 MATCH + U1–U4 resolutions + approval record, solo main-line, zero deviations), 08-01 (19 min, wave-1 worktree, bundling pipeline + dry-run oracle, zero deviations), 08-02 (~14 min, wave-1 worktree, TDD RED/GREEN + Qt separators + SMOKE-11 offscreen, zero deviations), 08-03 (wave-1 worktree, smoke de-hardcoding, zero fixes needed), 07-12 (~5 min docs-only verdict record: [HUMAN] checkpoint APPROVED 2026-09-22, 6/6 PASS, zero fix-batch, solo main-line)
 - Trend: steady ~5-20 min per plan; parallel waves via the AGENTS.md worktree protocol (phase 7 wave 1: 3 plans), STATE.md blended by the orchestrator on merge
 
 *Updated after each plan completion*

@@ -46,7 +46,7 @@ patterns-established:
   - "expect_atom_count guards re-confirmed at approval time (16 rows) — the 08-01 builder will refuse any fetch disagreeing"
 
 # Metrics
-duration: ~25 min (continuation session: re-verification + amendments + approval recording; the drafting/checkpoint session was a separate earlier session)
+duration: ~13 min (continuation session: re-verification + amendments + approval recording; the drafting/checkpoint session was a separate earlier session)
 completed: 2026-09-26
 ---
 
@@ -56,9 +56,9 @@ completed: 2026-09-26
 
 ## Performance
 
-- **Duration:** ~25 min (continuation session; drafting + checkpoint session was earlier the same day, unrecorded)
+- **Duration:** ~13 min (continuation session; drafting + checkpoint session was earlier the same day, unrecorded)
 - **Started:** 2026-09-26T13:17:45Z
-- **Completed:** 2026-09-26T13:28Z
+- **Completed:** 2026-09-26T13:30Z
 - **Tasks:** 4/4 (Task 3 = the [GATE] checkpoint, resolved by the human's verdicts; Task 4 = post-approval recording + this summary)
 - **Files modified:** 2 (08-PROPOSALS.md, STATE.md) + 1 created (this summary)
 

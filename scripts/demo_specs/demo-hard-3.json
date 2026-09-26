@@ -1,0 +1,44 @@
+{
+  "set_id": "demo-hard-3",
+  "tier": "hard",
+  "title": "Cofactors",
+  "license": "Public domain (NCBI PubChem)",
+  "provenance": {
+    "source_url": "https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/cid/<CID>/SDF?record_type=3d",
+    "license_url": "https://www.ncbi.nlm.nih.gov/home/about/policies/",
+    "pubchem_citation": "Kim S, Chen J, Cheng T, et al. PubChem 2025 update. Nucleic Acids Res. 2025;53(D1):D1516-D1525. doi:10.1093/nar/gkae1059",
+    "complex_license": "CC0 1.0 (wwPDB) - https://www.wwpdb.org/about/usage-policies",
+    "fetched": "2026-09-26",
+    "notes": "Hard-tier cofactor pair (08-PROPOSALS.md Set 6, APPROVED 2026-09-26): ATP CID 5957 (31 heavy) + NAD CID 5892 (44 heavy) - the bundle's FIRST medium size-class entries; the generator's medium bucket (and NEAREST-BUCKET fallback for large-tier games) becomes non-empty. Both neutral as registered per Decision 1; their phosphates are NOT salt-bridge-typed per the DETECT-04 parity law (capability.py does not type phosphate/sulfonate/pyrosphate charge groups). Per-record citation per U1: 'PubChem Identifier: CID <CID>; URL: https://pubchem.ncbi.nlm.nih.gov/compound/<CID>'. Complex reference metadata: CC0 1.0 (wwPDB)."
+  },
+  "entries": [
+    {
+      "entry_id": "atp",
+      "url": "https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/cid/5957/SDF?record_type=3d",
+      "protonation": "as-recorded",
+      "expect_atom_count": 47,
+      "provenance": {
+        "source_url": "https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/cid/5957/SDF?record_type=3d",
+        "pdb_id": "5IT5",
+        "entry_doi": "https://doi.org/10.2210/pdb5it5/pdb",
+        "paper_doi": "https://doi.org/10.1016/j.str.2016.08.010",
+        "plip": "PLIP (doi:10.1093/nar/gkaf361) reference complex 5IT5",
+        "notes": "ATP (adenosine 5'-triphosphate), PubChem CID 5957 (C10H16N5O13P3, 31 heavy - MEDIUM size class as derived, Charge 0 as recorded; real ATP at pH 7 is ~4- but explicitly NOT modeled per Decision 1). Complex: 5IT5 Thermus thermophilus PilB ATPase core with ATP (ATP confirmed in nonpolymer inventory - AGS/MG/ZN scene ions also present, verified 2026-09-26; paper DOI resolves 200). Carries h_bond rich (adenine NH/NH2 donors + acceptors, ribose OH donors, phosphate O acceptors), pi_stacking (adenine), hydrophobic (ribose), cation_pi (AA-cation-over-adenine). NO salt bridge: ligand phosphate groups are NOT charge-typed (capability.py / DETECT-04 parity - recorded repo law, honest limitation). First medium ligand in the bundle; the energy currency anchors the transition into multi-ring/multi-moiety recognition."
+      }
+    },
+    {
+      "entry_id": "nad",
+      "url": "https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/cid/5892/SDF?record_type=3d",
+      "protonation": "as-recorded",
+      "expect_atom_count": 71,
+      "provenance": {
+        "source_url": "https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/cid/5892/SDF?record_type=3d",
+        "pdb_id": "8HBA",
+        "entry_doi": "https://doi.org/10.2210/pdb8hba/pdb",
+        "paper_doi": "https://doi.org/10.1093/nar/gkad102",
+        "plip": "PLIP (doi:10.1093/nar/gkaf361) reference complex 8HBA",
+        "notes": "NAD (nicotinamide adenine dinucleotide), PubChem CID 5892 (C21H27N7O14P2, 44 heavy - MEDIUM size class as derived, Charge 0 as recorded). Complex: 8HBA NAD-II riboswitch with NAD (NAD confirmed in inventory - NMN also present, verified 2026-09-26; paper DOI verified at rcsb.org, doi.org 403 bot-block per U2). Carries h_bond rich (2 nucleosides' donors/acceptors), pi_stacking over 2 ring systems (adenine + nicotinamide amide ring), hydrophobic, cation_pi (AA-cation-over-ring directions). NO salt bridge: pyrophosphate not charge-typed (same recorded DETECT-04 parity law as ATP). Largest conjugated system in the hard tier; with ATP it carries the cofactor-recognition curriculum and supplies the bundle's medium-bucket mass."
+      }
+    }
+  ]
+}

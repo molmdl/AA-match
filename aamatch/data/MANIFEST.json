@@ -299,6 +299,60 @@
         "set_id": "demo-hard-2",
         "tier": "hard",
         "title": "Charged messengers"
+      },
+      {
+        "entries": [
+          {
+            "atom_count": 47,
+            "bond_count": 49,
+            "bond_order_counts": {
+              "1": 42,
+              "2": 7
+            },
+            "entry_id": "atp",
+            "file": "ligands/demo-hard-3-atp.sdf",
+            "formal_charge_sum": 0,
+            "format": "sdf",
+            "halogen_present": false,
+            "heavy_atom_count": 31,
+            "metal_present": false,
+            "protonation": "as-recorded",
+            "sha256": "f1ed29266c930c1c6826e56623b3d0a5ab8acb60a1c91e4d2150a6e26550e7b5",
+            "size_class": "medium",
+            "states_expected": 1
+          },
+          {
+            "atom_count": 71,
+            "bond_count": 75,
+            "bond_order_counts": {
+              "1": 65,
+              "2": 10
+            },
+            "entry_id": "nad",
+            "file": "ligands/demo-hard-3-nad.sdf",
+            "formal_charge_sum": 0,
+            "format": "sdf",
+            "halogen_present": false,
+            "heavy_atom_count": 44,
+            "metal_present": false,
+            "protonation": "as-recorded",
+            "sha256": "78128bef6f695dc84eb4ab5294e52e41454bca28ee918aa8b702f1040d2d8216",
+            "size_class": "medium",
+            "states_expected": 1
+          }
+        ],
+        "license": "Public domain (NCBI PubChem)",
+        "provenance": {
+          "complex_license": "CC0 1.0 (wwPDB) - https://www.wwpdb.org/about/usage-policies",
+          "fetched": "2026-09-26",
+          "license_url": "https://www.ncbi.nlm.nih.gov/home/about/policies/",
+          "notes": "Hard-tier cofactor pair (08-PROPOSALS.md Set 6, APPROVED 2026-09-26): ATP CID 5957 (31 heavy) + NAD CID 5892 (44 heavy) - the bundle's FIRST medium size-class entries; the generator's medium bucket (and NEAREST-BUCKET fallback for large-tier games) becomes non-empty. Both neutral as registered per Decision 1; their phosphates are NOT salt-bridge-typed per the DETECT-04 parity law (capability.py does not type phosphate/sulfonate/pyrosphate charge groups). Per-record citation per U1: 'PubChem Identifier: CID <CID>; URL: https://pubchem.ncbi.nlm.nih.gov/compound/<CID>'. Complex reference metadata: CC0 1.0 (wwPDB).",
+          "pubchem_citation": "Kim S, Chen J, Cheng T, et al. PubChem 2025 update. Nucleic Acids Res. 2025;53(D1):D1516-D1525. doi:10.1093/nar/gkae1059",
+          "source_url": "https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/cid/<CID>/SDF?record_type=3d"
+        },
+        "set_id": "demo-hard-3",
+        "tier": "hard",
+        "title": "Cofactors"
       }
     ]
   },

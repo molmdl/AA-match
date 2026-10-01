@@ -16,6 +16,21 @@ _giveup_now), NEVER the wrappers -- the smoke-99 receipt: a static
 QMessageBox BLOCKS indefinitely under offscreen, so _on_skip/_on_giveup
 (the QMessageBox.question owners) are [HUMAN]-only (06-10).
 
+Phase 8.1 deliberate evolution (2026-10-01, plan 08.1-05; the 06-05
+documented-evolution convention): the Confirm pass gate (08.1-02/03)
+makes a blind Confirm a no-record no-advance attempt that renders the
+confirm_failed debrief + retry line. PART A/C/F drives are re-gamed
+from the DEFAULT game to a Design B block_exclusive ['pi_stacking']
+game (molecules 2 x difficulty 3, seed 42, candidates benzamide + the
+first build-verified ring-bearing row of the ordered fallbacks
+aspirin/benzoic_acid/caffeine/quinine/thyroxine) so every proof
+confirm genuinely PASSES via the SMOKE-07 :555-613 wizard-ops
+placement recipe (ONE local helper, pick + rotate_axis + move_to --
+transform_baked/transform_object stay BANNED in game paths); PART
+B/D/E keep the DEFAULT game (skip/impl paths are type-agnostic).
+PART F keeps the ONLY panel-confirm end path -- the 9870561 F3-F7
+pins survive byte-for-byte. Check count 113 -> ~119.
+
 PART A  the tab drive:
         A1 construction - SetupWindow() built offscreen; GameTab
         inventory: btn_hint ('Hint'), btn_confirm ('Confirm'),
@@ -25,19 +40,28 @@ PART A  the tab drive:
         in the button row (the timer-row no-reflow law, 05-06 OQ-1);
         a FRESH GameTab shows the placeholder labels '0:00' /
         'Required: -' (the PART I2 pin class, SMOKE-11).
-        A2 live game - start_game(activate=False) + start_countdown +
-        4 direct _countdown_tick drives -> GO (that wizard pushed,
-        float timer anchor, 'Level 1, molecule 1 of 2.' logged).
-        A3 Confirm impl - _confirm_now() -> the pinned scored line
-        ('Molecule 1 of 2 scored 0.00 (total 0.00).') + the result_lines
-        debrief shapes + the new position line; _last_status updated;
-        the live wizard advanced to molecule 2.
+        A2 live game - Design B candidate pair resolution + build-time
+        payload verification (required == the one-item pi_stacking list
+        + a required pi_stacking slot per molecule), then
+        start_game(setup, seed, candidates, activate=False) +
+        start_countdown + 4 direct _countdown_tick drives -> GO (that
+        wizard pushed, float timer anchor, 'Level 1, molecule 1 of 2.'
+        logged).
+        A3 Confirm impl - FIRST the tab-side failed contract: a blind
+        _confirm_now() at grid state returns passed False / game_over
+        False / advanced None, the info box shows the confirm_failed
+        debrief + retry line (tab+panel parity) and NO endgame tail;
+        THEN the required pi_stacking slot is placed (the SMOKE-07
+        wizard-ops recipe) and the PASSING _confirm_now() -> the pinned
+        scored line ('Molecule 1 of 2 scored 1.00 (total 1.00).') + the
+        result_lines debrief shapes + the new position line;
+        _last_status updated; the live wizard advanced to molecule 2.
         A4 sync-refresh proof - every A3 assert runs IMMEDIATELY after
         the impl call with NO processEvents between (zero 1 Hz loss).
         A5 Skip impl - _skip_now() -> 'Skipped molecule 2 of 2 (partial
-        score 0.00, total 0.00).' + the level-2 line; skip_count 1.
+        score 0.00, total 1.00).' + the level-2 line; skip_count 1.
         A6 Give-up impl - _giveup_now() -> 'Game ended at level 2,
-        molecule 1 of 2 (total 0.00).' + the endgame block (headline
+        molecule 1 of 2 (total 1.00).' + the endgame block (headline
         'Game over -- gave up at level 2, molecule 1 of 2.' logged
         EXACTLY once, per-level + total + time + molecules + skips
         lines per status_text.endgame_lines); the 1 Hz _timer STOPPED;
@@ -46,7 +70,8 @@ PART A  the tab drive:
         required value (the timer is stopped -- no post-pop poll can
         reset it).
         A7 label-fix proof - fresh game via the countdown drive;
-        confirm through level 1's two molecules -> the level advance;
+        confirm through level 1's two molecules (each PASSING after
+        the placement helper) -> the level advance;
         _required_label text == required_display(fetch from get_status)
         -- molecule_id repeats across levels ('mol-001' again), so the
         level_pos-aware refresh condition is what updates the label.
@@ -61,9 +86,10 @@ PART B  restart/reset (06-08, SCORE-09/10):
         ('Reset') land AFTER btn_skip_menu, tooltips non-empty, the
         stretch stays LAST.
         B2 live game - the countdown drive -> scripted move of one AA
-        -> confirm_molecule (a score exists) -> the SMOKE-08 :146-162
-        marker band stamped on the whole generation (INSTANCE
-        identity, never name sets).
+        -> skip_molecule (a score exists -- 8.1: the pre-restart record
+        comes from a skip, Confirm can no longer record blind) -> the
+        SMOKE-08 :146-162 marker band stamped on the whole generation
+        (INSTANCE identity, never name sets).
         B3 restart impl - _restart_now() returns True; the pending
         wizard is armed and NOT on the stack; the info box is
         ['Get ready...', 'Game restarted.'] in that order (restart-
@@ -101,21 +127,27 @@ PART C  (06-09) the natural end + the final timer (SCORE-07's
         NEVER fire it (the smoke-99 receipt).
         C2 fresh game via the countdown drive -> GO (defaults = 3
         levels x 2 molecules).
-        C3 drive EVERY molecule of EVERY level through the tab impls:
-        confirm, skip (the L1->L2 advance), confirm x3 (L2M1, L2M2 ->
-        L3, L3M1) -- ops 1-5 return dicts with game_over False.
-        Zero-score records are sufficient (documented): score
+        C3 skip EVERY molecule of EVERY level through the tab impl up
+        to the last: skip x5 (L1M1, L1M2 -> L2M1, L2M2 -> L3M1, L3M1)
+        -- ops 1-5 return dicts with game_over False. Skip is the
+        non-passing advance path (8.1, CONTEXT constraint 4);
+        zero-score records are sufficient (documented): score
         correctness is smoke_04's proven domain (the 06-03 PART-A
         law); this PART proves only the natural-END state.
-        C4 the LAST confirm returns the endgame tuple (game_over
-        True, summary end_state 'completed').
+        C4 the LAST op places the required pi_stacking slot and the
+        PASSING confirm returns the endgame tuple (game_over True,
+        summary end_state 'completed') -- the pass gate ends the game
+        through the TAB (tab+panel parity with PART F).
         C5-C7 the info box holds the final molecule's pinned scored
-        line, the win headline 'You win! All 3 level(s) finished in'
-        logged EXACTLY once (one transition home), and the full
+        line ('Molecule 2 of 2 scored 1.00 (total 1.00).'), the win
+        headline 'You win! All 3 level(s) finished in' logged
+        EXACTLY once (one transition home), and the full
         endgame_lines block with the literal pins 'Level 1: 0.00' ..
-        'Level 3: 0.00', 'Total score: 0.00.', a 'Time:' line,
-        'Molecules completed: 6 of 6. Levels: 3.', 'Skips: 1.
-        Give-ups: 0.' matching the driven counts.
+        'Level 3: 1.00', 'Total score: 1.00.', a 'Time:' line,
+        'Molecules completed: 6 of 6. Levels: 3.', 'Skips: 5.
+        Give-ups: 0.' matching the driven op mix (the numeric pins
+        are DERIVED from the drive at runtime, never hand-written --
+        the 8.1 danger-D8 law).
         C8 the 1 Hz timer is STOPPED at the natural end and
         _timer_label == status_text.format_mss(summary['final_time'])
         (the EXACT final elapsed, not the <=1 s-stale tick).
@@ -227,10 +259,13 @@ PART F  (2026-09-27 diag fix): the PANEL-Confirm natural end with a
         endgame trio is completed by the tick's game_over transition,
         never by an impl). ZERO modals (the smoke-99 law); drives the
         public wizard op + direct _on_tick:
-        F1 live game via the countdown drive; five blind panel
-           confirms (wiz.confirm_molecule() -- zero-score records
-           sufficient, the PART C doctrine) -> game_over False.
-        F2 the sixth blind panel confirm -> game_over True + summary.
+         F1 live game via the countdown drive (the 8.1 Design B
+            game); five panel skips (wiz.skip_molecule() -- the
+            non-passing advance walk; zero-score records sufficient,
+            the PART C doctrine) -> game_over False.
+         F2 the sixth op places the required pi_stacking slot and the
+            PASSING panel confirm -> game_over True + summary (the
+            ONLY panel-confirm end-path coverage, 8.1 danger D4).
         F3 the pre-tick symptom state pinned (the mechanism, not a
            bug in itself): the 1 Hz timer is STILL ACTIVE and the
            wizard STILL on the stack straight after the panel op --
@@ -257,6 +292,7 @@ NEVER pump processEvents between start_countdown and the tick drive
 
 Python floor: runs inside PyMOL's Windows Python (3.9); written 3.6-safe.
 """
+import math
 import os
 import sys
 import traceback
@@ -301,6 +337,169 @@ from aamatch import setup_state, status_text  # noqa: E402
 
 print('SMOKE-ENV python: %s' % (sys.version.split()[0],), flush=True)
 
+# --- Phase 8.1 Design B drive (the 08.1-04/-05 shared recipe; the
+# SMOKE-04 manifest-load pattern + the SMOKE-07 :555-613 placement
+# recipe lifted verbatim as ONE local helper) -------------------------
+from aamatch import capability  # noqa: E402
+from aamatch.detector import extract_features  # noqa: E402
+from aamatch.manifest import enumerate_entries, parse_manifest_dict  # noqa: E402
+from aamatch.persistence import read_json_file  # noqa: E402
+from aamatch.setup_state import validate_state  # noqa: E402
+from aamatch.thresholds import PISTACK_ANGLE_TOL_DEG  # noqa: E402
+
+SETUP_D = BENZ = SECOND = None
+
+
+def _sub(a, b):
+    return (a[0] - b[0], a[1] - b[1], a[2] - b[2])
+
+
+def _add(a, b):
+    return (a[0] + b[0], a[1] + b[1], a[2] + b[2])
+
+
+def _scale(s, a):
+    return (s * a[0], s * a[1], s * a[2])
+
+
+def _dot(a, b):
+    return a[0] * b[0] + a[1] * b[1] + a[2] * b[2]
+
+
+def _cross(a, b):
+    return (a[1] * b[2] - a[2] * b[1],
+            a[2] * b[0] - a[0] * b[2],
+            a[0] * b[1] - a[1] * b[0])
+
+
+def _norm(a):
+    return math.sqrt(_dot(a, a))
+
+
+def _tofloat(pt):
+    return (float(pt[0]), float(pt[1]), float(pt[2]))
+
+
+def _max_axis_dev(a, b):
+    return max(abs(a[i] - b[i]) for i in range(3))
+
+
+def _remap_ligand_bonds(records, bonds, index_to_id):
+    """SMOKE-04 single-ligand remap (the 02-09 pinned mapping)."""
+    lig = sorted((r for r in records if r['side'] == 'lig'),
+                 key=lambda r: r['id'])
+    id_pos = dict((r['id'], i) for i, r in enumerate(lig))
+    out = []
+    for (i, j, order) in bonds:
+        out.append((id_pos[index_to_id[i + 1]],
+                    id_pos[index_to_id[j + 1]], int(order)))
+    return lig, out
+
+
+def _load_benzamide():
+    """(entries, benzamide row) from the bundled manifest (the
+    SMOKE-04 :194-199 pattern); the second candidate is chosen by the
+    build-time verification below."""
+    container = read_json_file(os.path.join(
+        _ROOT, 'aamatch', 'data', 'MANIFEST.json'))
+    entries = enumerate_entries(parse_manifest_dict(container))
+    benz_rows = [row for row in entries
+                 if row['entry_id'] == 'benzamide']
+    return entries, (benz_rows[0] if benz_rows else None)
+
+
+def _design_b_payload_ok(payload):
+    """Build-time verification (the 08.1 Design B law): 3 levels x 2
+    molecules, EVERY molecule's required is exactly the one-item
+    pi_stacking list, and EVERY molecule owns a required slot whose
+    can_form carries pi_stacking with an aromatic-capable AA (the
+    placement recipe needs a real ring -- seed-agnostic, the SMOKE-04
+    :275-283 slot discovery)."""
+    want = {'mode': 'list',
+            'items': [{'type': 'pi_stacking', 'count': 1}]}
+    if len(payload.get('levels') or ()) != 3:
+        return False
+    for level in payload['levels']:
+        if len(level.get('molecules') or ()) != 2:
+            return False
+        for mol in level['molecules']:
+            if mol.get('required') != want:
+                return False
+            req = [s for s in mol['grid']['slots']
+                   if s.get('role') == 'required'
+                   and 'pi_stacking' in (s.get('can_form') or ())]
+            if not any(capability.AA_RESIDUES[s['aa']]['rings']
+                       for s in req):
+                return False
+    return True
+
+
+def place_required_pi(wiz):
+    """The ONE proven passing-pose recipe (SMOKE-07 :555-613, lifted
+    verbatim, wizard-sanctioned ops ONLY -- pick + rotate_axis +
+    move_to): select the CURRENT molecule's required pi_stacking slot
+    (seed-agnostic discovery, SMOKE-04 :275-283), bake the ring-plane
+    alignment through the wizard's own rotate_axis about the AA ring
+    center, then move_to so the AA ring center lands 4.5 A above the
+    ligand ring center along its normal. Reads the CURRENT molecule
+    from the wizard's payload/registry. Returns
+    (slot_id, resn, drift, aligned) -- NO check() calls inside (the
+    drives assert placement sanity at the first placement only)."""
+    molecule = wiz._registry['molecules'][wiz._molecule_index]
+    mol_payload = (wiz._payload['levels'][wiz._level_index]
+                   ['molecules'][wiz._molecule_index])
+    req_slots = [s for s in mol_payload['grid']['slots']
+                 if s.get('role') == 'required'
+                 and 'pi_stacking' in (s.get('can_form') or ())]
+    slot = req_slots[0]
+    slot_id = slot['slot_id']
+    resn = slot['aa']
+    req_obj = molecule['slots'][slot_id][0]
+    lig_obj = molecule['ligand'][0]
+    cmd.select('sele', '%s and name CA' % req_obj)
+    wiz.do_select('sele')
+    records_live = geometry.extract_game_atoms()
+    bonds, index_to_id = geometry.ligand_bonds(lig_obj)
+    _, lig_remap = _remap_ligand_bonds(records_live, bonds, index_to_id)
+    features = extract_features(records_live, lig_remap)
+    lig_ring = features['lig']['rings'][0]
+    aa_ring = features['aa'][req_obj]['rings'][0]
+    n_l = _tofloat(lig_ring['normal'])
+    n_a = _tofloat(aa_ring['normal'])
+    d_n = _dot(n_a, n_l)
+    target_n = n_l if d_n >= 0.0 else _scale(-1.0, n_l)
+    line_angle = math.degrees(math.acos(abs(max(-1.0, min(1.0, d_n)))))
+    aligned = line_angle <= PISTACK_ANGLE_TOL_DEG
+    if not aligned:
+        k = _cross(n_a, target_n)
+        ang = math.degrees(math.acos(max(-1.0, min(1.0,
+                                                   _dot(n_a, target_n)))))
+        origin_c = _tofloat(aa_ring['center'])
+        wiz.rotate_axis(_scale(1.0 / max(_norm(k), 1e-12), k), ang,
+                        origin=origin_c)
+        records_live = geometry.extract_game_atoms()
+        features = extract_features(records_live, lig_remap)
+        aa_ring = features['aa'][req_obj]['rings'][0]
+        lig_ring = features['lig']['rings'][0]
+        n_l = _tofloat(lig_ring['normal'])
+        n_a = _tofloat(aa_ring['normal'])
+        new_angle = math.degrees(math.acos(abs(
+            max(-1.0, min(1.0, _dot(n_a, n_l))))))
+        aligned = new_angle <= 1e-3
+    aa_center = _tofloat(aa_ring['center'])
+    lig_center = _tofloat(lig_ring['center'])
+    ring_target = _add(lig_center, _scale(4.5, n_l))
+    position = _add(_tofloat(geometry.centroid_of(req_obj)),
+                    _sub(ring_target, aa_center))
+    wiz.move_to(position)
+    records_live = geometry.extract_game_atoms()
+    features = extract_features(records_live, lig_remap)
+    placed_center = _tofloat(
+        features['aa'][req_obj]['rings'][0]['center'])
+    drift = _max_axis_dev(placed_center, ring_target)
+    return slot_id, resn, drift, aligned
+
+
 # ============================================================
 # PART A: the tab lifecycle drive (T1b -- the 04-01 probe verdict is
 # PASS (platform=offscreen), so the dialog portions RUN; ZERO modals:
@@ -340,12 +539,16 @@ try:
           and [a.text() for a in acts] == ['Skip Molecule',
                                            'Give Up...'],
           'actions=%r' % ([a.text() for a in acts],))
-    check('A1: tooltips non-empty on all lifecycle controls',
+    check('A1: tooltips non-empty on all lifecycle controls; the '
+          'Confirm tooltip pins the 08.1 pass-gate wording EXACTLY',
           bool(tab.btn_hint.toolTip())
-          and bool(tab.btn_confirm.toolTip())
           and bool(tab.btn_skip_menu.toolTip())
           and bool(tab.act_skip.toolTip())
-          and bool(tab.act_giveup.toolTip()), '')
+          and bool(tab.act_giveup.toolTip())
+          and tab.btn_confirm.toolTip()
+          == ('Attempt to finish this molecule: runs detection; it '
+              'advances only when all required interactions are '
+              'formed.'), 'confirm tip=%r' % (tab.btn_confirm.toolTip(),))
     # The button row = the sub-layout holding btn_hint; the stretch
     # stays LAST (timer-row no-reflow, 05-06 OQ-1).
     btn_row_layout = None
@@ -376,8 +579,35 @@ try:
           'fresh=%r/%r' % (tab_fresh._timer_label.text(),
                            tab_fresh._required_label.text()))
 
+    # ---- A2: Design B candidates + build-time verification -----------
+    entries_a, benz_a = _load_benzamide()
+    SETUP_D = validate_state({'interaction_mode': 'block_exclusive',
+                              'allowed_interactions': ['pi_stacking'],
+                              'molecules_per_level': 2,
+                              'difficulty_levels': 3})
+    for _cand_id in ('aspirin', 'benzoic_acid', 'caffeine',
+                     'quinine', 'thyroxine'):
+        _rows = [row for row in entries_a
+                 if row['entry_id'] == _cand_id]
+        if benz_a is None or not _rows:
+            continue
+        _probe = engine.new_game(SETUP_D, 42,
+                                 candidates=[benz_a, _rows[0]])[0]
+        if _design_b_payload_ok(_probe):
+            SECOND = _rows[0]
+            break
+    BENZ = benz_a
+    check('A2: Design B candidate pair resolves + the payload verifies '
+          'build-time (3 levels x 2 molecules; required == one-item '
+          'pi_stacking list; required pi_stacking slot per molecule)',
+          BENZ is not None and SECOND is not None,
+          'second=%r'
+          % (SECOND['entry_id'] if SECOND is not None else None,))
+
     # ---- A2: live game through the countdown drive -------------------
-    wiz = gamestart.start_game(activate=False)
+    wiz = gamestart.start_game(setup=SETUP_D, seed=42,
+                               candidates=[BENZ, SECOND],
+                               activate=False)
     tab.start_countdown(wiz)
     for _ in range(4):
         tab._countdown_tick()
@@ -395,16 +625,50 @@ try:
           'lines=%r' % (lines_a2,))
 
     # ---- A3: the Confirm impl ----------------------------------------
+    # 8.1 pass gate: FIRST the tab-side failed contract (a blind
+    # confirm at grid state can never pass, record, advance, or end
+    # the game), THEN the placed passing confirm.
+    fail_a3 = tab._confirm_now()
+    text_a3f = tab._info_log.toPlainText()
+    check('A3: a blind _confirm_now returns the failed contract '
+          '(truthy dict; passed False, game_over False, advanced '
+          'None, position stayed at molecule 1)',
+          isinstance(fail_a3, dict)
+          and fail_a3.get('passed') is False
+          and fail_a3.get('game_over') is False
+          and fail_a3.get('advanced') is None
+          and fail_a3.get('molecule_pos') == 1,
+          'fail=%r' % (fail_a3,))
+    check('A3: the failed header + retry line reach the info box; NO '
+          'endgame tail scheduled (no win headline)',
+          'Molecule 1 of 2 not passing yet' in text_a3f
+          and 'Form the missing interactions and Confirm again.'
+          in text_a3f
+          and 'You win!' not in text_a3f, '')
+    check('A3: the failed debrief shapes follow the header (formed '
+          'none + missing -- tab+panel parity with the wizard panel)',
+          'required interactions formed (score 0.00)' in text_a3f
+          and 'Formed: (none)' in text_a3f
+          and 'Missing: pi_stacking' in text_a3f, '')
+    slot_a3, resn_a3, drift_a3, aligned_a3 = place_required_pi(wiz)
+    check('A3: required pi_stacking slot picked + ring aligned via '
+          'the wizard ops (the SMOKE-07 recipe)',
+          aligned_a3 and wiz._error is None,
+          'slot=%s resn=%s error=%r'
+          % (slot_a3, resn_a3, wiz._error))
+    check('A3: move_to places the ring at the target (drift < 1e-4)',
+          drift_a3 < 1e-4 and wiz._error is None,
+          'drift=%.2g' % drift_a3)
     conf = tab._confirm_now()
     text_a3 = tab._info_log.toPlainText()
     check('A3: _confirm_now returns the dict (game_over False)',
           isinstance(conf, dict) and conf.get('game_over') is False,
           'conf=%r' % (conf,))
     check("A3: info box has the pinned scored line",
-          'Molecule 1 of 2 scored 0.00 (total 0.00).' in text_a3, '')
+          'Molecule 1 of 2 scored 1.00 (total 1.00).' in text_a3, '')
     check('A3: the result_lines debrief shapes follow the header',
-          'required interactions formed (score 0.00)' in text_a3
-          and 'Formed: (none)' in text_a3, '')
+          'required interactions formed (score 1.00)' in text_a3
+          and 'Formed: pi_stacking' in text_a3, '')
     check('A3: the new position line landed (molecule 2 of 2)',
           'Level 1, molecule 2 of 2.' in text_a3, '')
     check('A3: the wizard really advanced (get_status molecule_pos 2)',
@@ -429,7 +693,7 @@ try:
           isinstance(skip, dict) and skip.get('game_over') is False,
           'skip=%r' % (skip,))
     check("A5: the pinned skip line + the level-2 position line",
-          ('Skipped molecule 2 of 2 (partial score 0.00, total 0.00).'
+          ('Skipped molecule 2 of 2 (partial score 0.00, total 1.00).'
            in text_a5)
           and 'Level 2, molecule 1 of 2.' in text_a5, '')
     check('A5: skip_count == 1 in the live GameState',
@@ -447,7 +711,7 @@ try:
           and giveup.get('game_over') is True
           and isinstance(summary_g, dict), '')
     check("A6: the pinned gave-up line",
-          'Game ended at level 2, molecule 1 of 2 (total 0.00).'
+          'Game ended at level 2, molecule 1 of 2 (total 1.00).'
           in text_a6, '')
     check('A6: the give-up headline logged EXACTLY once '
           '(one transition home, no double-log)',
@@ -483,11 +747,15 @@ try:
 
     # ---- A7: the required-label level-change fix ---------------------
     placement.cleanup_game_objects()
-    wiz2 = gamestart.start_game(activate=False)
+    wiz2 = gamestart.start_game(setup=SETUP_D, seed=42,
+                                candidates=[BENZ, SECOND],
+                                activate=False)
     tab.start_countdown(wiz2)
     for _ in range(4):
         tab._countdown_tick()
+    place_required_pi(wiz2)      # L1M1 pose -- both confirms must PASS
     tab._confirm_now()           # molecule 1 of level 1
+    place_required_pi(wiz2)      # L1M2 pose
     conf2 = tab._confirm_now()   # molecule 2 of level 1 -> level advance
     st2 = cmd.get_wizard().get_status()
     check('A7: two confirms advanced to LEVEL 2 (same instance on the '

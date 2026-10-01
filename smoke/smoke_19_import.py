@@ -437,7 +437,9 @@ try:
           'label=%r' % (tab._required_label.text(),))
 
     # ---- B4: accrue state + stamp the generation -------------------
-    conf_b4 = tab._confirm_now()
+    # 08.1: the blind confirm records nothing under the pass gate --
+    # skip accrues the partial instead.
+    conf_b4 = tab._skip_now()
     gen_b4 = _game_objects()
     _stamp_band(gen_b4)
     check('B4: a score recorded pre-import; marker band stamped on '

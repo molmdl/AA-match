@@ -421,9 +421,11 @@ if PHASE == 'verify':
         check('B continue-play pick selected molecule-2 slot %s'
               % (m2_first,), restored._current_slot == m2_first,
               'current=%r' % (restored._current_slot,))
-        result = restored.confirm_molecule()
+        # 08.1: the blind confirm records nothing under the pass gate --
+        # skip accrues the partial instead.
+        result = restored.skip_molecule()
         status2 = engine.game_status()
-        check('B confirm_molecule returned game_over False',
+        check('B skip_molecule returned game_over False',
               isinstance(result, dict) and result.get('game_over')
               is False,
               'advanced=%r' % (result.get('advanced')

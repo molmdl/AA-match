@@ -11,6 +11,18 @@ lifecycle core (PART B), and the 06-06 wizard skip/give-up half
 PART letters stay appendable so 06-07's tab side can grow further
 letters):
 
+08.1-04 DELIBERATE EVOLUTION (the 06-05 recorded-failure convention;
+CONTEXT constraint 5: rework, never delete): the 08.1 Confirm pass
+gate makes a BLIND confirm fail (no record, no advance), so PART
+B/C's confirm drives were re-gamed to a Design B block_exclusive
+['pi_stacking'] game (candidates benzamide + a fallback-order ring
+carrier, seed 42, 2 molecules x 3 levels) -- only slot-object
+pi_stacking poses have a proven passing-confirm recipe
+(08.1-RESEARCH-tests sec. 0.6). PART A KEEPS the DEFAULT game (the
+pass gate is wizard-level; the engine record/advance probes are
+unaffected). Check-call sites 94 -> 106 (the real executed count is
+pinned in the 08.1-04 SUMMARY).
+
 PART A  the pure cmd drive over the DEFAULT game (seed 42; 2
         molecules/level x 3 levels, frozen Phase-1 DEFAULTS):
         A1   baseline snapshot; gamestart.start_game(activate=True)
@@ -54,30 +66,46 @@ PART A  the pure cmd drive over the DEFAULT game (seed 42; 2
 
 PART B  the WIZARD-tier lifecycle E2E (06-05; drives the wizard's
         PUBLIC methods only -- no modals anywhere):
-        B1   fresh default start: cmd.get_wizard() IS the returned
-             GameWizard; the timer anchor is captured; the initial
-             status shows level 1 mol 1 with a None marker.
-        B2   MOLECULE advance: confirm_molecule() returns the plain
-             dict; advanced 'molecule', mol 2 of the level, marker
-             molecule_scored seq 1 molecule_pos 1, result cleared (D3),
-             selection cleared, required reflects molecule 2, and the
-             camera RE-FRAMED onto the NEW molecule (06-10 human
-             checkpoint fix: the molecule branch runs the SAME 06-04
-             compose seam as the level branch -- the zoom target names
-             only the new molecule's objects).
-        B3   LEVEL advance (the second confirm closes level 1):
-             advanced 'level', level 2 mol 1, the SAME wizard instance
-             still on the stack, the timer anchor UNCHANGED (the D6
-             intent assert), a fresh scene at the derived object count,
-             selection/result cleared, marker seq 2 molecule_pos 2, and
-             the camera view CHANGED (the 06-04 compose running).
+        B1   fresh DESIGN B start (08.1-04): the candidate probe walks
+             the planner-pinned fallback order (aspirin ->
+             benzoic_acid -> caffeine -> quinine -> thyroxine alongside
+             benzamide) until EVERY molecule's required is the
+             pi_stacking count-1 list shape AND a required pi_stacking
+             slot exists per molecule; then cmd.get_wizard() IS the
+             returned GameWizard, the timer anchor is captured, and
+             the initial status shows level 1 mol 1 with a None
+             marker.
+        B2   the PASS-GATE LOOP: a blind confirm_molecule() FAILS the
+             08.1 contract (passed False, advanced None, score 0.0, NO
+             record, NO skip_count change, NO advance, the
+             confirm_failed marker -- NEVER molecule_scored -- with
+             the debrief payload keys, _result holding the Phase-3
+             shape + the prompt's Missing line, NO _error, the timer
+             anchor UNCHANGED); then the SMOKE-07 placement recipe
+             (pick + rotate_axis + move_to) forms the required
+             pi_stacking and the RETRY PASSES: advanced 'molecule',
+             score 1.0, mol 2 of the level, marker molecule_scored
+             seq 2 molecule_pos 1 (the failed attempt consumed
+             seq 1), result cleared (D3), selection cleared, required
+             reflects molecule 2, and the camera RE-FRAMED onto the
+             NEW molecule (the 06-10 compose teeth now ride a
+             genuinely CONFIRM-driven advance).
+        B3   LEVEL advance (placement + the second PASSING confirm
+             closes level 1): advanced 'level', level 2 mol 1, the
+             SAME wizard instance still on the stack, the timer anchor
+             UNCHANGED (the D6 intent assert), a fresh scene at the
+             derived object count, selection/result cleared, marker
+             seq 3 molecule_pos 2, and the camera view CHANGED (the
+             06-04 compose running).
         B4   rebind proof: the SMOKE-07 scripted-pick recipe on a slot
              of the NEW molecule resolves slot identity through the
              rebuilt maps.
-        B5   completion drive: four more confirms walk molecule ->
-             level -> molecule -> None; the last returns game_over True
-             + the 06-01 summary keys, status shows game_over/
-             'completed', engine.is_over() True.
+        B5   completion drive: place + confirm walks molecule ->
+             level -> molecule -> end; the last PASSING confirm
+             returns advanced None + game_over True + the 06-01
+             summary keys (a passing confirm COMPLETES the game),
+             status shows game_over/'completed', engine.is_over()
+             True.
         B6   restore: Done pop + prefix cleanup -> baseline EXACTLY;
              gamestart._last_start reset.
         NOTE: the re-Confirm REFUSAL is proven at the engine level in
@@ -127,6 +155,7 @@ never call into the code under test to build an assert message).
 
 Python floor: runs inside PyMOL's Windows Python (3.9); written 3.6-safe.
 """
+import math
 import os
 import sys
 import traceback
@@ -164,6 +193,11 @@ from pymol import cmd  # noqa: E402
 
 from aamatch import engine, gamestart, geometry, placement  # noqa: E402,E501
 from aamatch.wizard import GameWizard  # noqa: E402
+from aamatch.persistence import read_json_file  # noqa: E402
+from aamatch.manifest import parse_manifest_dict, enumerate_entries  # noqa: E402,E501
+from aamatch.setup_state import validate_state  # noqa: E402
+from aamatch.detector import extract_features  # noqa: E402
+from aamatch.thresholds import PISTACK_ANGLE_TOL_DEG  # noqa: E402
 
 print('SMOKE-ENV pymol: %s' % (cmd.get_version()[0],), flush=True)
 print('SMOKE-ENV python: %s' % (sys.version.split()[0],), flush=True)
@@ -174,6 +208,131 @@ _SUMMARY_KEYS = ('end_state', 'ended_level', 'ended_molecule',
                  'final_time', 'giveup_count', 'level_scores', 'levels',
                  'molecules', 'molecules_completed', 'skip_count',
                  'total')
+
+
+# --- tiny vec helpers (smoke-local, the SMOKE-04/07 set) -------------
+def _sub(a, b):
+    return (a[0] - b[0], a[1] - b[1], a[2] - b[2])
+
+
+def _add(a, b):
+    return (a[0] + b[0], a[1] + b[1], a[2] + b[2])
+
+
+def _scale(s, a):
+    return (s * a[0], s * a[1], s * a[2])
+
+
+def _dot(a, b):
+    return a[0] * b[0] + a[1] * b[1] + a[2] * b[2]
+
+
+def _cross(a, b):
+    return (a[1] * b[2] - a[2] * b[1],
+            a[2] * b[0] - a[0] * b[2],
+            a[0] * b[1] - a[1] * b[0])
+
+
+def _norm(a):
+    return math.sqrt(_dot(a, a))
+
+
+def _tofloat(pt):
+    return (float(pt[0]), float(pt[1]), float(pt[2]))
+
+
+def _remap_ligand_bonds(records, bonds, index_to_id):
+    """SMOKE-04/07 single-ligand remap (the 02-09 pinned mapping);
+    the records here are PRE-SCOPED to one molecule, so the lig side
+    is that molecule's ligand only."""
+    lig = sorted((r for r in records if r['side'] == 'lig'),
+                 key=lambda r: r['id'])
+    id_pos = dict((r['id'], i) for i, r in enumerate(lig))
+    out = []
+    for (i, j, order) in bonds:
+        out.append((id_pos[index_to_id[i + 1]],
+                    id_pos[index_to_id[j + 1]], int(order)))
+    return lig, out
+
+
+def place_required_pi(wiz, level_index, molecule_index):
+    """Passing-pose placement for the Design B game (08.1-04): the
+    SMOKE-07 PART C recipe (:555-:613) parameterized per molecule and
+    SCOPED per molecule (engine.detect_molecule's keep-set pattern --
+    the one-ligand feature layer of SMOKE-04/07 cannot serve a
+    two-ligand scene: features['lig'] aggregates every ligand-side
+    atom in the extraction). Wizard-sanctioned game-path ops ONLY
+    (the baked-transform ban): scripted pick of the required
+    pi_stacking slot -> rotate_axis ring-plane alignment about the AA
+    ring center (the 02-14 law) -> move_to landing the AA ring center
+    4.5 A directly above the ligand ring center. Returns (slot_id,
+    resn, drift, line_angle_deg). NO check() calls inside -- the
+    drive owns its asserts."""
+    mol_payload = (wiz._payload['levels'][level_index]
+                   ['molecules'][molecule_index])
+    molecule = wiz._registry['molecules'][molecule_index]
+    req_slots = [s for s in mol_payload['grid']['slots']
+                 if s.get('role') == 'required'
+                 and 'pi_stacking' in (s.get('can_form') or ())]
+    slot = req_slots[0]
+    slot_id = slot['slot_id']
+    resn = slot['aa']
+    req_obj = molecule['slots'][slot_id][0]
+    lig_obj = molecule['ligand'][0]
+    keep = set(entry[0] for entry in molecule['slots'].values())
+    keep.add(lig_obj)
+
+    def _survey():
+        recs = [r for r in geometry.extract_game_atoms()
+                if r['object'] in keep]
+        bonds, index_to_id = geometry.ligand_bonds(lig_obj)
+        _, lig_remap = _remap_ligand_bonds(recs, bonds, index_to_id)
+        return extract_features(recs, lig_remap)
+
+    # Scripted pick of the required slot (the C-layer route:
+    # cmd.select('sele', ...) -> do_select('sele')).
+    cmd.select('sele', '%s and name CA' % req_obj)
+    wiz.do_select('sele')
+
+    features = _survey()
+    lig_ring = features['lig']['rings'][0]
+    aa_ring = features['aa'][req_obj]['rings'][0]
+    n_l = _tofloat(lig_ring['normal'])
+    n_a = _tofloat(aa_ring['normal'])
+    d_n = _dot(n_a, n_l)
+    target_n = n_l if d_n >= 0.0 else _scale(-1.0, n_l)
+    line_angle = math.degrees(math.acos(abs(max(-1.0, min(1.0, d_n)))))
+    # The explicit baked ring-alignment step (02-14 decision): a pure
+    # translate CANNOT fix orientation; route the Rodrigues alignment
+    # through the wizard's own rotate_axis about the ring center.
+    if line_angle > PISTACK_ANGLE_TOL_DEG:
+        k = _cross(n_a, target_n)
+        ang = math.degrees(math.acos(max(-1.0, min(1.0,
+                                                   _dot(n_a, target_n)))))
+        origin_c = _tofloat(aa_ring['center'])
+        wiz.rotate_axis(_scale(1.0 / max(_norm(k), 1e-12), k), ang,
+                        origin=origin_c)
+        features = _survey()
+        lig_ring = features['lig']['rings'][0]
+        aa_ring = features['aa'][req_obj]['rings'][0]
+        n_l = _tofloat(lig_ring['normal'])
+        n_a = _tofloat(aa_ring['normal'])
+    final_angle = math.degrees(math.acos(abs(
+        max(-1.0, min(1.0, _dot(n_a, n_l))))))
+    # move_to: the AA ring center lands 4.5 A directly above the
+    # ligand ring center (offset ~ 0 -> the P-subtype construction).
+    aa_center = _tofloat(aa_ring['center'])
+    lig_center = _tofloat(lig_ring['center'])
+    ring_target = _add(lig_center, _scale(4.5, n_l))
+    position = _add(_tofloat(geometry.centroid_of(req_obj)),
+                    _sub(ring_target, aa_center))
+    wiz.move_to(position)
+    placed_center = _tofloat(
+        _survey()['aa'][req_obj]['rings'][0]['center'])
+    drift = max(abs(placed_center[i] - ring_target[i])
+                for i in range(3))
+    return slot_id, resn, drift, final_angle
+
 
 pre_names = list(cmd.get_names('objects'))
 
@@ -469,12 +628,64 @@ except Exception:
 part_a_checks = REC['checks']
 
 # ============================================================
-# PART B1: default start + anchor capture
+# PART B1: DESIGN B start (08.1-04) -- candidate probe + re-game
 # ============================================================
+design_b = None
 wiz_b = None
 anchor0 = None
 try:
-    wiz_b = gamestart.start_game(activate=True)
+    container = read_json_file(os.path.join(
+        _ROOT, 'aamatch', 'data', 'MANIFEST.json'))
+    entries = enumerate_entries(parse_manifest_dict(container))
+    benz_rows = [row for row in entries
+                 if row['entry_id'] == 'benzamide']
+    benz = benz_rows[0] if benz_rows else None
+    setup_b = validate_state({'interaction_mode': 'block_exclusive',
+                              'allowed_interactions': ['pi_stacking'],
+                              'molecules_per_level': 2,
+                              'difficulty_levels': 3})
+    second_id = None
+    second = None
+    shape_ok = False
+    slots_ok = False
+    for cand_id in ('aspirin', 'benzoic_acid', 'caffeine', 'quinine',
+                    'thyroxine'):
+        cand_rows = [row for row in entries
+                     if row['entry_id'] == cand_id]
+        if not cand_rows or benz is None:
+            continue
+        try:
+            probe_payload, _prows = engine.new_game(
+                setup_b, 42, candidates=[benz, cand_rows[0]])
+        except Exception:
+            continue
+        shape_ok = all(
+            mol['required'] == {'mode': 'list',
+                                'items': [{'type': 'pi_stacking',
+                                           'count': 1}]}
+            for lev in probe_payload['levels']
+            for mol in lev['molecules'])
+        slots_ok = all(
+            [s for s in mol['grid']['slots']
+             if s.get('role') == 'required'
+             and 'pi_stacking' in (s.get('can_form') or ())]
+            for lev in probe_payload['levels']
+            for mol in lev['molecules'])
+        if shape_ok and slots_ok:
+            second_id = cand_id
+            second = cand_rows[0]
+            break
+    check('B1 Design B candidates: benzamide + a verified ring '
+          'carrier (the plan fallback order)',
+          benz is not None and second is not None,
+          'second=%r' % (second_id,))
+    check('B1 Design B build-time: EVERY molecule required == the '
+          'pi_stacking count-1 list shape', shape_ok, '')
+    check('B1 Design B build-time: a required pi_stacking slot '
+          'exists per molecule (seed-agnostic law)', slots_ok, '')
+    design_b = (setup_b, [benz, second])
+    wiz_b = gamestart.start_game(setup=setup_b, seed=42,
+                                 candidates=[benz, second])
     check('B1 start_game returns the stacked GameWizard',
           isinstance(wiz_b, GameWizard) and cmd.get_wizard() is wiz_b,
           'type=%r' % (type(wiz_b),))
@@ -497,36 +708,118 @@ except Exception:
     check('B1 start', False, 'raised (see traceback above)')
 
 # ============================================================
-# PART B2: MOLECULE advance via Confirm (zero-score mechanics)
+# PART B2: the pass-gate loop -- the blind confirm FAILS the 08.1
+# contract, then place -> RETRY PASSES -> MOLECULE advance
 # ============================================================
 try:
     view_pre2 = [float(v) for v in cmd.get_view()]
+    anchor_pre = engine._current_game().timer_anchor
+    # -- step 1: the BLIND confirm (grid state -- nothing formed) ----
+    ret_fail = wiz_b.confirm_molecule()
+    st_f = wiz_b.get_status()
+    ev_f = st_f.get('last_event') or {}
+    gs_f = engine.game_status()
+    check('B2 blind confirm BLOCKED by the pass gate (return contract)',
+          isinstance(ret_fail, dict)
+          and ret_fail.get('passed') is False
+          and ret_fail.get('advanced') is None
+          and ret_fail.get('game_over') is False
+          and ret_fail.get('score') == 0.0,
+          'passed=%r advanced=%r game_over=%r score=%r'
+          % (ret_fail.get('passed') if isinstance(ret_fail, dict)
+             else ret_fail,
+             ret_fail.get('advanced') if isinstance(ret_fail, dict)
+             else None,
+             ret_fail.get('game_over') if isinstance(ret_fail, dict)
+             else None,
+             ret_fail.get('score') if isinstance(ret_fail, dict)
+             else None))
+    check('B2 blind confirm made NO record (one-record guard '
+          'untripped)',
+          (gs_f.get('molecule_scores') or []) == []
+          and (gs_f.get('score_per_molecule') or {}) == {},
+          'scores=%r keys=%r'
+          % (gs_f.get('molecule_scores'),
+             sorted(gs_f.get('score_per_molecule') or {})))
+    check('B2 blind confirm left skip_count untouched',
+          gs_f.get('skip_count') == 0,
+          'skip_count=%r' % (gs_f.get('skip_count'),))
+    check('B2 blind confirm did NOT advance (same instance, mol 1)',
+          st_f.get('molecule_pos') == 1
+          and cmd.get_wizard() is wiz_b,
+          'molecule_pos=%r' % (st_f.get('molecule_pos'),))
+    check('B2 marker: confirm_failed (NEVER molecule_scored) with '
+          'the debrief payload keys',
+          ev_f.get('kind') == 'confirm_failed'
+          and isinstance(ev_f.get('seq'), int)
+          and ev_f.get('molecule_pos') == 1
+          and ev_f.get('molecule_total') == 2
+          and isinstance(ev_f.get('score'), float)
+          and isinstance(ev_f.get('total'), float)
+          and isinstance(ev_f.get('formed'), list)
+          and isinstance(ev_f.get('required'), dict)
+          and isinstance(ev_f.get('extras'), list),
+          'kind=%r seq=%r pos=%r'
+          % (ev_f.get('kind'), ev_f.get('seq'),
+             ev_f.get('molecule_pos')))
+    result_f = st_f.get('result')
+    prompt_f = cmd.get_wizard().get_prompt() or []
+    check('B2 debrief: _result holds the Phase-3 shape; the prompt '
+          'carries a Missing line; NO _error',
+          isinstance(result_f, dict)
+          and sorted(result_f)
+          == ['extras', 'formed', 'required', 'score']
+          and any(line.startswith('Missing:') for line in prompt_f)
+          and wiz_b._error is None,
+          'result_keys=%s error=%r'
+          % (sorted(result_f) if isinstance(result_f, dict)
+             else type(result_f), wiz_b._error))
+    check('B2 timer anchor UNCHANGED by the failed confirm (D5)',
+          engine._current_game().timer_anchor == anchor_pre
+          and anchor_pre == anchor0,
+          'anchor=%r (B1 captured %r)'
+          % (engine._current_game().timer_anchor, anchor0))
+    # -- step 2: place the required pi_stacking pose (SMOKE-07 recipe),
+    # then the RETRY passes (proving the failed attempt left the
+    # one-record guard untripped -- danger D3) ------------------------
+    slot_b, resn_b, drift_b, ang_b = place_required_pi(wiz_b, 0, 0)
+    check('B2 placement: required pi ring aligned (SMOKE-07 recipe)',
+          ang_b <= PISTACK_ANGLE_TOL_DEG,
+          'slot=%s resn=%s angle=%.6f deg' % (slot_b, resn_b, ang_b))
+    check('B2 placement: ring landed at the 4.5 A target',
+          drift_b < 1e-4 and wiz_b._error is None,
+          'drift=%.2g' % (drift_b,))
     ret1 = wiz_b.confirm_molecule()
     st = wiz_b.get_status()
     ev = st.get('last_event') or {}
-    check('B2 molecule advance return contract',
+    check('B2 molecule advance return contract (RETRY PASSES, '
+          'score 1.00)',
           isinstance(ret1, dict)
           and ret1.get('advanced') == 'molecule'
-          and isinstance(ret1.get('score'), float)
+          and ret1.get('passed') is True
+          and ret1.get('score') == 1.0
           and isinstance(ret1.get('total'), float)
           and ret1.get('game_over') is False,
-          'advanced=%r score=%r total=%r'
+          'advanced=%r passed=%r score=%r total=%r'
           % (ret1.get('advanced') if isinstance(ret1, dict) else ret1,
+             ret1.get('passed') if isinstance(ret1, dict) else None,
              ret1.get('score') if isinstance(ret1, dict) else None,
              ret1.get('total') if isinstance(ret1, dict) else None))
     check('B2 status moved to molecule 2 of level 1',
           st.get('molecule_pos') == 2 and st.get('level_pos') == 1,
           'molecule_pos=%r level_pos=%r'
           % (st.get('molecule_pos'), st.get('level_pos')))
-    check('B2 marker: molecule_scored seq 1, completed pos 1 of 2',
-          ev.get('kind') == 'molecule_scored' and ev.get('seq') == 1
+    check('B2 marker: molecule_scored seq 2 (the failed attempt '
+          'consumed seq 1), completed pos 1 of 2',
+          ev.get('kind') == 'molecule_scored' and ev.get('seq') == 2
           and ev.get('molecule_pos') == 1
           and ev.get('molecule_total') == 2
           and isinstance(ev.get('formed'), list)
+          and 'pi_stacking' in (ev.get('formed') or [])
           and isinstance(ev.get('extras'), list),
-          'kind=%r seq=%r pos=%r total=%r'
+          'kind=%r seq=%r pos=%r total=%r formed=%r'
           % (ev.get('kind'), ev.get('seq'), ev.get('molecule_pos'),
-             ev.get('molecule_total')))
+             ev.get('molecule_total'), ev.get('formed')))
     check('B2 D3: result + selection cleared on advance',
           st.get('result') is None and st.get('selected') is None,
           'result=%r selected=%r'
@@ -558,10 +851,12 @@ except Exception:
     check('B2 molecule advance', False, 'raised (see traceback above)')
 
 # ============================================================
-# PART B3+B6: LEVEL advance -- same instance, anchor untouched,
-# scene rebuilt, camera re-framed
+# PART B3+B6: LEVEL advance -- place molecule 2's required pose,
+# then the second PASSING confirm closes level 1; same instance,
+# anchor untouched, scene rebuilt, camera re-framed
 # ============================================================
 try:
+    place_required_pi(wiz_b, 0, 1)
     view_pre = [float(v) for v in cmd.get_view()]
     ret2 = wiz_b.confirm_molecule()
     st = wiz_b.get_status()
@@ -594,12 +889,14 @@ try:
           st.get('selected') is None and st.get('result') is None,
           'selected=%r result=%r'
           % (st.get('selected'), st.get('result')))
-    check('B3 marker: seq 2, completed level-1 final molecule (pos 2)',
-          ev.get('kind') == 'molecule_scored' and ev.get('seq') == 2
+    check('B3 marker: seq 3, completed level-1 final molecule (pos 2)',
+          ev.get('kind') == 'molecule_scored' and ev.get('seq') == 3
           and ev.get('molecule_pos') == 2
-          and ev.get('molecule_total') == 2,
-          'kind=%r seq=%r pos=%r'
-          % (ev.get('kind'), ev.get('seq'), ev.get('molecule_pos')))
+          and ev.get('molecule_total') == 2
+          and 'pi_stacking' in (ev.get('formed') or []),
+          'kind=%r seq=%r pos=%r formed=%r'
+          % (ev.get('kind'), ev.get('seq'), ev.get('molecule_pos'),
+             ev.get('formed')))
     view_post = [float(v) for v in cmd.get_view()]
     check('B6 camera re-framed by the level advance (compose ran)',
           view_pre != view_post,
@@ -628,19 +925,23 @@ except Exception:
     check('B4 pick drive', False, 'raised (see traceback above)')
 
 # ============================================================
-# PART B5: completion drive -- four confirms close the game
+# PART B5: completion drive -- place + confirm walks the remaining
+# four molecules; the last PASSING confirm closes the game
 # ============================================================
 try:
     got = []
-    for _ in range(3):
+    for (lev_i, mol_i) in ((1, 0), (1, 1), (2, 0)):
+        place_required_pi(wiz_b, lev_i, mol_i)
         r_mid = wiz_b.confirm_molecule()
         got.append(r_mid.get('advanced')
                    if isinstance(r_mid, dict) else r_mid)
+    place_required_pi(wiz_b, 2, 1)
     final = wiz_b.confirm_molecule()
     check('B5 intermediate advances walk molecule -> level -> molecule',
           got == ['molecule', 'level', 'molecule'],
           'advanced=%r' % (got,))
-    check('B5 final confirm: advanced None, game_over, summary keys',
+    check('B5 final PASSING confirm completes the game: advanced '
+          'None, game_over, summary keys',
           isinstance(final, dict) and final.get('advanced') is None
           and final.get('game_over') is True
           and isinstance(final.get('summary'), dict)

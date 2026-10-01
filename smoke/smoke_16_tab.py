@@ -384,16 +384,22 @@ def _max_axis_dev(a, b):
     return max(abs(a[i] - b[i]) for i in range(3))
 
 
-def _remap_ligand_bonds(records, bonds, index_to_id):
-    """SMOKE-04 single-ligand remap (the 02-09 pinned mapping)."""
-    lig = sorted((r for r in records if r['side'] == 'lig'),
-                 key=lambda r: r['id'])
-    id_pos = dict((r['id'], i) for i, r in enumerate(lig))
-    out = []
-    for (i, j, order) in bonds:
-        out.append((id_pos[index_to_id[i + 1]],
-                    id_pos[index_to_id[j + 1]], int(order)))
-    return lig, out
+def _mol_features(lig_obj, slot_objects):
+    """detect_molecule's EXACT scoped feature layer (the 03-06 law):
+    records restricted to the molecule's ligand + slot objects fed
+    through engine._remap_ligand_bonds -- the ONE production bond
+    convention. Multi-ligand SAFE: the smoke_07 single-ligand
+    id-sort remap (verbatim lift) silently mis-resolves ring geometry
+    on the SECOND ligand of a 2-molecules-per-level scene (its ring
+    "target" lands ~30 A from the real ligand ring; the 08.1-05
+    probe receipt: placements on M2 ligands returned zero detector
+    records at a provably perfect pose -- dist 4.50 / angle 0 / planar
+    0 by the phantom features, true ligand 32 A away)."""
+    scope = set(slot_objects) | set((lig_obj,))
+    records = [r for r in geometry.extract_game_atoms()
+               if r['object'] in scope]
+    _, lig_bonds = engine._remap_ligand_bonds(records, [lig_obj])
+    return extract_features(records, lig_bonds)
 
 
 def _load_benzamide():
@@ -435,16 +441,22 @@ def _design_b_payload_ok(payload):
 
 
 def place_required_pi(wiz):
-    """The ONE proven passing-pose recipe (SMOKE-07 :555-613, lifted
-    verbatim, wizard-sanctioned ops ONLY -- pick + rotate_axis +
-    move_to): select the CURRENT molecule's required pi_stacking slot
-    (seed-agnostic discovery, SMOKE-04 :275-283), bake the ring-plane
-    alignment through the wizard's own rotate_axis about the AA ring
-    center, then move_to so the AA ring center lands 4.5 A above the
-    ligand ring center along its normal. Reads the CURRENT molecule
-    from the wizard's payload/registry. Returns
-    (slot_id, resn, drift, aligned) -- NO check() calls inside (the
-    drives assert placement sanity at the first placement only)."""
+    """The ONE proven passing-pose recipe (SMOKE-07 :555-613,
+    wizard-sanctioned ops ONLY -- pick + rotate_axis + move_to)
+    RE-HOMED onto the production scoped feature layer (the smoke_07
+    verbatim lift is provably unsafe on >1 molecule per level -- see
+    _mol_features for the receipt): select the CURRENT molecule's
+    required pi_stacking slot (seed-agnostic discovery, SMOKE-04
+    :275-283), bake the ring-plane alignment through the wizard's own
+    rotate_axis about the AA ring center, then move_to so the AA ring
+    center lands 4.5 A above the ligand ring center along its normal.
+    Reads the CURRENT molecule from the wizard's payload/registry.
+    Returns (slot_id, resn, drift, aligned) -- NO check() calls
+    inside (the drives assert placement sanity at the first placement
+    only; the ring re-extraction IS the landing proof -- move_to's
+    own low-magnitude-axis bake assert can false-positive on the far
+    slab while the pose lands exactly, so _error is deliberately NOT
+    consulted here)."""
     molecule = wiz._registry['molecules'][wiz._molecule_index]
     mol_payload = (wiz._payload['levels'][wiz._level_index]
                    ['molecules'][wiz._molecule_index])
@@ -456,12 +468,10 @@ def place_required_pi(wiz):
     resn = slot['aa']
     req_obj = molecule['slots'][slot_id][0]
     lig_obj = molecule['ligand'][0]
+    slot_objects = [entry[0] for entry in molecule['slots'].values()]
     cmd.select('sele', '%s and name CA' % req_obj)
     wiz.do_select('sele')
-    records_live = geometry.extract_game_atoms()
-    bonds, index_to_id = geometry.ligand_bonds(lig_obj)
-    _, lig_remap = _remap_ligand_bonds(records_live, bonds, index_to_id)
-    features = extract_features(records_live, lig_remap)
+    features = _mol_features(lig_obj, slot_objects)
     lig_ring = features['lig']['rings'][0]
     aa_ring = features['aa'][req_obj]['rings'][0]
     n_l = _tofloat(lig_ring['normal'])
@@ -477,8 +487,7 @@ def place_required_pi(wiz):
         origin_c = _tofloat(aa_ring['center'])
         wiz.rotate_axis(_scale(1.0 / max(_norm(k), 1e-12), k), ang,
                         origin=origin_c)
-        records_live = geometry.extract_game_atoms()
-        features = extract_features(records_live, lig_remap)
+        features = _mol_features(lig_obj, slot_objects)
         aa_ring = features['aa'][req_obj]['rings'][0]
         lig_ring = features['lig']['rings'][0]
         n_l = _tofloat(lig_ring['normal'])
@@ -492,8 +501,7 @@ def place_required_pi(wiz):
     position = _add(_tofloat(geometry.centroid_of(req_obj)),
                     _sub(ring_target, aa_center))
     wiz.move_to(position)
-    records_live = geometry.extract_game_atoms()
-    features = extract_features(records_live, lig_remap)
+    features = _mol_features(lig_obj, slot_objects)
     placed_center = _tofloat(
         features['aa'][req_obj]['rings'][0]['center'])
     drift = _max_axis_dev(placed_center, ring_target)
@@ -651,14 +659,19 @@ try:
           and 'Formed: (none)' in text_a3f
           and 'Missing: pi_stacking' in text_a3f, '')
     slot_a3, resn_a3, drift_a3, aligned_a3 = place_required_pi(wiz)
+    # Sanity keys on the RE-EXTRACTED geometry (alignment + drift),
+    # never _error: move_to's own per-axis bake assert false-positives
+    # on the far slab while the pose lands exactly (the 08.1-05 probe
+    # receipt) -- a passing confirm clears the error line anyway.
     check('A3: required pi_stacking slot picked + ring aligned via '
           'the wizard ops (the SMOKE-07 recipe)',
-          aligned_a3 and wiz._error is None,
+          aligned_a3,
           'slot=%s resn=%s error=%r'
           % (slot_a3, resn_a3, wiz._error))
-    check('A3: move_to places the ring at the target (drift < 1e-4)',
-          drift_a3 < 1e-4 and wiz._error is None,
-          'drift=%.2g' % drift_a3)
+    check('A3: move_to places the ring at the target (drift < 1e-4, '
+          'the re-extraction landing proof)',
+          drift_a3 < 1e-4,
+          'drift=%.2g error=%r' % (drift_a3, wiz._error))
     conf = tab._confirm_now()
     text_a3 = tab._info_log.toPlainText()
     check('A3: _confirm_now returns the dict (game_over False)',

@@ -52,7 +52,7 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Scoring & Game Lifecycle
 
-- [x] **SCORE-01**: Confirm runs detection and shows the molecule score (fraction of required interactions formed, binary per interaction) plus running total, then advances to the next molecule
+- [x] **SCORE-01**: Confirm runs the molecule-scoped detection pass; the molecule finishes ONLY when all required interactions are formed — then the molecule score (fraction of required interactions formed, binary per interaction) plus running total is recorded and shown, and the game advances to the next molecule. A confirm without the required interactions records nothing (no score entry, no skip-count change), advances nothing, and shows the Formed/Missing debrief with a clear not-passing/retry line while the timer keeps running. (Amended 2026-09-27 by human directive — pass-gate semantics; repaired + re-verified in Phase 8.1.)
 - [x] **SCORE-02**: After Confirm, a debrief shows which required interactions formed vs missed (numbers only — no geometry, respecting the no-helper rule)
 - [x] **SCORE-03**: Finishing a level advances to the next level with higher difficulty
 - [x] **SCORE-04**: Game status tab shows a rolling info box, elapsed timer (outside the info box), and the type + number of required interactions (`any` or from the allowed list)
@@ -170,4 +170,4 @@ Which phases cover which requirements. Updated during roadmap creation (2026-09-
 
 ---
 *Requirements defined: 2026-09-05*
-*Last updated: 2026-09-21 — Phase 6 closed (SCORE-01/02/03/05/06/07/09/10 → Complete; 06-VERIFICATION.md passed 39/39, step-1 re-verify closed 2026-09-21)*
+*Last updated: 2026-09-27 — SCORE-01 amended to pass-gate semantics (human directive; repair + re-verify in Phase 8.1). Prior: 2026-09-21 — Phase 6 closed (SCORE-01/02/03/05/06/07/09/10 → Complete; 06-VERIFICATION.md passed 39/39, step-1 re-verify closed 2026-09-21)*

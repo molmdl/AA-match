@@ -217,8 +217,8 @@ class GameTab(QtWidgets.QWidget):
         # reflows (the 05-06 OQ-1 design).
         self.btn_confirm = QtWidgets.QPushButton('Confirm', self)
         self.btn_confirm.setToolTip(
-            'Finish this molecule: run detection, score it, and '
-            'advance.')
+            'Attempt to finish this molecule: runs detection; it '
+            'advances only when all required interactions are formed.')
         btn_row.insertWidget(btn_row.count() - 1, self.btn_confirm)
         # Skip/Give-Up dropdown (06-07, SCORE-05/06 UI -- spec.md:42's
         # 'Skip Mol/give up dropdown button'): ONE QToolButton with a

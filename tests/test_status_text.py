@@ -31,11 +31,13 @@ event inventory, pitfalls 3/4/5/7):
   fingerprinted in Phase 5 (score lines reserved for Phase 6, pitfall 7).
   Unknown/extra keys are tolerated (.get -- the wizard_text consumer
   precedent).
-- EVENT_KINDS: the documented event vocabulary, exactly 15 keys: the 7
+- EVENT_KINDS: the documented event vocabulary, exactly 16 keys: the 7
   Phase-5 emitted kinds (game_start, countdown, level_molecule,
   required_display, selection, error, hint) + 6 reserved for Phase 6
   (molecule_scored, molecule_skipped, gave_up, level_advanced, game_reset,
-  game_restarted) + 2 reserved for Phase 7 (game_saved, game_imported).
+  game_restarted) + 2 reserved for Phase 7 (game_saved, game_imported)
+  + 1 Phase-8.1 emitted kind (confirm_failed -- the deliberate-evolution
+  15 -> 16 landing; the Phase-6 reserved-kinds landing precedent).
 
 State dicts are PLAIN DATA shaped exactly like what GameWizard.get_status()
 (plan 05-07) returns:
@@ -306,14 +308,17 @@ class TestEventKinds(unittest.TestCase):
     SET is what is pinned; reserved-kind notes only carry phase markers
     (final wording is Phase 6/7 research's job)."""
 
-    def test_exact_15_keys(self):
+    def test_exact_16_keys(self):
+        # Phase 8.1 deliberate evolution 15 -> 16 (the confirm_failed
+        # kind lands as a REAL emitted kind; the Phase-6 reserved-kinds
+        # landing precedent).
         self.assertEqual(
             sorted(status_text.EVENT_KINDS),
             sorted(['game_start', 'countdown', 'level_molecule',
                     'required_display', 'selection', 'error', 'hint',
                     'molecule_scored', 'molecule_skipped', 'gave_up',
                     'level_advanced', 'game_reset', 'game_restarted',
-                    'game_saved', 'game_imported']))
+                    'game_saved', 'game_imported', 'confirm_failed']))
 
     def test_values_are_notes(self):
         for kind, note in status_text.EVENT_KINDS.items():
@@ -333,7 +338,8 @@ class TestEventKinds(unittest.TestCase):
 
     def test_emitted_kinds_not_marked_reserved(self):
         for kind in ('game_start', 'countdown', 'level_molecule',
-                     'required_display', 'selection', 'error', 'hint'):
+                     'required_display', 'selection', 'error', 'hint',
+                     'confirm_failed'):
             self.assertNotIn('reserved for Phase',
                              status_text.EVENT_KINDS[kind])
 
@@ -815,7 +821,9 @@ class TestPhase7BuildersHandlerLogged(unittest.TestCase):
     handler-logged pattern: they take no event argument (their single
     parameter is 'path') and are EXCLUDED from _EVENT_BUILDERS -- the
     poll-diff can never see them (tab-side operations; the reserved
-    EVENT_KINDS set stays 15, no new kind)."""
+    EVENT_KINDS set stays 15 THROUGH PHASE 7, no new kind -- Phase
+    8.1's confirm_failed is a separate deliberate evolution to 16
+    pinned in its own section below)."""
 
     def test_kinds_not_in_poll_builder_table(self):
         table = status_text._EVENT_BUILDERS
@@ -841,13 +849,120 @@ class TestPhase7BuildersHandlerLogged(unittest.TestCase):
 
     def test_vocabulary_pins_unchanged(self):
         # The pre-existing vocabulary pins must keep passing
-        # byte-unchanged: exactly 15 kinds, and the game_saved /
-        # game_imported notes still carry 'reserved for Phase 7'.
-        self.assertEqual(len(status_text.EVENT_KINDS), 15)
+        # byte-unchanged: exactly 15 kinds (Phase 8.1 deliberately
+        # evolved the set 15 -> 16 with its own confirm_failed section
+        # below -- the Phase-6 reserved-kinds landing precedent), and
+        # the game_saved / game_imported notes still carry 'reserved
+        # for Phase 7'.
+        self.assertEqual(len(status_text.EVENT_KINDS), 16)
         self.assertIn('reserved for Phase 7',
                       status_text.EVENT_KINDS['game_saved'])
         self.assertIn('reserved for Phase 7',
                       status_text.EVENT_KINDS['game_imported'])
+
+
+# ---------------------------------------------------------------------------
+# Phase 8.1 (plan 08.1-03) -- additive battery. RED first:
+# confirm_failed_lines does not exist yet, so these tests fail on
+# AttributeError; the GREEN commit implements the builder + the
+# EVENT_KINDS/_EVENT_BUILDERS entries in ONE landing (the hard runtime
+# coupling: an EVENT_KINDS entry without a builder would crash the poll
+# on the unknown-kind ValueError). This is the deliberate-evolution
+# landing that takes the kind set 15 -> 16 (the Phase-6 reserved-kinds
+# landing precedent -- recorded in the commits).
+# ---------------------------------------------------------------------------
+
+
+class TestConfirmFailedLines(unittest.TestCase):
+    """The failed-confirm debrief block (Phase 8.1, CONTEXT constraint
+    3): the not-passing header (the score shown is the WOULD-BE
+    preview -- labeled not recorded), then the wizard_text
+    result_lines debrief VERBATIM (single-home law -- the retry line
+    lives HERE ONLY, never inside result_lines), then the retry line
+    LAST."""
+
+    def test_list_mode_full_block(self):
+        event = _event('confirm_failed', score=0.5, total=1.5,
+                       molecule_pos=1, molecule_total=2,
+                       formed=['h_bond'],
+                       required={'mode': 'list',
+                                 'items': [{'type': 'h_bond', 'count': 1},
+                                           {'type': 'salt_bridge',
+                                            'count': 1}]},
+                       extras=[('pi_stacking', 1)])
+        self.assertEqual(
+            status_text.confirm_failed_lines(event),
+            ['Molecule 1 of 2 not passing yet (score so far 0.50, '
+             'total 1.50; not recorded).',
+             '1/2 required interactions formed (score 0.50)',
+             'Formed: h_bond',
+             'Missing: salt_bridge',
+             'Formed (not required): pi_stacking x1',
+             'Form the missing interactions and Confirm again.'])
+
+    def test_any_mode_nothing_formed(self):
+        event = _event('confirm_failed', score=0.0, total=0.0,
+                       molecule_pos=1, molecule_total=2,
+                       formed=[],
+                       required={'mode': 'any', 'items': []},
+                       extras=[])
+        self.assertEqual(
+            status_text.confirm_failed_lines(event),
+            ['Molecule 1 of 2 not passing yet (score so far 0.00, '
+             'total 0.00; not recorded).',
+             'Nothing formed (score 0.00)',
+             'Form the missing interactions and Confirm again.'])
+
+    def test_list_mode_nothing_formed(self):
+        # The 'Formed: (none)' + 'Missing: ...' shapes also render
+        # inside the block (result_lines verbatim).
+        event = _event('confirm_failed', score=0.0, total=2.0,
+                       molecule_pos=2, molecule_total=2,
+                       formed=[],
+                       required={'mode': 'list',
+                                 'items': [{'type': 'h_bond', 'count': 2}]},
+                       extras=[])
+        self.assertEqual(
+            status_text.confirm_failed_lines(event),
+            ['Molecule 2 of 2 not passing yet (score so far 0.00, '
+             'total 2.00; not recorded).',
+             '0/1 required interactions formed (score 0.00)',
+             'Formed: (none)',
+             'Missing: h_bond',
+             'Form the missing interactions and Confirm again.'])
+
+    def test_wrong_kind_refused(self):
+        with self.assertRaises(ValueError) as cm:
+            status_text.confirm_failed_lines(_event('molecule_scored'))
+        self.assertIn('confirm_failed', str(cm.exception))
+        self.assertIn('molecule_scored', str(cm.exception))
+
+    def test_missing_payload_keys_refused(self):
+        for key in ('score', 'total', 'molecule_pos', 'molecule_total',
+                    'formed', 'required', 'extras'):
+            payload = {'score': 1.0, 'total': 2.5,
+                       'molecule_pos': 1, 'molecule_total': 2,
+                       'formed': ['h_bond'],
+                       'required': {'mode': 'any', 'items': []},
+                       'extras': []}
+            del payload[key]
+            with self.assertRaises(ValueError) as cm:
+                status_text.confirm_failed_lines(
+                    _event('confirm_failed', **payload))
+            self.assertIn(key, str(cm.exception))
+
+    def test_kind_in_poll_builder_table(self):
+        # A REAL poll-emitted kind: registered in _EVENT_BUILDERS so the
+        # poll diff dispatches it (an unknown kind would raise).
+        self.assertIs(status_text._EVENT_BUILDERS['confirm_failed'],
+                      status_text.confirm_failed_lines)
+
+    def test_kind_note_not_marked_reserved(self):
+        # A REAL emitted kind (Phase 8.1) -- its note must NOT say
+        # 'reserved' (test_emitted_kinds_not_marked_reserved's law).
+        note = status_text.EVENT_KINDS['confirm_failed']
+        self.assertTrue(note)
+        self.assertNotIn('reserved for Phase', note)
 
 
 if __name__ == '__main__':

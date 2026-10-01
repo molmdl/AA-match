@@ -231,6 +231,27 @@ Plans:
 - [ ] 08-09-PLAN.md — docs/DATA_SOURCES.md consolidation (HELP-02 gate-doc format) (wave 6)
 - [ ] 08-10-PLAN.md — (conditional) curated-manifest supply measurement + SIZE_S1/S2 re-tune verdict (wave 6)
 - [ ] 08-11-PLAN.md — [HUMAN] GUI checkpoint (grouped dropdown + DATA_SOURCES sign-off) + full regression battery + detector-coverage verdict (wave 7)
+  - NOTE (2026-09-27): 08-11 auto tasks 1-2 COMPLETE (battery GREEN + detector verdict recorded); Task 3 ([HUMAN] checkpoint + SUMMARY) DEFERRED to Phase 8.1's final human-checkpoint plan per human decision — one combined GUI session will close both.
+
+### Phase 8.1: Confirm Pass-Gate Restoration (INSERTED)
+
+**Goal:** Restore the spec-correct Confirm semantics the human originally tested in Phase 3: Confirm is a detection attempt that passes and advances ONLY when the required interactions are formed — blind confirm can never pass, score, or win — and repair the requirement/decision records that encoded the wrong behavior. The final plan includes the deferred 08-11 [HUMAN] checkpoint (one combined GUI session).
+**Depends on**: Phase 8 (content plans complete; 08-11 Task 3 deferred here)
+**Requirements**: SCORE-01 (amended), SCORE-03 (wording check)
+**Plans:** 8 plans in 5 waves
+
+Plans:
+- [ ] 08.1-01-PLAN.md — records repair: SCORE-01 rewrite + ROADMAP criterion-1 NOTE + PROJECT Key-Decisions row + STATE dated amendment (+ sequencing notes) (wave 1)
+- [ ] 08.1-02-PLAN.md — [TDD] pure pass gate: CONFIRM_PASS_RULE + confirm_passes + score_preview in game_state.py (wave 1)
+- [ ] 08.1-03-PLAN.md — gate wiring: wizard pass gate + failed-confirm contract (truthy dict, _result debrief) + status_text confirm_failed kind (15→16) + tooltip reword (wave 2)
+- [ ] 08.1-04-PLAN.md — SMOKE-15 rework: Design B re-game + failed-contract block + passing-confirm drives (wave 3)
+- [ ] 08.1-05-PLAN.md — SMOKE-16 rework: tab-side pass-gate pins + F keeps the panel-confirm end + 9870561 pins byte-surviving (wave 3)
+- [ ] 08.1-06-PLAN.md — smoke_19/20 accrual conversion: blind confirms → skips (wave 3)
+- [ ] 08.1-07-PLAN.md — full regression battery (py_compile + WSL 912+ + smokes 01-21, 23-run recipe) + verdict record (wave 4)
+- [ ] 08.1-08-PLAN.md — [HUMAN] combined 8.1-retest + 08-11-Task-3 checkpoint + close-out (08-11-SUMMARY + STATE + ROADMAP tick-up) (wave 5)
+
+**Details:**
+Provenance and constraints seeded in .planning/phases/08.1-confirm-pass-gate-restoration/CONTEXT.md (items 1-8 are LOCKED); research: 08.1-RESEARCH-code.md / -tests.md / -records.md. Carry-forward items (arrow-key probe, Phase-9 decision candidates) are explicitly OUT of scope.
 
 ### Phase 9: Help, Docs & Release Audit
 **Goal**: A new user can learn the game from in-game help alone; every user-facing document matches shipped reality; performance budgets are confirmed on the final build.

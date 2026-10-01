@@ -20,8 +20,9 @@ carrier, seed 42, 2 molecules x 3 levels) -- only slot-object
 pi_stacking poses have a proven passing-confirm recipe
 (08.1-RESEARCH-tests sec. 0.6). PART A KEEPS the DEFAULT game (the
 pass gate is wizard-level; the engine record/advance probes are
-unaffected). Check-call sites 94 -> 106 (the real executed count is
-pinned in the 08.1-04 SUMMARY).
+unaffected). Executed checks 75 -> 87 (+12: three B1 probe pins,
+the seven-item failed-confirm contract, two first-placement sanity
+pins; call sites 94 -> 106 incl. the exception fallbacks).
 
 PART A  the pure cmd drive over the DEFAULT game (seed 42; 2
         molecules/level x 3 levels, frozen Phase-1 DEFAULTS):

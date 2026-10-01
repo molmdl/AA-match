@@ -12,7 +12,10 @@ THE BINDING CONTRACTS:
    This class routes clicks/keys/panel buttons onto engine ops
    (confirm / reset_to_grid / place_aa) and renders the plain-data
    result as panel/prompt text. NO detection math, NO scoring, NO spec
-   knowledge here; engine ops own game state.
+   knowledge here; engine ops own game state. The Confirm pass RULE
+   likewise lives in the pure layer (game_state CONFIRM_PASS_RULE /
+   confirm_passes, Phase 8.1) -- the wizard only branches on the
+   verdict and renders the debrief (the 08.1 gate decision).
 
 2. PLAIN PICKLABLE DATA ONLY on self (RESEARCH sec. 2.3): session save
    pickles the whole wizard stack, so every GameWizard attribute is a
@@ -79,7 +82,7 @@ import math
 from pymol import cmd
 from pymol.wizard import Wizard
 
-from . import geometry, setup_state, wizard_core, wizard_text
+from . import game_state, geometry, setup_state, wizard_core, wizard_text
 
 _MATRIX_TOL = 1e-6    # identity-matrix invariant slack (SMOKE-06
                       # _is_identity pattern; float32-tight)
@@ -765,29 +768,43 @@ class GameWizard(Wizard):
         cmd.refresh_wizard()
 
     def confirm_molecule(self):
-        """PLAY-03 Confirm, the 06-05 lifecycle form (SCORE-01/03):
-        record -> event marker -> ADVANCE in ONE op. Renders through
-        panel/prompt TEXT built from the plain-data state (wizard_text;
-        no result geometry, PLAY-04).
+        """PLAY-03 Confirm, the Phase-8.1 pass-gate form (SCORE-01 plus
+        the 08.1 restoration): a detection ATTEMPT that passes ONLY
+        when the required interactions are formed (CONFIRM_PASS_RULE in
+        pure game_state -- 'all' pinned, 'any' the documented one-line
+        flip). The ONE enforcement site is _confirm_molecule_impl
+        BETWEEN detect and record, so BOTH Confirm surfaces (wizard
+        panel button + Game tab button) inherit the gate. Renders
+        through panel/prompt TEXT built from the plain-data state
+        (wizard_text; no result geometry, PLAY-04).
 
-        The Phase-3 re-Confirm caveat is CLOSED: the record routes
-        through engine.record_scored, whose one-record guard refuses a
-        second Confirm of an already-recorded molecule (the pinned
-        'This molecule already has a recorded result ...' message lands
-        on the panel error line via _guard). Unreachable after a real
-        advance anyway -- Confirm always lands on the NEXT molecule.
+        On a PASS: record via engine.record_scored (exactly 1.0 under
+        'all'), stamp the molecule_scored event marker, and ADVANCE
+        through the ONE _advance_after_record site -- the 06-05
+        lifecycle flow unchanged. The one-record guard still stands:
+        record_scored refuses a second record of an already-recorded
+        molecule (the pinned 'This molecule already has a recorded
+        result ...' message lands on the panel error line via _guard);
+        unreachable after a real advance anyway.
 
-        D3 (recorded 06-05): Confirm advances IMMEDIATELY -- the
-        score/total debrief lives in the info box via the last-event
-        marker, NOT in the prompt; the panel shows the NEXT molecule
-        and self._result is CLEARED by every advance (shift from the
-        04-15 clarification, rationale recorded in 06-05-SUMMARY).
+        On a FAILED attempt (blind Confirm): records NOTHING (no
+        molecule_scores entry, no skip_count change -- record_scored is
+        never reached, so the one-record guard stays untripped and the
+        player retries freely), advances NOTHING, touches NO timer op,
+        sets NO _error (routine gameplay feedback, not a refusal), and
+        renders the Formed/Missing debrief + retry line on BOTH
+        surfaces (panel/prompt via self._result -- the Phase-3 1c3737c
+        flow restored -- and the Game-tab info box via the
+        confirm_failed marker, tab+panel parity). The timer keeps
+        running.
 
-        Returns the plain-data result through the _guard seam (score,
-        total, advanced 'molecule'|'level'|None, game_over, summary,
-        level_pos, molecule_pos of the COMPLETED molecule) -- the
-        06-07 tab consumes game_over/summary; None on a guarded
-        refusal."""
+        Returns the plain-data result through the _guard seam: score,
+        total, advanced 'molecule'|'level'|None (the advance outcome;
+        None on a failed attempt), game_over, summary, level_pos,
+        molecule_pos -- the COMPLETED molecule's positions on a pass,
+        the CURRENT molecule's on failure -- plus 'passed' (True on a
+        pass, False on a failed attempt). The 06-07 tab consumes
+        game_over/summary; None on a guarded refusal."""
         return self._guard(self._confirm_molecule_impl)
 
     def _advance_after_record(self):
@@ -828,15 +845,47 @@ class GameWizard(Wizard):
         required = self._required()
         records = engine.detect_molecule(self._level_index,
                                          self._molecule_index)
+        # The ONE pass-gate enforcement site (Phase 8.1): between
+        # detect and record, so BOTH Confirm surfaces (wizard panel +
+        # Game tab) inherit it. The RULE lives in pure game_state; here
+        # we only branch on the verdict. A failed attempt returns the
+        # truthy failed contract -- record_scored is never reached.
+        if not game_state.confirm_passes(required, records):
+            return self._confirm_failed(required, records)
         score, formed = engine.record_scored(self._level_index,
                                              self._molecule_index,
                                              required, records=records)
         total = engine.total_score()
-        # 03-06 UX addition: records whose type is NOT required still
-        # happened on screen -- surface them as 'Formed (not required)'
-        # counts (plan's invisible-pi-stacking bug). 'any' mode has no
-        # such concept (every record satisfies the requirement), so
-        # extras stay empty there by construction.
+        extras = self._extras_counts(required, records)
+        self._error = None
+        # Capture the COMPLETED molecule's position BEFORE the advance
+        # mutates both books -- the marker debriefs what was scored,
+        # not where the player now stands. (The gate now precedes the
+        # record, so reaching this point already implies a pass.)
+        scored_level = self._level_index + 1
+        scored_pos = self._molecule_index + 1
+        scored_m_total = len(self._registry['molecules'])
+        advanced, summary = self._advance_after_record()
+        self._sync_end_state()
+        self._set_event('molecule_scored',
+                        score=float(score), total=float(total),
+                        molecule_pos=scored_pos,
+                        molecule_total=scored_m_total,
+                        formed=list(formed), required=required,
+                        extras=extras)
+        cmd.refresh_wizard()
+        return {'passed': True, 'score': float(score),
+                'total': float(total), 'advanced': advanced,
+                'game_over': self._game_over, 'summary': summary,
+                'level_pos': scored_level, 'molecule_pos': scored_pos}
+
+    def _extras_counts(self, required, records):
+        """The 03-06 UX addition as the ONE home both confirm branches
+        share: records whose type is NOT required still happened on
+        screen -- surface them as 'Formed (not required)' counts (the
+        plan's invisible-pi-stacking bug). 'any' mode has no such
+        concept (every record satisfies the requirement), so extras
+        stay empty there by construction."""
         extras = []
         if required.get('mode') == 'list':
             required_types = set(item['type']
@@ -851,26 +900,38 @@ class GameWizard(Wizard):
                     counts[rtype] = counts.get(rtype, 0) + 1
             extras = [(t, counts[t])
                       for t in sorted(counts, key=order.get)]
+        return extras
+
+    def _confirm_failed(self, required, records):
+        """The pass gate's failed branch (Phase 8.1, CONTEXT
+        constraint 3): NO record (record_scored is never reached --
+        the one-record guard stays untripped, retry freely), NO
+        advance, NO timer op, NO _error set (routine gameplay
+        feedback, not a house refusal). Renders the Phase-3 debrief
+        (1c3737c flow: detect -> _result -> refresh -> STAY) and
+        stamps the confirm_failed poll marker so the Game tab's info
+        box shows the same debrief + retry line (tab+panel parity).
+        Returns a TRUTHY dict -- None would short-circuit the tab's
+        sync refresh (game_window.py:635-636)."""
+        from . import engine
+        score, formed = game_state.score_preview(required, records)
+        extras = self._extras_counts(required, records)
+        self._result = {'score': float(score), 'formed': list(formed),
+                        'required': required, 'extras': extras}
         self._error = None
-        # Capture the COMPLETED molecule's position BEFORE the advance
-        # mutates both books -- the marker debriefs what was scored,
-        # not where the player now stands.
-        scored_level = self._level_index + 1
-        scored_pos = self._molecule_index + 1
-        scored_m_total = len(self._registry['molecules'])
-        advanced, summary = self._advance_after_record()
-        self._sync_end_state()
-        self._set_event('molecule_scored',
+        total = engine.total_score()
+        self._set_event('confirm_failed',
                         score=float(score), total=float(total),
-                        molecule_pos=scored_pos,
-                        molecule_total=scored_m_total,
+                        molecule_pos=self._molecule_index + 1,
+                        molecule_total=len(self._registry['molecules']),
                         formed=list(formed), required=required,
                         extras=extras)
         cmd.refresh_wizard()
-        return {'score': float(score), 'total': float(total),
-                'advanced': advanced, 'game_over': self._game_over,
-                'summary': summary, 'level_pos': scored_level,
-                'molecule_pos': scored_pos}
+        return {'passed': False, 'score': float(score),
+                'total': float(total), 'advanced': None,
+                'game_over': self._game_over, 'summary': None,
+                'level_pos': self._level_index + 1,
+                'molecule_pos': self._molecule_index + 1}
 
     def skip_molecule(self):
         """SCORE-05 Skip (06-06): record the detection-AT-SKIP-TIME

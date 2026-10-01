@@ -109,6 +109,50 @@ def draw(cmd):
 '''
 
 
+def find_confirm_gate_calls(src):
+    """Every ast.Call to ``game_state.confirm_passes(...)`` inside the
+    GameWizard's confirm impl (the Phase-8.1 pass gate pin).
+
+    Walks ONLY the ``_confirm_molecule_impl`` and ``_confirm_failed``
+    function defs of wizard.py and returns one entry per call whose
+    attribute name is 'confirm_passes' -- the gate cannot be silently
+    removed without a visible test failure. AST again: docstring prose
+    can never trip or satisfy this pin.
+    """
+    hits = []
+    tree = ast.parse(src)
+    for node in ast.walk(tree):
+        if isinstance(node, ast.FunctionDef) and node.name in (
+                '_confirm_molecule_impl', '_confirm_failed'):
+            for sub in ast.walk(node):
+                if isinstance(sub, ast.Call) \
+                        and isinstance(sub.func, ast.Attribute) \
+                        and sub.func.attr == 'confirm_passes':
+                    hits.append('%s line %d' % (node.name, sub.lineno))
+    return hits
+
+
+class TestConfirmPassGatePresent(unittest.TestCase):
+    """Phase 8.1: the pass gate sits in the ONE confirm impl."""
+
+    def test_confirm_impl_calls_game_state_confirm_passes(self):
+        hits = find_confirm_gate_calls(
+            _read_source(os.path.join(PKG_DIR, 'wizard.py')))
+        self.assertTrue(
+            hits,
+            'the Confirm pass gate (game_state.confirm_passes) MUST '
+            'sit in wizard.py\'s confirm impl -- without it a blind '
+            'Confirm records and advances again (the Phase-6 semantics '
+            'defect Phase 8.1 restored)')
+
+    def test_negative_control_finder_scoped(self):
+        # The finder must NOT fire on unrelated scopes: a call to
+        # confirm_passes outside the confirm impls is ignored.
+        src = ('def other():\n'
+               '    thing.confirm_passes(1, 2)\n')
+        self.assertEqual(find_confirm_gate_calls(src), [])
+
+
 class TestNoHelperVisualCalls(unittest.TestCase):
     """The scanned cmd-tier sources draw ZERO scene geometry."""
 

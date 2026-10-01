@@ -163,6 +163,7 @@ Plans:
 **Requirements**: SCORE-01, SCORE-02, SCORE-03, SCORE-05, SCORE-06, SCORE-07, SCORE-09, SCORE-10
 **Success Criteria** (what must be TRUE):
   1. [HUMAN] Confirm shows the molecule score (fraction of required interactions formed, binary per interaction) plus the running total, then advances to the next molecule; a post-confirm debrief lists formed vs missed interactions (numbers only — no geometry). (SCORE-01, SCORE-02)
+     - NOTE (2026-09-27, human amendment — Phase 8.1): the advance in criterion 1 happens ONLY when the required interactions are formed — Confirm is the PASS GATE (spec.md:38 "interactions required to finish this molecule" + spec.md:52 "confirm button to finish this molecule"). A confirm without them records nothing, advances nothing, and renders the Formed/Missing debrief + a not-passing/retry line. Criterion 2's "finishing all molecules" = every molecule carries a recorded result (passed or skipped). The original 06-10 approval followed the pre-amendment reading; repaired + re-verified in Phase 8.1.
   2. [HUMAN] Finishing all molecules of a level advances to the next level at higher difficulty. (SCORE-03)
   3. [HUMAN] Skip Molecule (with confirmation warning) stores the partial score and moves to the next molecule; Give Up (with confirmation warning) ends the game at the current stage. (SCORE-05, SCORE-06)
   4. [HUMAN] The endgame screen shows per-level scores + total, a stopped timer, and a winning message with time taken, total molecules and levels, and skip/give-up counts. (SCORE-07)
@@ -232,6 +233,7 @@ Plans:
 - [ ] 08-10-PLAN.md — (conditional) curated-manifest supply measurement + SIZE_S1/S2 re-tune verdict (wave 6)
 - [ ] 08-11-PLAN.md — [HUMAN] GUI checkpoint (grouped dropdown + DATA_SOURCES sign-off) + full regression battery + detector-coverage verdict (wave 7)
   - NOTE (2026-09-27): 08-11 auto tasks 1-2 COMPLETE (battery GREEN + detector verdict recorded); Task 3 ([HUMAN] checkpoint + SUMMARY) DEFERRED to Phase 8.1's final human-checkpoint plan per human decision — one combined GUI session will close both.
+  - NOTE (2026-09-27, CONTEXT constraint 8): Phase 8's /gsd-verify-phase runs AFTER Phase 8.1 lands (on the corrected tree).
 
 ### Phase 8.1: Confirm Pass-Gate Restoration (INSERTED)
 

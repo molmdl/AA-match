@@ -27,6 +27,14 @@ Records missing 'type', records whose 'type' is outside
 ``setup_state.INTERACTION_TYPES`` (the ONE enum home), non-dict records,
 and unknown modes raise ValueError — never silently mis-score.
 
+Phase 8.1 (Confirm pass-gate restoration, plan 08.1-02): this module is
+also the ONE home of the Confirm pass rule — ``CONFIRM_PASS_RULE``
+('all' pinned; 'any' the documented one-line-flip alternative) read by
+``confirm_passes`` over ``score`` (the gate and the recorded score can
+never disagree), plus the read-only ``score_preview`` op the
+failed-confirm debrief consumes (a failed confirm never touches the
+books).
+
 GameState is the minimal in-memory runtime container the engine ops
 mutate: level/molecule position, per-molecule formed types, running
 score, skip/give-up counters, a timer anchor, and (06-01 lifecycle data
@@ -139,6 +147,35 @@ def _formed_types(required, record_types):
     else:
         formed = set(record_types)
     return sorted(formed, key=_CANONICAL_POSITION.get)
+
+
+CONFIRM_PASS_RULE = 'all'   # 'all' = every required interaction formed (spec pass-gate);
+                            # 'any' = at least one required interaction formed (documented alternative)
+
+
+def confirm_passes(required, results):
+    """The Confirm pass gate (Phase 8.1): CONFIRM_PASS_RULE read over
+    the SCORE-01 truth function. 'all' -> score == 1.0 (exact: 'list'
+    formed == len(items) divides to exactly 1.0; 'any' is binary).
+    'any' -> score > 0.0. Reuses score() so the gate and the recorded
+    score can never disagree (single "formed" home)."""
+    value = score(required, results)
+    if CONFIRM_PASS_RULE == 'all':
+        return value >= 1.0
+    if CONFIRM_PASS_RULE == 'any':
+        return value > 0.0
+    raise ValueError('confirm_passes: unknown CONFIRM_PASS_RULE %r'
+                     % (CONFIRM_PASS_RULE,))
+
+
+def score_preview(required, results):
+    """The would-be (score, formed) pair for a CONFIRM attempt --
+    exactly what ``GameState.record_molecule_result`` would record,
+    WITHOUT recording (Phase 8.1: a failed confirm must not touch the
+    books). Pure: plain data in, plain data out."""
+    value = score(required, results)
+    record_types = _validate_records(results)
+    return value, _formed_types(required, record_types)
 
 
 class GameState:

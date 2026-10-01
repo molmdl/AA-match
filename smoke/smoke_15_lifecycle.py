@@ -114,17 +114,24 @@ PART B  the WIZARD-tier lifecycle E2E (06-05; drives the wizard's
         refusal is unreachable by design.
 
 PART C  the 06-06 wizard skip/give-up half (SCORE-05/06 wizard ops,
-        game-over gating, reset marker; public wizard methods only):
-        C1   fresh start; confirm molecule 1 -> skip molecule 2 ->
-             advanced 'level', skip_count 1, two molecule_scores, the
-             molecule_skipped marker (pos 2 of 2, seq 2), status at
-             level 2 molecule 1 -- skip advances EXACTLY like Confirm
-             through the shared _advance_after_record.
-        C2   skip-COMPLETES-the-game: confirm/skip through to the
-             LAST molecule of the LAST level, then skip_molecule ->
+        game-over gating, reset marker; public wizard methods only;
+        C1/C2 re-gamed to the same Design B game at 08.1-04, while
+        C3/C4/C5 stay on their own fresh DEFAULT games):
+        C1   fresh start; PLACE + confirm molecule 1 (a PASSING
+             confirm -- the pairing's true precondition under the
+             gate) -> skip molecule 2 -> advanced 'level',
+             skip_count 1, two molecule_scores, the molecule_skipped
+             marker (pos 2 of 2, seq 2), status at level 2 molecule 1
+             -- skip advances EXACTLY like Confirm through the shared
+             _advance_after_record.
+        C2   skip-COMPLETES-the-game: THREE SKIPS walk molecule ->
+             level -> molecule (skip is the non-passing advance path
+             by construction -- CONTEXT constraint 4), then a final
+             skip_molecule on the LAST molecule of the LAST level ->
              advanced None, game_over True, summary end_state
              'completed' (a skipped final molecule still finishes the
-             game -- every molecule has a record).
+             game -- every molecule has a record); skip_count 5
+             (C1's one + C2's four).
         C3   full game-over LOCKDOWN: fresh game, select a slot, then
              give_up -> nudge_cam / rotate_view refused with the
              pinned 'The game is over.' AND the pose unchanged; hint /
@@ -1001,16 +1008,25 @@ except Exception:
 part_b_checks = REC['checks']
 
 # ============================================================
-# PART C1: skip advances EXACTLY like Confirm (shared site)
+# PART C1: skip advances EXACTLY like Confirm (shared site) -- the
+# Confirm half runs a PASSING confirm (the 08.1-04 re-game)
 # ============================================================
 wiz_c = None
 try:
-    wiz_c = gamestart.start_game(activate=True)
+    if design_b is None:
+        raise RuntimeError('B1 Design B probe failed')
+    wiz_c = gamestart.start_game(setup=design_b[0], seed=42,
+                                 candidates=design_b[1])
     check('C1 fresh start returns the stacked GameWizard',
           isinstance(wiz_c, GameWizard) and cmd.get_wizard() is wiz_c,
           'type=%r' % (type(wiz_c),))
+    # The pass-gate loop's happy path: place molecule 1's required
+    # pi_stacking pose so the Confirm half of the pairing PASSES (the
+    # check's true precondition under the 08.1-03 gate).
+    place_required_pi(wiz_c, 0, 0)
     r_conf = wiz_c.confirm_molecule()
-    check('C1 confirm on molecule 1 advances molecule',
+    check('C1 confirm on molecule 1 advances molecule (PASSING '
+          'confirm)',
           isinstance(r_conf, dict) and r_conf.get('advanced')
           == 'molecule',
           'advanced=%r'
@@ -1054,16 +1070,18 @@ except Exception:
     check('C1 skip drive', False, 'raised (see traceback above)')
 
 # ============================================================
-# PART C2: skip-COMPLETES-the-game (last molecule, last level)
+# PART C2: skip-COMPLETES-the-game (last molecule, last level) --
+# the walk is SKIPS (the non-passing advance path, CONTEXT
+# constraint 4); the final op stays a skip
 # ============================================================
 try:
     got = []
     for _ in range(3):
-        r_mid = wiz_c.confirm_molecule()
+        r_mid = wiz_c.skip_molecule()
         got.append(r_mid.get('advanced')
                    if isinstance(r_mid, dict) else r_mid)
     r_final = wiz_c.skip_molecule()
-    check('C2 confirms walk molecule -> level -> molecule',
+    check('C2 skips walk molecule -> level -> molecule',
           got == ['molecule', 'level', 'molecule'],
           'advanced=%r' % (got,))
     check('C2 skip on the LAST molecule completes the game',
@@ -1079,11 +1097,12 @@ try:
              (r_final.get('summary') or {}).get('end_state')
              if isinstance(r_final, dict) else None))
     st = wiz_c.get_status()
-    check('C2 status/engine mirror the completion (skip_count 2)',
+    check('C2 status/engine mirror the completion (skip_count 5: '
+          "C1's one + C2's four)",
           st.get('game_over') is True
           and st.get('end_state') == 'completed'
           and engine.is_over() is True
-          and engine.game_status().get('skip_count') == 2,
+          and engine.game_status().get('skip_count') == 5,
           'game_over=%r end_state=%r is_over=%r skip=%r'
           % (st.get('game_over'), st.get('end_state'),
              engine.is_over(), engine.game_status().get('skip_count')))

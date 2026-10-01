@@ -33,7 +33,9 @@ Binding facts this module encodes (05-RESEARCH-status-surface.md):
   reserved for Phase 6 (pitfall 7). Unknown/extra keys are tolerated
   via .get (the wizard_text consumer precedent).
 - EVENT_KINDS: the documented event vocabulary -- the 7 Phase-5 emitted
-  kinds + 6 reserved Phase-6 kinds + 2 reserved Phase-7 kinds. Reserved
+  kinds + 6 reserved Phase-6 kinds + 2 reserved Phase-7 kinds + 1
+  Phase-8.1 emitted kind (confirm_failed; the deliberate evolution
+  15 -> 16, the Phase-6 reserved-kinds landing precedent). Reserved
   wording/format is NOT pinned in the dict (its value notes stay
   BYTE-UNCHANGED); the Phase-6 wording is pinned by the builders below.
 - Phase 6 (plan 06-02): the SIX reserved kinds are now real builders
@@ -56,10 +58,18 @@ Binding facts this module encodes (05-RESEARCH-status-surface.md):
   (game_saved_line, game_imported_line, game_resumed_line) land in the
   game_restarted_line shape -- no event argument, EXCLUDED from
   _EVENT_BUILDERS (Save/Import/Resume are tab-side operations; the
-  poll's fingerprint set has no key for them). EVENT_KINDS stays
-  EXACTLY 15 and the game_saved/game_imported reserved notes stay
-  BYTE-UNCHANGED (the Phase-6 precedent); there is no reserved resume
-  kind -- the handler-logged pattern needs none.
+  poll's fingerprint set has no key for them). EVENT_KINDS stayed
+  EXACTLY 15 through Phase 7 and the game_saved/game_imported reserved
+  notes stay BYTE-UNCHANGED (the Phase-6 precedent); there is no
+  reserved resume kind -- the handler-logged pattern needs none.
+- Phase 8.1 (plan 08.1-03): the Confirm pass gate's failed branch
+  emits a NEW poll kind, confirm_failed -- the deliberate evolution
+  that took EVENT_KINDS 15 -> 16 (kind + builder + _EVENT_BUILDERS
+  entry landed TOGETHER, so no unknown-kind poll crash window ever
+  existed; the Phase-6 reserved-kinds landing precedent). The debrief
+  block is the not-passing header + wizard_text.result_lines VERBATIM
+  + the retry line LAST (the retry line lives HERE ONLY, never inside
+  result_lines -- the single-home law).
 """
 
 from .wizard_text import required_summary, result_lines
@@ -97,6 +107,8 @@ EVENT_KINDS = {
     'game_restarted': "restart line -- reserved for Phase 6",
     'game_saved': "save line -- reserved for Phase 7",
     'game_imported': "import line -- reserved for Phase 7",
+    'confirm_failed': "the failed-confirm debrief line -- emitted by "
+                      "the wizard's pass gate (Phase 8.1)",
 }
 
 
@@ -228,6 +240,27 @@ def molecule_scored_lines(event):
                            event['required'], event['extras']))
 
 
+def confirm_failed_lines(event):
+    """The failed-confirm debrief block (Phase 8.1, CONTEXT
+    constraint 3): the not-passing header (the score shown is the
+    WOULD-BE preview -- labeled not recorded) plus the
+    wizard_text.result_lines debrief VERBATIM (single-home law --
+    molecule_scored_lines reuses it too, so the retry line lives
+    HERE ONLY, never inside result_lines), then the retry line."""
+    _require_kind(event, 'confirm_failed', 'confirm_failed_lines')
+    _require_keys(event, ('score', 'total', 'molecule_pos',
+                          'molecule_total', 'formed', 'required',
+                          'extras'), 'confirm_failed_lines')
+    header = ('Molecule %d of %d not passing yet (score so far '
+              '%.2f, total %.2f; not recorded).'
+              % (event['molecule_pos'], event['molecule_total'],
+                 event['score'], event['total']))
+    return ([header]
+            + result_lines(event['score'], event['formed'],
+                           event['required'], event['extras'])
+            + ['Form the missing interactions and Confirm again.'])
+
+
 def molecule_skipped_line(event):
     """The skip event line (SCORE-05): the partial score formed so far
     is stored, the molecule counts as done."""
@@ -302,12 +335,15 @@ def game_resumed_line(path):
 
 
 # The poll-emitted builder table (05-RESEARCH Q5/06-RESEARCH Q7
-# ordering: event lines FIRST). EXACTLY the 5 poll-emitted kinds;
+# ordering: event lines FIRST). EXACTLY the 6 poll-emitted kinds
+# (Phase 8.1 added confirm_failed -- kind + builder + table entry
+# landed TOGETHER so no unknown-kind poll crash window ever existed);
 # game_restarted is tab-handler-logged (see game_restarted_line) --
 # a marker with that kind, or any unknown kind, fails closed in
 # status_events below.
 _EVENT_BUILDERS = {
     'molecule_scored': molecule_scored_lines,
+    'confirm_failed': confirm_failed_lines,
     'molecule_skipped': molecule_skipped_line,
     'gave_up': gave_up_line,
     'level_advanced': level_advanced_line,
@@ -418,9 +454,10 @@ def status_events(prev, curr):
         if builder is None:
             raise ValueError(
                 'status_events: unknown last_event kind %r (poll-'
-                'emitted: molecule_scored, molecule_skipped, gave_up, '
-                'level_advanced, game_reset -- game_restarted is '
-                'tab-handler-logged, never poll-emitted)' % (kind,))
+                'emitted: molecule_scored, confirm_failed, '
+                'molecule_skipped, gave_up, level_advanced, game_reset '
+                '-- game_restarted is tab-handler-logged, never '
+                'poll-emitted)' % (kind,))
         event_lines = builder(curr_event)
         if isinstance(event_lines, str):
             event_lines = [event_lines]

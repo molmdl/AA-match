@@ -27,6 +27,14 @@ Records missing 'type', records whose 'type' is outside
 ``setup_state.INTERACTION_TYPES`` (the ONE enum home), non-dict records,
 and unknown modes raise ValueError — never silently mis-score.
 
+Phase 8.1 (Confirm pass-gate restoration, plan 08.1-02): this module is
+also the ONE home of the Confirm pass rule — ``CONFIRM_PASS_RULE``
+('all' pinned; 'any' the documented one-line-flip alternative) read by
+``confirm_passes`` over ``score`` (the gate and the recorded score can
+never disagree), plus the read-only ``score_preview`` op the
+failed-confirm debrief consumes (a failed confirm never touches the
+books).
+
 GameState is the minimal in-memory runtime container the engine ops
 mutate: level/molecule position, per-molecule formed types, running
 score, skip/give-up counters, a timer anchor, and (06-01 lifecycle data

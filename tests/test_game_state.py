@@ -14,11 +14,18 @@ satisfies the same contract.
 06-01 additions (the SCORE-06/07 lifecycle data layer): end-state fields,
 ``stop_timer``, ``has_record``, the keyed ``score_per_molecule`` store,
 and the fail-closed ``endgame_summary`` builder.
+
+08.1 additions (Confirm pass-gate restoration): the single-homed
+``CONFIRM_PASS_RULE`` constant, the ``confirm_passes`` predicate (the
+pass rule read over the SCORE-01 truth function), and the read-only
+``score_preview`` op the failed-confirm debrief consumes.
 """
 
 import unittest
 
-from aamatch.game_state import score, GameState, records_for_molecule
+from aamatch import game_state
+from aamatch.game_state import (score, GameState, records_for_molecule,
+                                confirm_passes, score_preview)
 from aamatch.setup_state import INTERACTION_TYPES
 
 
@@ -729,6 +736,157 @@ class TestEndgameSummary(unittest.TestCase):
         # records name a level the payload never had.
         with self.assertRaises(ValueError):
             self._completed_game().endgame_summary([4])
+
+
+class TestConfirmPasses(unittest.TestCase):
+    """The Confirm pass gate (Phase 8.1, CONTEXT constraints 1-3): the
+    single-homed CONFIRM_PASS_RULE read over the SCORE-01 truth function
+    score(). 'all' passes iff score == 1.0 EXACTLY — no epsilon, ever
+    ('list' formed == len(items) divides to exactly 1.0; 'any' mode is
+    binary). The documented 'any' alternative passes iff score > 0.0.
+    The gate reuses score(), so the pass verdict and the recorded score
+    can never disagree (one "formed" home)."""
+
+    SMOKE04_REQUIRED = {'mode': 'list',
+                        'items': [{'type': 'pi_stacking', 'count': 1}]}
+
+    def test_constant_single_home_pins_all(self):
+        # The ONE rule home (CONTEXT constraint 2). A flip to 'any' is a
+        # visible, tested event — this pin must change with it.
+        self.assertEqual(game_state.CONFIRM_PASS_RULE, 'all')
+
+    def test_all_rule_list_mode_single_item(self):
+        # The exact SMOKE-04 block_exclusive required shape: a formed
+        # pi_stacking passes; zero records never pass (no blind confirm).
+        self.assertTrue(confirm_passes(self.SMOKE04_REQUIRED,
+                                       _recs('pi_stacking')))
+        self.assertFalse(confirm_passes(self.SMOKE04_REQUIRED, []))
+
+    def test_all_rule_list_mode_two_items(self):
+        self.assertTrue(confirm_passes(LIST_REQUIRED,
+                                       _recs('h_bond', 'pi_stacking')))
+        # Exactly one item formed never passes under 'all' ...
+        self.assertFalse(confirm_passes(LIST_REQUIRED, _recs('h_bond')))
+        self.assertFalse(confirm_passes(LIST_REQUIRED,
+                                        _recs('pi_stacking')))
+        self.assertFalse(confirm_passes(LIST_REQUIRED, []))
+        # ... and record COUNTS never inflate (the 02-10 law): three
+        # h_bond records form one item exactly once; the second item is
+        # still missing.
+        self.assertFalse(confirm_passes(LIST_REQUIRED,
+                                        _recs('h_bond', 'h_bond',
+                                              'h_bond')))
+
+    def test_all_rule_any_mode_binary(self):
+        # 'any' mode score is binary, so 'all' reduces to >= 1 record.
+        self.assertTrue(confirm_passes(ANY_REQUIRED, _recs('h_bond')))
+        self.assertTrue(confirm_passes(ANY_REQUIRED,
+                                       _recs('h_bond', 'salt_bridge')))
+        self.assertFalse(confirm_passes(ANY_REQUIRED, []))
+
+    def test_any_rule_alternative_relaxes_to_at_least_one_formed(self):
+        # The documented one-line-flip alternative: mutate the module
+        # constant in-process (NOT a sys.modules stub) and restore in
+        # finally. This test pins the flip's semantics so a future flip
+        # is a deliberate, recorded event.
+        original = game_state.CONFIRM_PASS_RULE
+        game_state.CONFIRM_PASS_RULE = 'any'
+        try:
+            # 'list' mode: one of two items formed now passes.
+            self.assertTrue(confirm_passes(LIST_REQUIRED,
+                                           _recs('h_bond')))
+            self.assertTrue(confirm_passes(LIST_REQUIRED,
+                                           _recs('h_bond', 'pi_stacking')))
+            self.assertFalse(confirm_passes(LIST_REQUIRED, []))
+            # A record of a type NOT in the items still forms nothing.
+            self.assertFalse(confirm_passes(LIST_REQUIRED,
+                                            _recs('salt_bridge')))
+            # 'any' mode is unchanged (already binary).
+            self.assertTrue(confirm_passes(ANY_REQUIRED,
+                                           _recs('h_bond')))
+            self.assertFalse(confirm_passes(ANY_REQUIRED, []))
+        finally:
+            game_state.CONFIRM_PASS_RULE = original
+        self.assertEqual(game_state.CONFIRM_PASS_RULE, 'all')
+
+    def test_unknown_rule_fails_closed(self):
+        # An unrecognized CONFIRM_PASS_RULE refuses loudly (never passes
+        # silently), naming the constant and the bad value.
+        original = game_state.CONFIRM_PASS_RULE
+        game_state.CONFIRM_PASS_RULE = 'bogus'
+        try:
+            try:
+                confirm_passes(LIST_REQUIRED,
+                               _recs('h_bond', 'pi_stacking'))
+            except ValueError as e:
+                self.assertIn('CONFIRM_PASS_RULE', str(e))
+                self.assertIn('bogus', str(e))
+            else:
+                self.fail('unknown CONFIRM_PASS_RULE must raise '
+                          'ValueError')
+        finally:
+            game_state.CONFIRM_PASS_RULE = original
+
+    def test_gate_never_disagrees_with_score(self):
+        # Property pin over a battery of (required, results) pairs: under
+        # the pinned 'all' rule the verdict IS "score == 1.0 exactly" —
+        # one truth function, two views.
+        cases = [
+            (LIST_REQUIRED, []),
+            (LIST_REQUIRED, _recs('h_bond')),
+            (LIST_REQUIRED, _recs('h_bond', 'pi_stacking')),
+            (ANY_REQUIRED, []),
+            (ANY_REQUIRED, _recs('salt_bridge')),
+        ]
+        for required, results in cases:
+            self.assertEqual(confirm_passes(required, results),
+                             score(required, results) == 1.0)
+
+
+class TestScorePreview(unittest.TestCase):
+    """score_preview(required, results) returns the (score, formed) pair
+    GameState.record_molecule_result WOULD record — WITHOUT recording
+    (Phase 8.1, CONTEXT constraint 3: a failed confirm must not touch the
+    books; the debrief needs a read-only data source)."""
+
+    def test_preview_mirrors_recorded_pair_without_recording(self):
+        for records in (_recs('h_bond', 'salt_bridge'),
+                        _recs('h_bond', 'pi_stacking')):
+            reference = GameState()
+            ref_value = reference.record_molecule_result(0, 0,
+                                                         LIST_REQUIRED,
+                                                         records)
+            ref_formed = reference.formed_types_per_molecule['L0M0']
+            fresh = GameState()
+            self.assertEqual(score_preview(LIST_REQUIRED, records),
+                             (ref_value, ref_formed))
+            # ... and the fresh books are provably untouched.
+            self.assertEqual(fresh.molecule_scores, [])
+            self.assertEqual(fresh.score_per_molecule, {})
+            self.assertEqual(fresh.formed_types_per_molecule, {})
+
+    def test_preview_any_mode(self):
+        reference = GameState()
+        records = _recs('salt_bridge')
+        ref_value = reference.record_molecule_result(0, 0, ANY_REQUIRED,
+                                                     records)
+        ref_formed = reference.formed_types_per_molecule['L0M0']
+        self.assertEqual(ref_value, 1.0)
+        self.assertEqual(score_preview(ANY_REQUIRED, records),
+                         (ref_value, ref_formed))
+
+    def test_fail_closed_malformed_records_and_modes(self):
+        # score_preview inherits score()'s own refusals
+        # (TestScoreContractValidation): missing 'type', type outside
+        # INTERACTION_TYPES, non-dict record, unknown required mode.
+        with self.assertRaises(ValueError):
+            score_preview(ANY_REQUIRED, [{'side': 'aa'}])
+        with self.assertRaises(ValueError):
+            score_preview(ANY_REQUIRED, [{'type': 'anti_aromatic'}])
+        with self.assertRaises(ValueError):
+            score_preview(ANY_REQUIRED, ['h_bond'])
+        with self.assertRaises(ValueError):
+            score_preview({'mode': 'sometimes', 'items': []}, [])
 
 
 if __name__ == '__main__':

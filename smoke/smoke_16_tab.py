@@ -908,7 +908,7 @@ try:
     check('B1: row order Hint/Confirm/Skip-GiveUp/Restart/Reset, '
           'stretch LAST', row_b_ok, '')
 
-    # ---- B2: live game, move+confirm, stamp the generation ----------
+    # ---- B2: live game, move+skip, stamp the generation --------------
     wiz_b = gamestart.start_game(activate=False)
     tab2.start_countdown(wiz_b)
     for _ in range(4):
@@ -919,7 +919,10 @@ try:
     wiz_b.do_select('sele')
     wiz_b.move_to((target_b[0] + 3.0, target_b[1] + 5.0,
                    target_b[2] - 2.0))
-    conf_b = wiz_b.confirm_molecule()
+    conf_b = wiz_b.skip_molecule()     # 8.1: the record accrues via a
+                                       # skip (partial), never a blind
+                                       # confirm; B4's fresh-zeros
+                                       # teeth stay non-vacuous (D1)
     gen_b = _game_objects_b()
     _stamp_b(gen_b)
     check('B2: live game with a score recorded pre-restart',
@@ -1151,34 +1154,39 @@ try:
           and callable(getattr(tab3, '_show_endgame_modal')), '')
 
     # ---- C2: fresh game via the countdown drive -> GO ---------------
-    wiz_c = gamestart.start_game(activate=False)
+    wiz_c = gamestart.start_game(setup=SETUP_D, seed=42,
+                                 candidates=[BENZ, SECOND],
+                                 activate=False)
     tab3.start_countdown(wiz_c)
     for _ in range(4):
         tab3._countdown_tick()
-    check('C2: GO pushed THAT wizard; 1 Hz running (defaults = 3 '
-          'levels x 2 molecules = 6 molecules)',
+    check('C2: GO pushed THAT wizard; 1 Hz running (the Design B '
+          'game = 3 levels x 2 molecules = 6 molecules)',
           cmd.get_wizard() is wiz_c and tab3._timer.isActive(), '')
 
-    # ---- C3: drive EVERY molecule of EVERY level --------------------
-    # Zero-score records are sufficient (documented in the docstring):
-    # smoke_04 owns score correctness; this PART proves the natural
-    # END only. Sequence: confirm (L1M1), skip (L1M2 -> L2M1),
-    # confirm (L2M1), confirm (L2M2 -> L3M1), confirm (L3M1) -- five
-    # confirms + one skip; the LAST op below completes the game.
+    # ---- C3: skip EVERY molecule of EVERY level to the last ---------
+    # Skip is the non-passing advance path (8.1, CONTEXT constraint
+    # 4); zero-score records are sufficient (documented in the
+    # docstring): smoke_04 owns score correctness; this PART proves
+    # the natural END only. Sequence: skip (L1M1), skip (L1M2 ->
+    # L2M1), skip (L2M1), skip (L2M2 -> L3M1), skip (L3M1); the LAST
+    # op below completes the game.
     ops_c = []
-    ops_c.append(('confirm L1M1', tab3._confirm_now()))
-    ops_c.append(('skip    L1M2', tab3._skip_now()))
-    ops_c.append(('confirm L2M1', tab3._confirm_now()))
-    ops_c.append(('confirm L2M2', tab3._confirm_now()))
-    ops_c.append(('confirm L3M1', tab3._confirm_now()))
+    ops_c.append(('skip L1M1', tab3._skip_now()))
+    ops_c.append(('skip L1M2', tab3._skip_now()))
+    ops_c.append(('skip L2M1', tab3._skip_now()))
+    ops_c.append(('skip L2M2', tab3._skip_now()))
+    ops_c.append(('skip L3M1', tab3._skip_now()))
     mid_ok_c = all(isinstance(r, dict) and r.get('game_over') is False
                    for _n, r in ops_c)
-    check('C3: confirm/skip through every molecule until the final '
-          'one -- ops 1-5 return dicts with game_over False',
+    check('C3: skip through every molecule until the final one -- '
+          'ops 1-5 return dicts with game_over False',
           mid_ok_c, 'flags=%r' % ([r.get('game_over') if isinstance(
               r, dict) else r for _n, r in ops_c],))
 
-    # ---- C4: the LAST confirm returns game_over True ----------------
+    # ---- C4: the LAST confirm PASSES -- game_over True ---------------
+    place_required_pi(wiz_c)     # L3M2 pose -- the pass gate ends the
+                                 # game through the TAB
     last_c = tab3._confirm_now()
     summary_c = last_c.get('summary') if isinstance(last_c, dict) \
         else None
@@ -1192,27 +1200,37 @@ try:
     # ---- C5-C7: the info box at the natural end --------------------
     text_c = tab3._info_log.toPlainText()
     check("C5: the final molecule's pinned scored line ('Molecule 2 "
-          "of 2 scored 0.00 (total 0.00).')",
-          'Molecule 2 of 2 scored 0.00 (total 0.00).' in text_c, '')
+          "of 2 scored 1.00 (total 1.00).')",
+          'Molecule 2 of 2 scored 1.00 (total 1.00).' in text_c, '')
     check("C6: the win headline 'You win! All 3 level(s) finished in' "
           'logged EXACTLY once (one transition home)',
           text_c.count('You win! All 3 level(s) finished in') == 1,
           'count=%d'
           % (text_c.count('You win! All 3 level(s) finished in'),))
+    # Danger D8 (8.1): the numeric literals are DERIVED FROM THE
+    # DRIVE's op mix at runtime (5 zero-score skips on L1M1/L1M2/
+    # L2M1/L2M2/L3M1 + the passing L3M2 confirm at 1.0) -- never
+    # hand-recomputed blind.
+    level_sums_c = {1: 0.0, 2: 0.0, 3: 0.0}
+    for _lvl, _sc in ((1, 0.0), (1, 0.0), (2, 0.0), (2, 0.0),
+                      (3, 0.0), (3, 1.0)):
+        level_sums_c[_lvl] += _sc
+    n_skips_c = 5
+    want_c = (['Level %d: %.2f' % (_lvl, level_sums_c[_lvl])
+               for _lvl in (1, 2, 3)]
+              + ['Total score: %.2f.' % (sum(level_sums_c.values()),),
+                 'Skips: %d. Give-ups: 0.' % (n_skips_c,)])
     block_ok_c = False
     if summary_c is not None:
         block_ok_c = all(
             line in text_c
             for line in status_text.endgame_lines(summary_c))
     check('C7: the full endgame_lines block present with the literal '
-          'pins (per-level x3, total, a Time: line, driven counts)',
+          'pins (per-level x3, total, a Time: line, counts derived '
+          'from the driven op mix)',
           block_ok_c
-          and 'Level 1: 0.00' in text_c
-          and 'Level 2: 0.00' in text_c
-          and 'Level 3: 0.00' in text_c
-          and 'Total score: 0.00.' in text_c
+          and all(line in text_c for line in want_c)
           and 'Molecules completed: 6 of 6. Levels: 3.' in text_c
-          and 'Skips: 1. Give-ups: 0.' in text_c
           and any(line.startswith('Time: ')
                   for line in text_c.splitlines()), '')
 
@@ -1712,8 +1730,10 @@ try:
     tab6 = dlg6.game_tab
     baseline_f = cmd.get_names('objects')
 
-    # ---- F1: live game + five blind panel confirms ------------------
-    wiz_f = gamestart.start_game(activate=False)
+    # ---- F1: live game + five panel skips (the non-passing walk) ----
+    wiz_f = gamestart.start_game(setup=SETUP_D, seed=42,
+                                 candidates=[BENZ, SECOND],
+                                 activate=False)
     tab6.start_countdown(wiz_f)
     for _ in range(4):
         tab6._countdown_tick()
@@ -1721,16 +1741,21 @@ try:
           cmd.get_wizard() is wiz_f and tab6._timer.isActive(), '')
     mids_f = []
     for _i in range(5):
-        mids_f.append(wiz_f.confirm_molecule())
-    check('F1: five blind PANEL confirms -> dicts, game_over False '
-          '(zero-score records, the PART C doctrine)',
+        mids_f.append(wiz_f.skip_molecule())
+    check('F1: five PANEL skips -> dicts, game_over False (zero-score '
+          'records, the PART C doctrine)',
           all(isinstance(r, dict) and r.get('game_over') is False
               and r.get('score') == 0.0 for r in mids_f), '')
 
-    # ---- F2: the sixth blind panel confirm completes the game -------
+    # ---- F2: the placed PASSING panel confirm completes the game ----
+    # The ONLY panel-confirm end-path coverage (8.1 danger D4): the
+    # game must still end VIA A PANEL CONFIRM (the human's exact
+    # reported path) -- under the pass gate only a PASSING confirm can.
+    place_required_pi(wiz_f)     # L3M2 pose
     last_f = wiz_f.confirm_molecule()
     summ_f = last_f.get('summary') if isinstance(last_f, dict) else None
-    check('F2: the sixth blind PANEL confirm -> game_over True + '
+    check('F2: the sixth PANEL op -- a placed PASSING confirm -> '
+          'game_over True + '
           "summary end_state 'completed'",
           isinstance(last_f, dict) and last_f.get('game_over') is True
           and isinstance(summ_f, dict)

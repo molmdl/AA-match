@@ -50,9 +50,61 @@ if REPO_ROOT not in sys.path:
 # module in the set).
 SCANNED_MODULES = ['wizard.py', 'gamestart.py',
                    'setup_window.py',   # 04-05: Qt setup window
-                   'game_window.py']    # 05-06: GameTab shell (Qt tier,
+                   'game_window.py',    # 05-06: GameTab shell (Qt tier,
                                         # growth protocol, 03-05/04-05
                                         # precedent)
+                   'upload.py']  # quick-003 (2026-10-04): upload.py -- the
+                                 # last cmd-tier module missing from any
+                                 # registry (pre-verified clean for both
+                                 # scans)
+
+# --- quick-003 cmd-tier registration partition (TestCmdTierRegistration) --
+# The cmd-tier roster is derived LIVE (listdir of aamatch/*.py minus
+# PURE_MODULES minus the exempt composition root) and must be EXACTLY
+# partitioned into SCANNED_MODULES u NON_UI_CMD_CORE -- a NEW cmd-tier
+# module can never again silently escape both registries (quick-001's
+# direction-2 coverage-gate pattern). Today: 28 *.py files = 19
+# PURE_MODULES + '__init__' + exactly 8 cmd-tier modules
+# [engine, game_window, gamestart, geometry, placement, setup_window,
+# upload, wizard] (verified by ls in quick-003 planning).
+NON_UI_CMD_CORE = ['engine', 'geometry',
+                   'placement']  # deliberately non-UI core; the banned
+                                 # matrix-token prose allowances for these
+                                 # three are pinned in
+                                 # tests/test_code_audit.py's PROSE_PIN
+                                 # instead of this gate's zero-mention scan
+CMD_TIER_EXEMPT = ['__init__']  # the 01-01 composition root -- the
+                                # zero-module-level-imports law gates it
+                                # via test_package_skeleton.py; it is
+                                # neither a pure module nor a cmd-tier
+                                # module to scan
+
+from tests.test_purity import PURE_MODULES  # noqa: E402 -- the lines
+# 42-46 bootstrap above inserts REPO_ROOT; tests/__init__.py exists, so
+# the suite imports under `python3.6 -m unittest discover -s tests`.
+
+
+def _derived_cmd_tier():
+    """The cmd-tier roster, derived LIVE from the package contents:
+    basename of every aamatch/*.py minus the pure modules (gated by
+    tests/test_purity.py) minus the exempt composition root (gated by
+    tests/test_package_skeleton.py). ANY new module automatically lands
+    in this set -- no enrollment step can be forgotten (quick-001
+    direction-2 pattern)."""
+    return sorted(name[:-3]
+                  for name in os.listdir(PKG_DIR)
+                  if name.endswith('.py')
+                  and name[:-3] not in set(PURE_MODULES)
+                  and name[:-3] not in set(CMD_TIER_EXEMPT))
+
+
+def _registered_cmd_tier():
+    """The registered partition: the PLAY-04 scan set plus the
+    deliberately non-UI cmd-tier core (whose banned-token prose
+    allowances are pinned in tests/test_code_audit.py instead)."""
+    return sorted(set(name[:-3] for name in SCANNED_MODULES)
+                  | set(NON_UI_CMD_CORE))
+
 
 # Helper-visual primitives banned by PLAY-04 (no scene geometry ever:
 # measurement distance objects, measure-mode overlays, CGO primitives).
@@ -190,6 +242,51 @@ class TestNoHelperVisualCalls(unittest.TestCase):
                         '(count pin: zero)' % (name, token))
         self.assertEqual(problems, [],
                          'banned-token drift:\n  ' + '\n  '.join(problems))
+
+
+class TestCmdTierRegistration(unittest.TestCase):
+    """quick-003: every cmd-tier module sits in EXACTLY ONE registry.
+
+    The derived roster (aamatch/*.py - PURE_MODULES - __init__) is
+    today exactly [engine, game_window, gamestart, geometry, placement,
+    setup_window, upload, wizard] (8 = 28 files - 19 PURE_MODULES -
+    the exempt composition root). The partition into SCANNED_MODULES u
+    NON_UI_CMD_CORE must cover it with no remainder and no overlap, so
+    a NEW cmd-tier module fails HERE -- loudly and by name -- instead
+    of silently escaping every source gate (upload.py's quick-003
+    discovery was exactly that silent escape).
+    """
+
+    def test_every_cmd_tier_module_is_registered(self):
+        unregistered = sorted(set(_derived_cmd_tier())
+                              - set(_registered_cmd_tier()))
+        self.assertEqual(
+            unregistered, [],
+            'cmd-tier module(s) outside EVERY registry: %r -- a new '
+            'cmd-tier module must register: a new UI module goes into '
+            'SCANNED_MODULES (the PLAY-04 scans); a new deliberately '
+            'non-UI core module goes into NON_UI_CMD_CORE; never both'
+            % unregistered)
+
+    def test_registered_modules_all_exist(self):
+        missing = sorted(name for name in _registered_cmd_tier()
+                         if not os.path.isfile(
+                             os.path.join(PKG_DIR, name + '.py')))
+        self.assertEqual(
+            missing, [],
+            'registry rot: registered module(s) missing from aamatch/: '
+            '%r -- a rename/delete must update the registry WITH the '
+            'file, not leave a phantom gate entry' % missing)
+
+    def test_no_registry_overlap(self):
+        overlap = sorted(set(name[:-3] for name in SCANNED_MODULES)
+                         & set(NON_UI_CMD_CORE))
+        self.assertEqual(
+            overlap, [],
+            'SCANNED_MODULES and NON_UI_CMD_CORE must be DISJOINT '
+            '(a module is scanned for banned tokens via this gate XOR '
+            'via test_code_audit.py\'s PROSE_PIN -- never both): %r'
+            % overlap)
 
 
 if __name__ == '__main__':

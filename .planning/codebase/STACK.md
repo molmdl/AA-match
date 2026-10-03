@@ -1,101 +1,168 @@
 # Technology Stack
 
-**Analysis Date:** 2026-09-12
+**Analysis Date:** 2026-10-03
 
-> **Scope note:** This repo is currently PyMOL-plugin only (v1). The VMD Tcl
-> port is explicitly out of scope (`.planning/PROJECT.md:42`). There are no
-> `pymol/` or `vmd/` subtrees — the cmd-coupled viewer layer lives inside the
-> `aamatch/` package alongside the pure layer. Verified research with
-> file:line citations for the PyMOL host API: `.planning/research/STACK.md`.
+AA-match is a **PyMOL 2.5.0 plugin** (a molecular-matching educational mini-game), not a
+standalone application. There is no `package.json` / `requirements.txt` / `pyproject.toml`
+— dependency truth is in the imports plus `AGENTS.md` (repo law) and `README.md`
+("No external Python dependencies beyond what PyMOL already ships", `README.md:20`).
+`opencode.json` in the repo root is AI-tooling config, NOT product dependencies.
 
 ## Languages
 
 **Primary:**
-- Python 3.6-compatible (3.6 syntax floor, no walrus / no positional-only params) — the entire plugin `aamatch/`, tests `tests/`, smokes `smoke/smoke_*.py`. Written 3.6-safe so it runs under both runtimes below.
+- Python — 100% of product code. Package: `aamatch/` (28 modules), tests `tests/`,
+  headless PyMOL proofs `smoke/`, demo-data builder `scripts/build_demos.py`.
 
 **Secondary:**
-- Bash (POSIX-ish) — smoke harness `smoke/run_smoke.sh` only. Runs under WSL Ubuntu bash.
-- Tcl — NOT YET PRESENT (reserved for the deferred VMD v2 port).
+- Bash — exactly one script, the headless-smoke runner `smoke/run_smoke.sh`.
+- Tcl/Tk — NONE in product code. The VMD/Tcl port ("v2") is PLANNED but the `vmd/`
+  directory **does not exist in this repo** — do not reference it. (`vmd-ref/` and
+  `vmd/3rd_party_lib/` appear only in `.gitignore:7-8` and `AGENTS.md` as
+  git-ignored reference material for the future port.)
 
 ## Runtime
 
-**Environment (dev shell):**
-- WSL Ubuntu on Windows 11; `python3.6` 3.6.9 used ONLY for syntax checks and pure-layer unit tests (no installs allowed — `opencode.json:60-64` denies/asks `pip*`, `apt*`, `conda*`).
-- `python3.6 -m py_compile aamatch/*.py` is the syntax floor gate.
-- `python3.6 -m unittest discover -s tests -v` is the WSL test suite (includes purity gates from `tests/test_purity.py`).
+**Development shell (WSL Ubuntu):**
+- `python3.6` = Python **3.6.9** (verified: `python3.6 --version`). This is the
+  **3.6 syntax floor**: unit tests and syntax checks run here only. `tclsh` is NOT
+  installed in this WSL shell (`command not found`), despite `AGENTS.md` mentioning it
+  for the future v2 port.
+- Per `opencode.json` permissions: `pip*`, `apt*`, `conda*`, `rm*` are denied/ask —
+  **never install anything in WSL**.
 
-**Environment (product runtime, Windows-hosted):**
-- PyMOL 2.5.0 (open-source build) inside Windows conda env `chemtools-win10`, launched from WSL via `cmd.exe /c C:\src\run-conda-pymol.bat -cq <script>` (headless) or GUI for human checkpoints.
-- Recorded env versions (verbatim, one-time record): Python 3.9.13 conda-forge → `C:\Users\nglok\.conda\envs\chemtools-win10\python.exe`, PyQt5 binding 5.12.3 / Qt 5.12.9, PyMOL 2.5.0, numpy 1.25.2 — `.planning/phases/01-bootstrap-pure-foundation/windows-env-versions.md:9-20`.
+**Production runtime (Windows):**
+- PyMOL runs as a **Windows** process inside a conda env, invoked from WSL via
+  `cmd.exe /c "C:\src\run-conda-pymol.bat -cq <script>"` (see `smoke/run_smoke.sh:15`).
+- Recorded Windows env versions (verbatim, `.planning/phases/01-bootstrap-pure-foundation/windows-env-versions.md`):
 
-**Package Manager:**
-- None. The plugin ships as source; installation is via PyMOL's Plugin Manager (package dir or zip with one package + `__init__.py`). No `setup.py`, `pyproject.toml`, `requirements.txt`, or `package.json` exists — verified.
-- Lockfile: not applicable.
+| Component | Version |
+|---|---|
+| Python (conda env) | 3.9.13 (conda-forge, `C:\Users\nglok\.conda\envs\chemtools-win10\python.exe`) |
+| PyMOL | 2.5.0 |
+| Qt binding | PyQt5 (Qt 5.12.9, PyQt 5.12.3) |
+| numpy | 1.25.2 |
+
+**The dual-runtime rule (load-bearing):** all code must be 3.6-compatible syntax
+(enforced by `tests/test_purity.py` Gate D: `python3.6 -m py_compile aamatch/*.py`)
+yet runs under 3.9.13 in PyMOL. No `dataclasses`, no walrus, no positional-only
+params, no f-string `=`.
+
+**Package Manager:** None for the product. The plugin is installed via PyMOL's
+**Plugin → Plugin Manager → Install New Plugin** pointing at the `aamatch/` package
+directory (`README.md:22-28`). Any future extra lib requires explicit user approval
+and vendoring under `3rd_party_lib/` (git-ignored, `.gitignore:19`).
 
 ## Frameworks
 
-**Core (all ship inside PyMOL 2.5.0 — zero extra deps by hard constraint):**
-- PyMOL `cmd` API (2.5.0) — 3D viewer/object manipulation; entry point `aamatch/__init__.py` (`__init_plugin__` → `pymol.plugins.addmenuitemqt('AA-match', run_plugin_gui)`).
-- PyQt5 — imported ONLY via `from pymol.Qt import QtWidgets, QtGui, QtCore` (never `from PyQt5 import ...`); used by the Phase-4 setup window. Current headless modules import `from pymol import cmd` only (`aamatch/engine.py:75`, `aamatch/geometry.py:75`, `aamatch/placement.py:72`, `aamatch/wizard.py:79`).
-- `pymol.wizard.Wizard` — built-in wizard framework; gameplay loop `aamatch/wizard.py` (`GameWizard` subclass, `from pymol.wizard import Wizard` at `aamatch/wizard.py:80`).
-- numpy 1.25.2 — ships with PyMOL; geometry math.
+**Core / host application:**
+- **PyMOL 2.5.0** (open-source build) — THE host. The plugin imports:
+  - `from pymol import cmd` — module-level legal in CMD TIER modules
+    (`aamatch/engine.py:120`, `aamatch/gamestart.py:160`, `aamatch/placement.py:74`,
+    `aamatch/geometry.py:75`, `aamatch/upload.py:69`, `aamatch/setup_window.py:56`,
+    `aamatch/wizard.py`), lazy (`from pymol import cmd` inside functions) in
+    `aamatch/game_window.py`.
+  - `from pymol.Qt import QtWidgets, QtCore[, QtGui]` — Qt ONLY via this shim;
+    `from PyQt5 import ...` is banned repo-wide (test-pinned in
+    `aamatch/setup_window.py` header comment and checked by smokes). Used in the two
+    QT TIER modules `aamatch/setup_window.py:55` and `aamatch/game_window.py:148`.
+  - `from pymol.wizard import Wizard` — the game input adapter
+    `aamatch/wizard.py:83` (`class GameWizard(Wizard)`, `aamatch/wizard.py:136`).
+  - `from pymol.plugins import addmenuitemqt` — menu registration, lazy inside
+    `__init_plugin__` (`aamatch/__init__.py:25-26`).
+- **numpy** — available in the PyMOL env (1.25.2) but **deliberately UNUSED** in
+  product code. The pure-layer gate forbids `numpy` imports
+  (`tests/test_purity.py` `FORBIDDEN` set); vector math is plain-tuple stdlib in
+  `aamatch/vec3.py` ("No classes, no numpy", `aamatch/vec3.py:13`).
 
 **Testing:**
-- `unittest` (stdlib, 3.6) — all WSL tests in `tests/` (e.g. `tests/test_purity.py`, `tests/test_detector.py`, ...). No pytest.
-- Headless smoke harness — bash + cmd.exe bridge, `smoke/run_smoke.sh` + `smoke/smoke_0N_*.py`; verdict via PASS-marker grep (exit codes cannot cross cmd.exe).
+- Python stdlib `unittest` only (run: `python3.6 -m unittest discover -s tests -v`
+  from repo root). 28 test modules in `tests/`. No pytest, no plugins, no mock
+  framework — the purity contract (`tests/test_purity.py`) exists precisely so pure
+  modules import under bare 3.6 with **zero sys.modules stubs**.
 
 **Build/Dev:**
-- `opencode.json` — OpenCode/GSD workflow config (agent models, permission gates; `rm *` and `rg *` denied).
-- `.planning/config.json` — GSD workflow config (`mode: yolo`, `depth: comprehensive`, `parallelization: true`, `commit_docs: true`).
-- Git — conventional commits with phase-plan scope (`feat(02-03):` etc.).
+- None (no bundler/compiler). `scripts/build_demos.py` is a stdlib-only
+  (`json/os/sys/hashlib/urllib/argparse`) offline data-curation tool that fetches
+  ligand SDFs and writes `aamatch/data/` — a maintainer script, not part of the
+  shipped plugin pipeline.
 
 ## Key Dependencies
 
-**Critical:**
-- `pymol` (2.5.0, host-provided) — cmd API + plugin loader; imported in cmd-coupled modules only (`aamatch/engine.py`, `aamatch/geometry.py`, `aamatch/placement.py`, `aamatch/wizard.py`, `aamatch/gamestart.py`). Pure modules (`aamatch/setup_state.py`, `level_spec.py`, `persistence.py`, `backup.py`, `paths.py`) must NOT import it — enforced by AST purity gates in `tests/test_purity.py`.
-- Python stdlib only in pure layer: `json`, `os`, `tempfile` (`aamatch/persistence.py:28-30`), `hashlib`/`json`/`os`/`tempfile`/`time` (`aamatch/backup.py:42-46`), `copy`/`random` (`aamatch/setup_state.py:36-37`), `math` (`aamatch/vec3.py:18`, `aamatch/detector.py:155`), `os` (`aamatch/paths.py:17`).
-- `numpy` — host-provided 1.25.2; detection-geometry math (no scipy/RDKit/pandas allowed).
+**Critical (ship with PyMOL open-source — never added):**
+- `pymol.cmd` — the viewer API (`aamatch` touches ~55 distinct `cmd.*` calls;
+  see INTEGRATIONS.md for the inventory).
+- `pymol.Qt` (PyQt5 5.12.3 / Qt 5.12.9 in the recorded env) — UI widgets:
+  `aamatch/setup_window.py` (`class SetupWindow(QtWidgets.QDialog)`,
+  `aamatch/setup_window.py:120`, two-tab `QTabWidget`), `aamatch/game_window.py`
+  (`class GameTab(QtWidgets.QWidget)`, `aamatch/game_window.py:151`, `QMessageBox`,
+  `QFileDialog`, `QCheckBox`, `QtCore.QTimer` for countdown/1-Hz game clock).
+- `pymol.wizard.Wizard` — panel/pick interaction for gameplay.
 
-**Infrastructure:**
-- None — no servers, no databases, no external runtime services. Everything runs inside the PyMOL process.
+**Infrastructure (stdlib only — this is the complete pure-layer whitelist,
+`tests/test_purity.py` ALLOWED_STDLIB):**
+- `json`, `os`, `sys`, `tempfile`, `time`, `hashlib`, `random`, `copy`, `math`,
+  `io`, `re`, `collections`, `errno`, `ast`, `zipfile`, `shutil`, `unittest`,
+  `datetime`, `base64`.
+- Notable stdlib uses: `zipfile` for the `.aamz` checkpoint archive
+  (`aamatch/checkpoint.py:84`), `base64` + `hashlib` for embedded uploaded-ligand
+  records in the shareable game file (`aamatch/game_file.py:70-72`),
+  `tempfile.mkstemp(suffix='.pse')` for atomic session capture
+  (`aamatch/gamestart.py:833`).
+
+**Forbidden (AST-enforced in pure modules, `tests/test_purity.py` FORBIDDEN):**
+`pymol`, `numpy`, `dataclasses`, `PyQt5`, `PySide2`, `tkinter`, `Pmw`, `pmg_tk`.
 
 ## Configuration
 
-**Environment:**
-- No `.env` files. No env-var-driven configuration in plugin code.
-- WSL↔Windows bridge: `C:\src\run-conda-pymol.bat` (Windows-side, outside repo) activates conda env and forwards args to PyMOL; WSL entry point is `smoke/run_smoke.sh` ( `timeout $TIMEOUT cmd.exe /c "C:\\src\\run-conda-pymol.bat -cq smoke\\<script>"` at `smoke/run_smoke.sh:15`).
-- No `setenv.bat` in repo (referenced in AGENTS/PROJECT as the Windows GUI launch script; lives outside the repo).
+**Environment:** No `.env`, no config files, no settings files for the product.
+PyMOL-side runtime state is manipulated via `cmd.set(...)` (e.g. mouse_selection_mode
+snapshot/restore in `aamatch/wizard.py` header contract 4). Version constants live
+in code:
+- `aamatch/__init__.py:13` — `__version__ = '0.1.0'` (plus the `# Version:` metadata
+  block that `pymol.plugins` parses, `aamatch/__init__.py:1`).
+- `aamatch/persistence.py:37` — `FORMAT_VERSION = 1` (container gate,
+  refuse-newer/accept-older).
+- `aamatch/level_spec.py:60-61` — `DETECTOR_VERSION = "det-1"` (EXACT match gate),
+  `LEVEL_SPEC_VERSION = 1`.
+- `aamatch/checkpoint.py:89` — `CHECKPOINT_VERSION = 1`.
 
-**Build:**
-- No build step. Python source is interpreted in-place.
-- Version metadata: `# Version: 0.1.0` comment block at the top of `aamatch/__init__.py:1` (parsed by `pymol.plugins` — must stay first lines) kept in sync with `__version__ = '0.1.0'` at `aamatch/__init__.py:13`.
-- Data-format versions (two separate gates, never conflate): `FORMAT_VERSION` in `aamatch/persistence.py` (container format — refuses newer, accepts older) and `DETECTOR_VERSION`/`LEVEL_SPEC_VERSION` in `aamatch/level_spec.py` (exact-match required).
+**Build:** None. Installation = PyMOL Plugin Manager install of the `aamatch/`
+directory (imports then as `pmg_tk.startup.aamatch`; in smokes/direct imports it is
+`aamatch` — never mix both in one PyMOL session, `AGENTS.md` gate 5).
 
-**Bundled data (committed, offline):**
-- `aamatch/data/MANIFEST.json` — demo-set manifest (`manifest_version: 1`, magic `AAMATCH`, entries with SDF file, atom/bond counts, sha256, protonation).
-- `aamatch/data/ligands/benzamide.sdf`, `aamatch/data/ligands/acetate.sdf` — development demo set.
+**WSL→Windows path guard:** every `cmd.load`/`cmd.save`/file-API path routes through
+`to_windows_path()` (`aamatch/paths.py:20`) — Windows PyMOL cannot resolve
+`/mnt/c/...`. Anchor bundled data via `package_data_path()` (`aamatch/paths.py:54`,
+`__file__`-anchored, never `os.getcwd()`).
 
 ## Platform Requirements
 
 **Development:**
-- Windows 10/11 + WSL (Ubuntu) with the repo under `/mnt/c/...` (must be Windows-visible — headless smokes run from the repo copy, no staging step).
-- `python3.6` (3.6.9) available in WSL; NO installs ever (opencode permission rules).
-- Windows conda env `chemtools-win10` with PyMOL 2.5.0 + `C:\src\run-conda-pymol.bat` launcher.
-- `tclsh` (Tcl 8.5/8.6) available but currently unused (for future VMD port).
+- WSL Ubuntu with `python3.6` (3.6.9). Repo checkout on `/mnt/c/...` (Windows-visible —
+  smokes run against the repo copy directly; no staging step).
+- Test commands (from repo root):
+  - `python3.6 -m py_compile aamatch/*.py` — syntax floor
+  - `python3.6 -m unittest discover -s tests -v` — full suite incl. purity gates
+  - `bash smoke/run_smoke.sh smoke/<script>.py` — headless Windows PyMOL proof;
+    verdict greps `=== SMOKE-NN PASS ===` because exit codes cannot carry through
+    `cmd.exe` (`smoke/run_smoke.sh:4-17`). 21 smokes exist (`smoke/smoke_01_bootstrap.py`
+    … `smoke/smoke_21_demo_cleanup.py`).
 
-**Production (user side):**
-- PyMOL 2.5.0 (anaconda build or equivalent) with Qt GUI; install `aamatch/` via Plugin Manager (`README.md:22-28`). Plugin installs to `%APPDATA%\pymol\startup\aamatch\`.
-- No network access at gameplay time (demo data bundled; `.planning/PROJECT.md:45`).
+**Production:**
+- Windows PyMOL 2.5.0 (anaconda build or equivalent, `README.md:16`) with its bundled
+  PyQt5 + numpy. The PyMOL GUI (Qt) is required for the setup/game windows; headless
+  (-cq) works for cmd-only smokes — `addmenuitemqt` headless raises
+  `QtNotAvailableError` which PyMOL's loader catches cleanly
+  (`aamatch/__init__.py:19-24`).
 
-## Dev/Test Command Surface (canonical)
-
-```bash
-# WSL, from repo root:
-python3.6 -m py_compile aamatch/*.py            # syntax floor (3.6)
-python3.6 -m unittest discover -s tests -v      # WSL suite incl. purity gates
-bash smoke/run_smoke.sh smoke/smoke_01_bootstrap.py   # headless Windows PyMOL proof
-```
+**Headless runtime gotchas (recorded in
+`.planning/phases/01-bootstrap-pure-foundation/windows-env-versions.md`):**
+1. `__file__` inside a `-cq` script points at PyMOL's launcher, not the script —
+   anchor repo root from `sys.argv`/`os.getcwd()`, never `__file__`.
+2. `PluginInfo.loaded` stays `False` on the headless Qt-unavailable path even when
+   `load()` returns `True` — assert the return value, not `.loaded`.
 
 ---
 
-*Stack analysis: 2026-09-12*
+*Stack analysis: 2026-10-03*

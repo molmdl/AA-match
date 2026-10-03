@@ -1,150 +1,149 @@
 # Architecture
 
-**Analysis Date:** 2026-09-12
+**Analysis Date:** 2026-10-03
 
 ## Pattern Overview
 
-**Overall:** Strict one-directional dependency layering — a pure, WSL-unit-testable game-logic core, a thin `pymol.cmd` bridge tier, a wizard-based viewer-interaction adapter, and a zero-import `__init__.py` composition root. PyMOL 2.5.0 plugin; single package `aamatch/` installed via PyMOL's Plugin Manager.
+**Overall:** Layered architecture with a mechanically enforced **pure-core / host-coupled-shells** split. A stdlib-only "pure" layer owns all schemas, chemistry typing, detection, generation, scoring, text building, and file formats; two thin host tiers adapt it to PyMOL (`cmd` tier) and Qt (`pymol.Qt` tier).
 
 **Key Characteristics:**
-- **Purity contract, mechanically enforced.** The pure layer (`tests/test_purity.py:87-90` `PURE_MODULES`) imports stdlib + other pure modules ONLY — no `pymol`, no Qt, no numpy, no dataclasses — at module level OR inside any function body. Gate A = AST import scan; Gate B = clean-subprocess import proof per module; Gate D = every `aamatch/*.py` compiles under python3.6. Zero `sys.modules` stubs anywhere in the test suite.
-- **The level-spec payload is the single source of truth.** Seed + per-level grids + required interactions + `detector_version` stamp. Nothing re-derives from the seed at replay; reset/recovery REPLAY the spec (`placement.reset_to_grid`), never `cmd.matrix_reset`.
-- **Fail-closed everywhere.** All domain errors subclass `ValueError` (`FormatError`, `GenerationError`, `PlacementError`, `EngineError`, `WizardError`); every engine op is count-asserted; a failed start never leaves a silent half-built game.
-- **PyMOL holds atoms + sentinels only.** All game knowledge lives in plain Python data (payload, registry, `GameState`); the scene is a materialization of that data, not a store of it.
-- **VMD port not present.** The repo contains ONLY the PyMOL side; the VMD Tcl port (`vmd/`) planned in `AGENTS.md` has no directory yet.
+- **Enforced three-layer purity.** 19 pure modules are registered in `tests/test_purity.py:99` (`PURE_MODULES`) and gate-checked (AST import scan in any scope + clean bare-interpreter subprocess import): no `pymol`, `numpy`, `dataclasses`, `PyQt5`/`PySide2`, `pmg_tk` — stdlib whitelist only (`ALLOWED_STDLIB`, `tests/test_purity.py:113`).
+- **Single source of truth per artifact.** All file kinds share ONE versioned container format (`aamatch/persistence.py`); the level-spec payload is the shareable game truth ("embed-don't-regenerate" — regenerate only at fresh generation time).
+- **Data-in / decisions-out.** Cmd tier reads PyMOL atoms into plain dicts/tuples and hands them down; pure modules never see the scene (`aamatch/geometry.py` is THE boundary).
+- **Thin input adapter.** `aamatch/wizard.py`'s `GameWizard` routes clicks/keys onto engine ops; the engine (`aamatch/engine.py`) is the brain.
 
 ## Layers
 
-**Layer 1 — PURE game logic (no pymol, no Qt, no numpy):**
-- Purpose: All game rules, math, schemas, I/O discipline — unit-testable in WSL with bare `python3.6` and zero stubs.
-- Location: `aamatch/` (15 modules registered in `tests/test_purity.py:87-90`)
-- Contains:
-  - Schemas/state: `aamatch/setup_state.py` (7-field setup model + `INTERACTION_TYPES` — the ONE enum home), `aamatch/level_spec.py` (level-spec schema + two version gates), `aamatch/game_state.py` (SCORE-01 scoring + `GameState` runtime container), `aamatch/wizard_core.py` (pure wizard logic: slot map, view math, color bookkeeping), `aamatch/wizard_text.py` (pure panel/prompt/result text builders)
-  - Game brain: `aamatch/generator.py` (seeded, always-solvable level construction), `aamatch/detector.py` (7-type interaction classification over plain atom records), `aamatch/capability.py` (SINGLE atom/residue typing home), `aamatch/thresholds.py` (SINGLE import point for the approved DETECT-03 threshold table)
-  - Foundations: `aamatch/vec3.py` (tuple vector math), `aamatch/spatial.py` (cell-list pruning + brute-force oracle), `aamatch/manifest.py` (bundled-data manifest parse/validate/enumerate), `aamatch/persistence.py` (versioned-container core + atomic JSON I/O), `aamatch/backup.py` (snapshot/restore over an injected store), `aamatch/paths.py` (WSL→Windows path guard + bundled-data resolution)
-- Depends on: stdlib whitelist only (`json, os, sys, tempfile, time, hashlib, random, copy, math, io, re, collections, errno, ast, zipfile, shutil, unittest, datetime` — `tests/test_purity.py:98-101`) + sibling pure modules
-- Used by: Layer 2 (cmd tier) and the Layer 3 wizard
+**Pure layer (19 modules — `PURE_MODULES` in `tests/test_purity.py:99`):**
+- Purpose: All deterministic logic — schemas, chemistry, math, text, file formats. Unit-testable in WSL under bare `python3.6` with ZERO `sys.modules` stubs.
+- Location: `aamatch/setup_state.py`, `aamatch/level_spec.py`, `aamatch/persistence.py`, `aamatch/backup.py`, `aamatch/paths.py`, `aamatch/vec3.py`, `aamatch/spatial.py`, `aamatch/manifest.py`, `aamatch/capability.py`, `aamatch/thresholds.py`, `aamatch/detector.py`, `aamatch/generator.py`, `aamatch/game_state.py`, `aamatch/wizard_core.py`, `aamatch/wizard_text.py`, `aamatch/setup_form.py`, `aamatch/game_file.py`, `aamatch/status_text.py`, `aamatch/checkpoint.py`
+- Contains: constants/tables (`capability`, `thresholds`), tuple math (`vec3`), cell-list pruning (`spatial`), 7-type detection (`detector`), seeded level generation (`generator`), scoring/state (`game_state`), container/`FormatError` (`persistence`), level-spec gates (`level_spec`), manifest parse (`manifest`), setup schema (`setup_state`), game container (`game_file`), checkpoint sidecar + `.aamz` I/O (`checkpoint`), backup lifecycle over an INJECTED store (`backup`), path guards (`paths`), pure wizard/tab logic + text (`wizard_core`, `wizard_text`, `status_text`, `setup_form`).
+- Depends on: stdlib whitelist + pure siblings only.
+- Used by: both host tiers and the WSL `tests/` suite.
 
-**Layer 2 — CMD tier (module-level `from pymol import cmd` is LEGAL here, Qt is NEVER):**
-- Purpose: The pure/cmd boundary. Reads PyMOL objects into plain data down, materializes plain specs into PyMOL objects up.
-- Location: `aamatch/geometry.py`, `aamatch/placement.py`, `aamatch/engine.py`, `aamatch/wizard.py`, `aamatch/gamestart.py`
-- Contains:
-  - `aamatch/geometry.py` — THE geometry bridge: `extract_game_atoms` + `ligand_bonds` produce the detector-contract records; `bounding_sphere` feeds the generator's `ligand_data`. World-frame only, state-1 only, explicit `space=` dicts, identity = `(object, id)`. NEVER `cmd.get_model` (OOM pitfall).
-  - `aamatch/placement.py` — the materializer: `materialize(payload, level_index) -> registry`, `reset_to_grid`, `cleanup_game_objects`. Establishes the name/sentinel conventions and the banned-call list (`matrix_reset`, `get_object_ttt`, `cmd.create`/`cmd.load` onto existing names).
-  - `aamatch/engine.py` — the headless operation set (the brain): `new_game`, `materialize`, `place_aa`, `reset_to_grid`, `detect`, `detect_molecule`, `score_current`, `confirm`. Holds module-level runtime state `_payload`, `_registry`, `_game` (`engine.py:93-95`).
-  - `aamatch/gamestart.py` — THE single game entry point (`start_game`), the seam both the menu item and the future Qt setup window call.
-- Depends on: Layer 1 + `pymol.cmd`. NEVER added to `PURE_MODULES`.
-- Used by: Layer 3 wizard and `__init__.py`
+**Cmd tier (host-coupled, `from pymol import cmd` LEGAL at module level):**
+- Purpose: Adapt the pure layer to PyMOL session state; own all scene mutation and module-level runtime state.
+- Location: `aamatch/engine.py` (the headless op set + runtime state `_payload`/`_registry`/`_game`), `aamatch/geometry.py` (PyMOL objects → plain atom records; the pure/cmd boundary), `aamatch/placement.py` (materializer; builds `_aam_*` objects, grid slots, sentinel tagging `segi AAM` + `b<0`), `aamatch/wizard.py` (`GameWizard`, subclass of `pymol.wizard.Wizard`; thin input adapter), `aamatch/gamestart.py` (THE game lifecycle seam — see Entry Points), `aamatch/upload.py` (uploaded-molecule extraction bridge).
+- Contains: module-level engine state, scene composition (camera roll/front-offset laws in `gamestart`), count-asserted ops (`new_game`, `materialize`, `place_aa`, `reset_to_grid`, `detect`/`detect_molecule`, `score_current`, `record_scored`, `confirm`, `skip_molecule`, `advance_molecule`, `advance_level`, `give_up`, `complete_game`, `endgame_summary` — enumerated in `aamatch/engine.py:31-112`).
+- Depends on: pure layer + `pymol.cmd`. NO Qt anywhere.
+- Used by: Qt tier (via `gamestart` seam only) and headless smokes; NEVER by pure modules.
 
-**Layer 3 — Viewer interaction adapter (still CMD tier for purity purposes):**
-- Purpose: Thin input adapter over the engine. Routes clicks/keys/panel buttons onto engine ops and renders plain-data results as panel/prompt text. NO detection math, NO scoring, NO spec knowledge.
-- Location: `aamatch/wizard.py` (`GameWizard(Wizard)`)
-- Contains: `do_pick`/`do_key`/`do_select`/panel buttons → `engine.confirm`/`place_aa`/`reset_to_grid`; plain picklable attributes only (session save pickles the wizard stack — base class `__getstate__` strips `self.cmd`); stack-native lifecycle (`cmd.set_wizard(self)` push, panel Done → `cmd.set_wizard()` None pop)
-- Depends on: `aamatch.engine` (imported lazily INSIDE methods — keeps `aamatch` vs `pmg_tk.startup.aamatch` identity behavior identical), `geometry`, `setup_state`, `wizard_core`, `wizard_text`
-- Used by: `aamatch/gamestart.py` (instantiates, activates)
-
-**Layer 4 — Qt GUI: not yet implemented.** Phase-4 work; will reuse the same `gamestart.start_game` seam (`aamatch/__init__.py:29-39`). Only `pymol.Qt`/PyQt5/numpy ships with PyMOL are permitted deps.
-
-**Layer 0 — PyMOL host:** `pymol.cmd` API, wizard stack, plugin loader (`pymol.plugins` parses the `# Version:` metadata block at the top of `aamatch/__init__.py:1-11`).
-
-**Composition root:**
-- Purpose: Plugin entry and menu wiring only; ZERO module-level imports (Gate A2, `tests/test_purity.py:214-230`) so every pure-module test runs with zero stubs
-- Location: `aamatch/__init__.py`
-- `__init_plugin__(app=None)` lazily imports `pymol.plugins.addmenuitemqt` first (headless `ImportError` path is the design); `run_plugin_gui()` lazily imports `gamestart`
+**Qt tier (`from pymol.Qt import ...` REQUIRED at module level — class definitions need it):**
+- Purpose: Modeless windows (setup form + game status tab); dumb renderers that delegate every game action into the cmd-tier seam.
+- Location: `aamatch/setup_window.py` (setup singleton `SetupWindow`, 7 buttons + tab host), `aamatch/game_window.py` (`GameTab`: info box, 1 Hz timer tick, Hint/Confirm/Skip/Give-up/Save/Restart/Reset/Import controls).
+- Contains: Qt widget construction, `_guard` wrappers catching the ValueError-family refusals, modal-wrapper/non-modal-impl split ("impls never own boxes" so headless smokes drive impls directly).
+- Depends on: `pymol.Qt` shim ONLY (vendor binding never imported directly — the shim-only law), cmd tier via lazy relative imports inside handler methods (module-identity law).
+- Used by: `aamatch/__init__.py:run_plugin_gui`. Never imported by WSL tests.
 
 ## Data Flow
 
-**Game start (Plugins → AA-match):**
-1. `aamatch/__init__.py:run_plugin_gui` → lazy `from . import gamestart` → `gamestart.start_game(setup=None, seed=42, candidates=None)` (`aamatch/gamestart.py:60`)
-2. `placement.cleanup_game_objects()` — prefix-only (`_aam_`) deletion; user objects untouched
-3. `engine.new_game(spec, seed, candidates)` → `(payload, manifest_entries)` — manifest parsed (`manifest.parse_manifest_dict`), per-candidate `ligand_data` built via temp `_aam_tmp` load → `geometry.bounding_sphere` + `capability.ligand_profile` → temp deleted; generator builds the level-spec payload (fail-closed validation inside)
-4. `engine.materialize(payload, 0)` → `placement.materialize` → per-ligand `cmd.load` into `cmd.get_unused_name('_aam_lig')`, per-slot `cmd.fragment` amino-acid objects, world-frame baked poses (`cmd.translate/rotate(..., camera=0)`), sentinels stamped (`segi='AAM'`, `b=-999.0` via `cmd.alter` + `cmd.sort`) → registry {slot_id → (object, sorted atom ids)}
-5. `GameWizard(payload, registry, 0, 0).activate(replace=...)` — `replace=1` only when the prior top-of-stack wizard is itself a `GameWizard` (restart hygiene); user wizards are never popped
-6. `cmd.zoom('segi AAM', buffer=5.0)` to frame the whole game; returns the live wizard (smokes assert on it)
+**Fresh game (Plugins menu → playable wizard):**
 
-**Confirm (player clicks Confirm):**
-1. `GameWizard` panel button → engine op
-2. `engine.detect_molecule(level_index, molecule_index)` — `geometry.extract_game_atoms` restricted to the molecule's ligand + slot objects, bond block remapped (walk position i → `index_to_id[i+1]` → atom id → record position) → pure `detector.detect` → pure `game_state.records_for_molecule` post-filter (cross-molecule scoring guard)
-3. `engine.score_current` — pure `game_state.score(required, records)` (fraction of required interaction types formed; binary per type) → stored in `GameState` via `record_molecule_result`
-4. Wizard renders score + formed/missing type names via `wizard_text` (text only; selection feedback is RECOLOR ONLY — no lines/dots/CGO)
+1. `aamatch/__init__.py:run_plugin_gui` → lazy `from . import setup_window` → `setup_window.open_window()` (singleton, reuse-and-raise).
+2. User fills the setup form; Qt handlers validate through pure `setup_state.validate_state` (`aamatch/setup_state.py:90`).
+3. Start button `_start_impl` (`aamatch/setup_window.py:995`) → `gamestart.start_game(setup, seed, ...)` (`aamatch/gamestart.py:412`) — THE seam, shared by the menu item and the window.
+4. `placement.cleanup_game_objects()` — prefix-only deletion of prior `_aam_*` objects.
+5. `engine.new_game(setup, seed)` (`aamatch/engine.py`): parse bundled `aamatch/data/MANIFEST.json` (`manifest.parse_manifest_dict`), enumerate candidates, build per-candidate ligand profiles via a temp `_aam_tmp` load + `geometry.extract_game_atoms` + `capability` typing, then `generator.generate` → **level-spec payload** (seed + per-level grids + resolved required sets + `detector_version` stamp).
+6. `engine.materialize(payload, 0)` → `placement.materialize` builds PyMOL objects (ligand + AA grid slots, sentinel-tagged) and returns the **registry** (object name → sorted atom ids).
+7. `gamestart.compose_molecule_view` — geometry-first composition: world-space front-offset (`_move_ligand_in_front`), camera roll (`_frame_ligand_above_grid`), final framing `cmd.zoom` LAST.
+8. `gamestart._last_start` captures the deep-copied materialization INPUT tuple (`{'setup','seed','candidates','ligand_content','payload'}`) — Restart's replay source.
+9. `gamestart.activate_game(wiz)` — one conditional wizard push (`replace=1` iff top-of-stack is a GameWizard) + `GameState.start_timer`.
 
-**Reset to grid:**
-1. `engine.reset_to_grid()` → `placement.reset_to_grid(payload, registry, level_index)` — spec REPLAY re-bakes grid poses from the payload. NEVER `cmd.matrix_reset` (it reverts baked coordinates — probe-proven).
+**Gameplay loop (per molecule):**
+
+1. `GameWizard` click/key handlers (`aamatch/wizard.py`) → engine ops: `place_aa` (translate slot object), detect/score via `detect_molecule` (molecule-scoped).
+2. Detection: `geometry.extract_game_atoms()` + `geometry.ligand_bonds` → plain records → `detector.detect` (pure, 7 interaction types, `spatial.cross_pairs` cell-list candidates, `thresholds` constants, `capability` typing) → canonical records.
+3. Scoring: `game_state.score` via `engine.record_scored` (single lifecycle record site guarded by `GameState.has_record`) — `score_current`, `confirm`, `skip_molecule` compose on top.
+4. Progression: `advance_molecule` → recompose view (`compose_molecule_view` with advanced index); `advance_level` = cleanup → materialize(L+1) → `GameState.advance_level` LAST (fail-closed ordering).
+5. `game_window.GameTab` 1 Hz poll reads the live wizard's public `get_status()` diffed through pure `status_text.status_events` — the tab stays a dumb renderer.
+6. End: `give_up` / `complete_game` freeze the timer (`stop_timer`) and emit the SCORE-07 endgame summary.
+
+**Persistence / sharing (three versioned artifacts, one container law):**
+
+1. Setup file: `persistence.save_setup_file` / `load_setup_file` (validate-on-save AND validate-on-load; kind `'setup'`).
+2. Game file (Generate-and-export, kind `'game'`): `game_file.make_game_data` embeds the level-spec payload + base64 `ligand_files` for uploads — Import replays payload-direct through `gamestart.start_game_from_payload` (`aamatch/gamestart.py:496`), NEVER regenerates.
+3. Checkpoint (kind `'checkpoint'`, `.aamz` zip = `game.pse` full session + `state.json` sidecar): `gamestart.capture_checkpoint_snapshot` → `checkpoint.build_checkpoint_data` → `gamestart.save_checkpoint` (`cmd.save` full session → `checkpoint.write_checkpoint_zip` atomic). Resume: `gamestart.load_checkpoint` (`aamatch/gamestart.py:646`) — gates FIRST (`checkpoint.read_checkpoint_zip` refusal chain before ANY scene mutation), pop live GameWizard (any module identity), `cmd.load` the `.pse`, sentinel sweep, `checkpoint.reconcile_registry` (never-ghost + completeness gates), `engine.adopt_game` with timer REBASE from `elapsed_at_save`, wizard ADOPT-OR-REBUILD via canonical-registry compare, `_last_start` rebuild.
 
 **State Management:**
-- Truth: the level-spec payload (plain dict, `level_spec.py` schema).
-- Runtime: `aamatch/engine.py:93-95` module-level `_payload`, `_registry`, `_game` (`game_state.GameState` — plain data: per-molecule formed types, running score, skip/give-up counters, timer anchor float).
-- View: `GameWizard` holds ONLY plain picklable attributes (payload, registry, index ints, slot maps, color store, msm snapshot).
-- Scene: PyMOL objects are a projection — identity = `(object_name, atom_id)`; registry reconciles.
+- **Engine module state** (`aamatch/engine.py`): `_payload`, `_registry`, `_game` (one `game_state.GameState`). The three are the whole runtime truth; reset/recover REPLAY the spec, never derive from scene.
+- **PyMOL scene** holds atoms + sentinels only (`segi AAM`, `b < 0`, `_aam_*` object prefix).
+- **Wizard-side**: `GameWizard` carries its own books (`snapshot_books`/`resume_from`: colors, saved `mouse_selection_mode`, player poses) — checkpoint round-trips them.
+- **Restart store**: `gamestart._last_start` (module-level dict; payload stored BY IDENTITY for payload-direct replay).
 
 ## Key Abstractions
 
-**Level-spec payload:**
-- Purpose: Shareable source of truth for a generated game (seed + per-level grids + required interactions). Reset/replay/persist all consume it.
-- Examples: `aamatch/level_spec.py` (schema + gates), produced by `aamatch/generator.py`, stamped with `DETECTOR_VERSION = 'det-1'` (`aamatch/level_spec.py:60`)
-- Pattern: reserved schema, additive-only extension; unknown keys PRESERVED, input never mutated
+**The level-spec payload:**
+- Purpose: Single source of truth for a generated game — seed, per-level difficulty, molecules, resolved `required` sets, grids with slot poses. Fully determines the level; nothing is re-derived from the seed at replay.
+- Schema home: `aamatch/level_spec.py:14-35` (reserved shape, additive-only extension; unknown keys PRESERVED, input never mutated).
+- Producer: `aamatch/generator.py` (pure, seeded); consumers: `placement.materialize`, `engine` ops, `game_file`/`checkpoint` embedding.
 
-**Versioned container:**
-- Purpose: ONE file format for all AA-match files: `{"magic": "AAMATCH", "version": 1, "kind": <KINDS entry>, "data": {...}}`
-- Examples: `aamatch/persistence.py:34-37` (`AAM_MAGIC`, `FORMAT_VERSION`, `KINDS`), `write_json_atomic` (temp+fsync+os.replace), `load_container`
-- Pattern: two gates — container/payload `version` refuses only NEWER (accept-older via `.get` defaults); payload `detector_version` requires EXACT match (changed detection semantics make old specs unsolvable)
+**The versioned container:**
+- Purpose: ONE format discipline for every AA-match file: `{"magic": "AAMATCH", "version": 1, "kind": <KINDS entry>, "data": {...}}` where `KINDS = ('setup', 'level_spec', 'game', 'checkpoint', 'manifest')` (`aamatch/persistence.py:39`).
+- Examples: `aamatch/persistence.py:46` (`make_container`), `aamatch/persistence.py:63` (`check_container` refusal chain: foreign/newer/misfiled), `aamatch/persistence.py:133` (`peek_kind` — JSON or `.aamz`, header-exact routing for the one-button Import).
 
-**Canonical detector record:**
-- Purpose: The single result shape flowing from detection through scoring to the debrief UI — scoring reads the SAME records the player will see (no drift). Scoring consumes only `r['type']`, fail-closed on anything outside `setup_state.INTERACTION_TYPES`
-- Examples: `aamatch/detector.py` (produces), `aamatch/game_state.py:45-59` (`_validate_records`), `aamatch/game_state.py:88-100` (`records_for_molecule`)
+**The TWO version gates (never conflated):**
+- `FORMAT_VERSION = 1` in `aamatch/persistence.py:37` — container gate: **refuse-newer / accept-older** (additive-only evolution; readers use `.get()` defaults). Parallel payload gates: `LEVEL_SPEC_VERSION` in `aamatch/level_spec.py:61`, `CHECKPOINT_VERSION` in `aamatch/checkpoint.py`, `GAME_VERSION` in `aamatch/game_file.py`, `manifest_version` in `aamatch/manifest.py`.
+- `DETECTOR_VERSION = "det-1"` in `aamatch/level_spec.py:60` — **EXACT match both directions**: stale AND newer stamps refused, because changed detection semantics (`aamatch/thresholds.py` constants) make old specs unsolvable, not merely incomplete. Any threshold change is a `DETECTOR_VERSION` bump event (`aamatch/thresholds.py` bump policy).
 
-**Placement registry:**
-- Purpose: Materialize-time map slot_id → (object, sorted atom ids) — the scene↔spec reconciliation table
-- Examples: `aamatch/placement.py:232` (`materialize`), consumed by `engine` ops and the wizard's pick map
+**Capability typing tables (single homes):**
+- `aamatch/capability.py` — THE atom/residue typing home (`AA_RESIDUES`, `AA_TOKENS`, `aa_capable`, `ligand_support`, `METAL_ELEMENTS`, `ligand_profile`); shared by generator (solvability), detector (typing agreement), and the Hint.
+- `aamatch/thresholds.py` — THE numeric detection criteria home, each constant carrying a `source:` provenance comment against `docs/DETECTION_THRESHOLDS.md`.
+- `aamatch/setup_state.py` — THE setup schema home (`INTERACTION_TYPES` 7-type enum, `DEFAULTS`, clamp constants).
 
-**Sentinel + name conventions (the hygiene contract):**
-- Every game object is born `cmd.get_unused_name('_aam_<role>')`, role in `{'lig', 'aa', 'tmp'}` — the prefix is the ONLY cleanup selection rule
-- Every game atom carries `segi='AAM'` and `b=-999.0` — selectors use `segi AAM` / `b < 0` (never `b -999`, malformed)
-- Examples: `aamatch/placement.py:96-97` (`SENTINEL_SEGI`, `SENTINEL_B`), `aamatch/gamestart.py:85`
+**Backup policy over an injected store:**
+- `aamatch/backup.py` — PyMOL Open Source has NO undo; every destructive mutation is snapshot → (discard | restore), with sha256-framed stored bytes and `verify_intact` as the corruption gate. Duck-typed store protocol (`save_bytes`/`load_bytes`/`delete`/`exists`); ships `MemoryStore` and atomic `FileStore`. `BACKUP_OBJECT_PREFIX = '_aam_backup'` reserved for a future cmd-tier adapter.
+
+**Sentinel tagging + registry identity:**
+- Game objects are named with the private `_aam_` prefix and tagged `segi AAM` + `b < 0` (`aamatch/placement.py`). The materialize registry maps molecule → `{'ligand': (name, ids), 'slots': {slot_id: (name, ids)}}` — object names + sorted atom ids ARE the identity contract for checkpoint reconcile (`gamestart._canonical_registry` normalizes list/tuple container drift before comparison).
 
 ## Entry Points
 
-**PyMOL plugin entry:**
-- Location: `aamatch/__init__.py:16-39` (`__init_plugin__`, `run_plugin_gui`)
-- Triggers: PyMOL Plugin Manager install → `Plugins → AA-match`
-- Responsibilities: menu registration; delegates to `gamestart.start_game()`. As installed: `pmg_tk.startup.aamatch`; in smokes/direct imports: `aamatch` — NEVER both in one PyMOL session (two module objects → duplicate singletons)
+**PyMOL plugin startup:**
+- Location: `aamatch/__init__.py:16` (`__init_plugin__(app=None)`)
+- Triggers: PyMOL plugin loader (installed via Plugin Manager; also smokes/direct imports).
+- Responsibilities: Registers ONE Plugins-menu item via `from pymol.plugins import addmenuitemqt` → `addmenuitemqt('AA-match', run_plugin_gui)`. The import is INSIDE the function and FIRST (headless `HAVE_QT=False` raises cleanly; avoids the `cmd.extend` restore quirk). `run_plugin_gui` (`aamatch/__init__.py:29`) lazily imports + opens the modeless `SetupWindow`. The leading `# Version: 0.1.0` comment metadata block is LOAD-BEARING (pymol.plugins parses `# Key: value` comment lines at file top, stopping at the first non-# line).
 
-**The game-start seam:**
-- Location: `aamatch/gamestart.py:60` (`start_game(setup=None, seed=42, candidates=None)`)
-- Triggers: the menu item today, the Phase-4 Qt setup window tomorrow (passes its validated setup through the SAME seam)
-- Responsibilities: any state → playable game in one call (cleanup → new_game → materialize → wizard activate → zoom)
+**Game start (THE seam):**
+- Location: `aamatch/gamestart.py:412` (`start_game`), `:496` (`start_game_from_payload`), `:393` (`activate_game` — the single activation home for the countdown path), `:646` (`load_checkpoint` resume).
+- Triggers: Plugins-menu item, setup-window Start, tab Restart, tab Import, checkpoint Load.
+- Contract: one call takes the scene from any state to a playable game; `activate=False` prepares without pushing the wizard (countdown path).
+
+**Headless smokes (Windows PyMOL proof):**
+- Location: `smoke/run_smoke.sh` + `smoke/smoke_NN_*.py` (01–21)
+- Triggers: manual / per-phase verification — `bash smoke/run_smoke.sh smoke/<script>.py` from repo root.
+- Mechanism: `cmd.exe /c "C:\src\run-conda-pymol.bat -cq smoke\<script>.py"`; verdict = grep for `=== SMOKE-NN PASS ===` (exit codes cannot carry verdicts through cmd.exe).
 
 **WSL unit tests:**
-- Location: `tests/` (discover via `python3.6 -m unittest discover -s tests -v` from repo root)
-- Triggers: developer; includes the purity gates `tests/test_purity.py` and the source audit `tests/test_code_audit.py`
-
-**Headless PyMOL smokes (Windows PyMOL proof):**
-- Location: `smoke/run_smoke.sh` + `smoke/smoke_NN_*.py`
-- Triggers: `bash smoke/run_smoke.sh smoke/smoke_NN_name.py [timeout]` from repo root; runs `cmd.exe /c C:\src\run-conda-pymol.bat -cq` against the REPO copy (repo is Windows-visible via `/mnt/c` — no staging)
-- Verdict: grep for `=== SMOKE-NN PASS ===` (exit codes cannot carry verdicts through cmd.exe)
+- Location: `tests/` — `python3.6 -m unittest discover -s tests -v` from repo root; includes the purity gates (`tests/test_purity.py`) and mechanical code audits (`tests/test_code_audit.py`).
+- Also: `python3.6 -m py_compile aamatch/*.py` (3.6 syntax floor; "Gate D" also enforced inside the suite).
 
 ## Error Handling
 
-**Strategy:** Fail-closed, message names the cause. A failed op raises; nothing degrades silently and no half-built game state survives quietly.
+**Strategy:** Fail-closed everywhere. Refusals ride the ValueError family with messages that NAME the cause; unexpected exceptions propagate as bug surfacing.
 
 **Patterns:**
-- One error class per tier, ALL subclasses of `ValueError`: `persistence.FormatError` (`aamatch/persistence.py:40`), `generator.GenerationError` (`aamatch/generator.py:130`), `placement.PlacementError` (`aamatch/placement.py:100`), `engine.EngineError` (`aamatch/engine.py:85`), `wizard.WizardError` (`aamatch/wizard.py:94`). Thrown errors propagate to PyMOL's menu handler, which surfaces the traceback.
-- Validation BEFORE write and AGAIN on load (`persistence.save_setup_file`/`load_setup_file`); missing keys forward-filled from `DEFAULTS` (idempotent).
-- Count/hygiene asserts in every engine op (e.g. object list unchanged across `new_game`; identity-matrix invariant after every wizard move with `_MATRIX_TOL = 1e-6`, `aamatch/wizard.py:84`).
-- Refusal classes for file headers: foreign magic / newer version / misfiled kind / unparseable JSON — each with a distinct, user-facing message (`aamatch/persistence.py:8-12`).
+- **Typed refusal hierarchy:** `persistence.FormatError(ValueError)` (foreign/newer/misfiled/unparseable files); `engine.EngineError(ValueError)`; `placement.PlacementError` / `generator.GenerationError` / wizard `WizardError`; `backup.BackupError(Exception)` (missing/corrupt backup). Qt `_guard` wrappers catch the ValueError family per button.
+- **Gates before mutation:** checkpoint load runs the full refusal chain BEFORE touching the session (`aamatch/checkpoint.py`); engine ops are count-asserted (object list unchanged across generation); validate-on-save AND validate-on-load (`persistence.save_setup_file`).
+- **Atomic file I/O:** `persistence.write_json_atomic` (temp + fsync + `os.replace`, `allow_nan=False`, sort_keys, binary write); `checkpoint.write_checkpoint_zip` same discipline; failed writes leave the original untouched.
+- **Never re-derive a missing backup:** `backup.restore`/`verify_intact` raise on missing key — assert, don't re-call (callers route restore failure to regenerate-from-spec; the seeded level spec is the source of truth).
+- **Fail-soft only where documented:** degenerate scene composition in `gamestart` keeps materialized geometry (roll + zoom still run); tab handlers are isinstance-gated SILENT no-ops before GO.
 
 ## Cross-Cutting Concerns
 
-**Logging:** No logging framework. Player-facing status goes through `print(...)` to the PyMOL console (e.g. `aamatch/gamestart.py:87-90`) and wizard panel/prompt text via `aamatch/wizard_text.py`.
+**Module identity (two import mechanisms, never mix):**
+- Installed plugin imports as `pmg_tk.startup.aamatch`; smokes/direct imports as `aamatch`. Two module objects → duplicate singletons. Mitigations: `aamatch/__init__.py` holds ZERO module-level imports (Gate A2, `tests/test_purity.py:229`); Qt modules use lazy relative sibling imports INSIDE handlers (`aamatch/setup_window.py:39`); wizard identity checks go through the module-attribute predicate `wizard.is_game_wizard_any_identity` (used in `gamestart.load_checkpoint` and the tab) rather than bare `isinstance` against one module object.
 
-**Validation:** Schema validation lives at the pure-layer homes — `setup_state.validate_state` (the 7-field setup), `level_spec.parse_level_spec_dict` (gate chain: container → format_version → detector_version → structural minimums), `manifest.parse_manifest_dict`. Inputs are never mutated; unknown keys are preserved.
+**WSL→Windows path guard:**
+- Every path crossing into Windows PyMOL routes through `paths.to_windows_path` (`aamatch/paths.py:20` — guard, not unconditional transform; `/mnt/c/...` → `C:\...`, idempotent). Bundled data anchors to `paths.package_data_path` (`__file__`-relative, never `os.getcwd()`). Smoke scripts run from the repo-root cwd which cmd.exe maps to a Windows path.
 
-**Authentication:** Not applicable (offline single-user desktop plugin; no network, no secrets; `*.env`/`secrets.toml` git-ignored defensively).
+**Logging:** None. No logging framework anywhere (house rule); feedback is the wizard panel, the tab info box, and `print(...)` status lines from `gamestart.start_game` (visible in the PyMOL console / smoke output, e.g. `aamatch/gamestart.py:489`).
 
-**Path discipline:** Every file path routes through `aamatch/paths.py` (`to_windows_path`, `package_data_path`) — Windows PyMOL cannot resolve `/mnt/c/...`; the repo is `C:\...`-visible to PyMOL smokes.
+**Validation:** Centralized in pure schema modules — `setup_state.validate_state` (fill/clamp/normalize), `level_spec.parse_level_spec_dict` (three-gate chain), `game_file.parse_game_data`, checkpoint's four-gate parse replay — and re-run on EVERY load.
 
-**Syntax floor:** All of `aamatch/*.py` written Python-3.6-safe (PyMOL's Windows runtime is 3.9; Gate D compiles under `python3.6`).
+**Timer doctrine:** Per-molecule timer anchored from zero at `activate_game`; `advance_level` deliberately leaves the anchor untouched; checkpoint resume REBASES from `elapsed_at_save` iff the game is not over; game-over freezes `final_time` authoritative.
+
+**Provenance/truthfulness:** Detection constants carry `source:` citations (`aamatch/thresholds.py`); the human-approved gate document is `docs/DETECTION_THRESHOLDS.md`; data sources are vetted in `docs/DATA_SOURCES.md`. Demo data is NEVER hand-edited — `scripts/build_demos.py` regenerates SDF bytes + `aamatch/data/MANIFEST.json` from `scripts/demo_specs/<set_id>.json`.
 
 ---
 
-*Architecture analysis: 2026-09-12*
+*Architecture analysis: 2026-10-03*

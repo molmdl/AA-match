@@ -1,63 +1,36 @@
 # Testing Patterns
 
-**Analysis Date:** 2026-09-12
+**Analysis Date:** 2026-10-03
 
 ## Test Framework
 
-**Runner:**
-- stdlib `unittest` ONLY (no pytest, no nose). Python 3.6.9 in WSL.
-- No config file (no `pytest.ini`, `tox.ini`, `setup.cfg`) — discovery is
-  driven entirely by `unittest discover`.
+**Runner:** Python 3.6 stdlib `unittest` ONLY. **No pytest**, no third-party
+test deps (the dev shell is bare `python3.6` 3.6.9 on WSL Ubuntu; installing
+is forbidden). Config: none — discovery conventions only.
 
-**Assertion library:** `unittest.TestCase` methods (`assertEqual`,
-`assertIn`, `assertRaises`, `assertAlmostEqual`, `subTest`, ...).
-**Mocking:** `unittest.mock` only (used sparingly — 2 files).
+**Run commands (from repo root):**
 
-**Run Commands:**
 ```bash
-python3.6 -m unittest discover -s tests -v     # the full WSL suite (incl. purity gates)
-python3.6 -m unittest tests.test_purity -v     # one module
-python3.6 -m py_compile aamatch/*.py           # 3.6 syntax floor (also Gate D)
-bash smoke/run_smoke.sh smoke/smoke_01_bootstrap.py   # headless Windows PyMOL smoke
+python3.6 -m py_compile aamatch/*.py            # syntax floor (3.6)
+python3.6 -m unittest discover -s tests -v      # FULL WSL suite incl. purity gates
+python3.6 -m unittest tests.test_setup_state -v # one module
+bash smoke/run_smoke.sh smoke/smoke_01_bootstrap.py          # headless Windows PyMOL proof
 ```
-All run from the repo root.
-
-**Three test tiers** (each with a distinct verdict carrier):
-1. **WSL unit tests** — `tests/test_*.py`, pure-Python, zero PyMOL.
-2. **Mechanical AST gates** — also in `tests/`, scan source text
-   (`test_purity.py`, `test_code_audit.py`, `test_wizard_source.py`).
-3. **Headless smoke proofs** — `smoke/smoke_NN_*.py` run inside real Windows
-   PyMOL via `cmd.exe`; verdict is a grepped marker, not an exit code.
 
 ## Test File Organization
 
-**Location:** flat `tests/` directory, one file per source module
-(`aamatch/level_spec.py` → `tests/test_level_spec.py`). `tests/__init__.py`
-is a single comment line. Cross-cutting suites are named for their purpose,
-not a module: `tests/test_purity.py`, `tests/test_code_audit.py`,
-`tests/test_package_skeleton.py`, `tests/test_generator_invariants.py`,
-`tests/test_detector_invariance.py`.
+**Location:** `tests/` at repo root (NOT co-located). One file per module
+under test: `tests/test_vec3.py` ↔ `aamatch/vec3.py` (28 test files).
+Cross-cutting mechanical audits get their own files: `tests/test_purity.py`,
+`tests/test_code_audit.py`, `tests/test_wizard_source.py`,
+`tests/test_package_skeleton.py`.
 
-**Naming:** files `test_<module>.py`; classes `Test<Concept>` (`TestGateA2LazyInit`, `TestCheckContainer`, `TestBuildSlotMap`); methods long descriptive snake_case (`test_newer_version_refused_with_update_message`, `test_garbage_file_refused_with_parse_message`).
-
-**Module docstring is mandatory** on every test file and must state: scope,
-the plan ID it serves, and the zero-stub run conditions. Pattern
-(`tests/test_persistence.py:1-14`):
-
-```python
-"""Tests for aamatch.persistence -- versioned container core + atomic JSON I/O.
-
-RED-first suite for plan 01-02 (PERSIST-01 format discipline). Covers:
-- container construction (magic/version/kind/data, exact shape)
-- all three refusal classes with message assertions ...
-Runs under bare python3.6 in WSL with stdlib only (no pymol/Qt/numpy
-stubs needed -- the module under test is pure).
-"""
-```
-
-**Bootstrap block** — every test file inserts the repo root on `sys.path`
-before importing `aamatch`, so suites run both via `discover -s tests` and as
-direct modules (`tests/test_purity.py:55-61`):
+**Every test file opens with:**
+1. A docstring stating WHAT is covered, the plan/trace references
+   (`plan 02-02`, `RED-first suite for plan 01-05`), and the exact run
+   commands (`tests/test_vec3.py:1-7`).
+2. The path bootstrap so the file works both via discovery and direct
+   execution (`tests/test_purity.py:55-61`):
 
 ```python
 _HERE = os.path.dirname(os.path.abspath(__file__))
@@ -66,183 +39,223 @@ if REPO_ROOT not in sys.path:
     sys.path.insert(0, REPO_ROOT)
 ```
 
-## The Zero-Stub Contract (critical)
+(Some files use the shorter `sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))` — `tests/test_setup_state.py:31`.)
 
-Tests import pure modules directly — `from aamatch.persistence import ...` —
-with **ZERO `sys.modules` stubs anywhere** (`AGENTS.md` gate 2). This works
-because `aamatch/__init__.py` has no module-level imports (Gate A2) and pure
-modules never import pymol/Qt/numpy at any scope. **Do NOT add stub patterns
-from the old research docs; they are explicitly superseded and enforced
-against by `tests/test_purity.py`.**
+3. Parenthesized imports of symbols under test
+   (`tests/test_setup_state.py:33-56`).
 
-## Test Structure & Assertions
+**ZERO `sys.modules` stubs anywhere** — this is a standing rule
+(purity gate prerequisite; `tests/test_purity.py:19-26`). Pure modules
+import cleanly in a bare interpreter, so no MagicMock pymol stubs exist.
+Do NOT add any.
 
-**TDD, RED-first:** suites are written before implementation; the docstring
-records it (`tests/test_wizard_core.py:1-10`: "simply collecting this module
-raises ImportError -- that failure IS the RED proof").
+## Test Structure
 
-**Exact-equality discipline:**
-- Round-trip tests use `assertEqual` on parsed structures — `"Exact equality
-  after load (NEVER assertAlmostEqual)"` (`tests/test_persistence.py:128`).
-- Float geometry: `assertAlmostEqual(..., places=N)` with pinned precision —
-  `places=12` for vec3 unit tests, `places=6..9` for detector metrics
-  (`tests/test_detector.py` throughout).
+**Suite organization:** one `unittest.TestCase` subclass per behavior
+cluster, each with a 1-line docstring of its cluster
+(`tests/test_setup_state.py:87,114`). Test methods named
+`test_<NN>_<what>` with sequence numbers in older suites
+(`test_01_defaults_key_set_is_exactly_the_7_fields`,
+`tests/test_setup_state.py:90) or plain `test_<what>` in newer ones
+(`tests/test_vec3.py:18`). Trailing `if __name__ == '__main__': unittest.main()`.
 
-**Error assertions always check the message:**
+**Setup/teardown:** `setUp` builds injected stores/temp dirs
+(`tests/test_backup.py:60-63`); `tempfile` + `shutil.rmtree` in file-I/O
+suites (`tests/test_setup_state.py` imports `tempfile`, `shutil`).
+
+**Editable-case pattern:** `self.subTest()` for the per-iteration failures
+that must name their case (`tests/test_purity.py:253,280`).
+
+**Refusal assertion pattern:** context manager + message assert:
+
 ```python
 with self.assertRaises(FormatError) as ctx:
-    check_container(newer, 'setup')
-message = str(ctx.exception)
-self.assertIn('unsupported', message)
-self.assertIn('Please update AA-match', message)   # frozen phrasing
+    ...
+self.assertIn('detector', str(ctx.exception))
 ```
-(`tests/test_persistence.py:88-94`). Error message fragments are part of the
-public contract — see CONVENTIONS.md.
 
-**Parametrization via `subTest`** (used in 6+ files):
-```python
-for mod in PURE_MODULES:
-    with self.subTest(module=mod):
-        ...
-```
-(`tests/test_purity.py:237-238`; heavier batteries in
-`tests/test_generator_invariants.py` nest two levels).
+(`tests/test_checkpoint.py:311-358`, `tests/test_level_spec.py:213-224`.
+Refusal wording is pinned — gate phrasing is part of the contract.)
 
-**Temp files:**
-```python
-def setUp(self):
-    self.tmp = tempfile.mkdtemp(prefix='aamatch-test-')
-    self.addCleanup(shutil.rmtree, self.tmp)
-```
-(`tests/test_persistence.py:123-125`) — `addCleanup`, never `tearDown`.
+**Shared contract mixin pattern:** a plain mixin (NOT a TestCase subclass)
+`BackupContractMixin(object)` paired with concrete `TestCase` subclasses per
+store (`tests/test_backup.py:50-63`) — the contract runs exactly twice
+(MemoryStore, FileStore), never as an abstract third suite.
 
-**Expensive fixture builds** use `setUpClass` (`tests/test_detector.py:580,1054,1637`).
+**Fixtures:** module-level constants (`PAYLOAD` in
+`tests/test_backup.py:36-47` includes unicode + nested shapes for
+exact-equality round-trips) and private factory functions
+(`_non_default_raw_state(interaction_mode)`,
+`tests/test_setup_state.py:69-84` — an "every field non-default" dict with
+boundary MIN/CAP values). Boundary values come from module constants
+(`MOLECULES_MIN`, `DIFFICULTY_CAP`) — never inlined literals.
+
+## Mechanical Audit Suites (the standing gates — do not weaken)
+
+All live in the normal suite (`python3.6 -m unittest discover -s tests -v`).
+They are **AST-based by design**, NOT grep-based: the AST is immune to the
+"grep tripwire" — a docstring that SAYS `from PyQt5 import` is a string
+constant, never an Import/Call node (prior art false-positived on prose;
+the grep-form is a documented-only human-check "Gate C", never a blind-fail
+mechanism). Every gate carries a **NEGATIVE CONTROL** proving the finder
+can fire — "a gate that cannot fail proves nothing"
+(`tests/test_purity.py:118-131,329-352`).
+
+**`tests/test_purity.py` — the four purity gates:**
+- **Gate A** (`TestGateAASTImportScan`, line 211): AST import scan over all
+  `PURE_MODULES` (line 99). Every `ast.Import`/`ast.ImportFrom` node in
+  EVERY scope (module level AND function bodies) is checked against
+  `FORBIDDEN` roots `{pymol, numpy, dataclasses, PyQt5, PySide2, tkinter,
+  Pmw, pmg_tk}` (line 107) and the `ALLOWED_STDLIB` whitelist (lines
+  113-116). Relative imports must target pure modules.
+- **Gate A2** (`TestGateA2LazyInit`, line 229): `aamatch/__init__.py` has
+  ZERO module-level imports (lazy imports inside `__init_plugin__`/handlers
+  are the design).
+- **Gate B** (`TestGateBCleanSubprocessImport`, line 248): each pure module
+  imported by a FRESH bare interpreter via `subprocess` with
+  `cwd=REPO_ROOT` and no stubs — exit code must be 0. Catches dynamic
+  `__import__` and transitive contamination. 30 s timeout per module.
+- **Gate D** (`TestGateDPyCompileSyntax`, line 270): every `aamatch/*.py`
+  compiles under `python3.6 -m py_compile` (the 3.6 syntax floor).
+- **Registration pins** (`TestGeneratorRegistration`, line 294, and
+  siblings): each newly-gated module gets a test asserting its name is in
+  `PURE_MODULES` — unregistered pure modules are silently ungated.
+- **Negative control** (`TestNegativeControl`, line 329): synthetic source
+  with 2 real forbidden imports + a docstring repeating the tokens must
+  produce EXACTLY 2 findings (prose must NOT count).
+
+**`tests/test_code_audit.py` — detection-pipeline audits (plan 02-15):**
+four permanent checks, all AST-over-source-text with negative controls:
+1. Candidate routing: `detector.py` imports AND calls `cross_pairs`.
+2. Oracle isolation: `brute_force_pairs` (O(N·M) test oracle,
+   `aamatch/spatial.py`) is imported/called NOWHERE in `aamatch/ or smoke/`.
+3. No naive pair loops: no nested record-namespace double loops in
+   `detector.py` or `spatial.cross_pairs`.
+4. Banned cmd calls: `BANNED_CALLS = ('get_model', 'matrix_reset',
+   'get_object_ttt')` (line 56) never CALLED; prose mentions pinned by
+   EXACT count in `PROSE_PIN` (lines 64-69) — count drift = human
+   re-review, never blind-fail on prose alone.
+
+**`tests/test_wizard_source.py`:** AST gate for PLAY-04 — zero `ast.Call`
+sites of `indicate`/`distance`/`load_cgo` in `SCANNED_MODULES`
+(`wizard.py`, `gamestart.py`, `setup_window.py`, `game_window.py`, line 51)
+with a finder negative control; `game_window.py` 'grow the list' comments
+show how new cmd-tier modules join the scan set.
+
+**Version-gate tests:** refuse-newer / accept-older for container
+`version` and payload `format_version`; EXACT-match (stale AND newer
+refused) for `detector_version`; message-asserted
+(`tests/test_level_spec.py:176-237`, `tests/test_setup_state.py:307`).
+The two gates must never be conflated — format accepts older, detector
+refuses any mismatch.
+
+## Property/Invariant Test Pattern
+
+`tests/test_detector_invariance.py` is the exemplar: seeded batteries over
+hand-scripted plain-list geometry (NO numpy):
+
+1. Rigid-transform invariance — 100 seeded random rotation+translation
+   transforms; full-record **dict equality** (tolerance effectively 0.0,
+   tighter than the plan's 1e-9 ceiling). Rotation via plain list math,
+   `random.Random(seed)`.
+2. Permutation invariance — seeded Fisher-Yates shuffles of the atom
+   record list; canonical output identical.
+3. Determinism — two consecutive calls return `==` lists.
+4. Boundary sensitivity — per-type cases pushed `_DELTA_A = 0.2` Å /
+   `_DELTA_DEG = 0.2`° inside and outside the `thresholds.py` constants
+   (always against the imported constants, never inlined numbers).
+5. Loose perf guard — **REGRESSION-only** assertion:
+   `WSL_PERF_GUARD_SECONDS = 2.0` for a worst-case synthetic scene. The
+   docstring (lines 24-31) says explicitly: WSL is slower/CI-noisy; a
+   sub-100-ms assertion here would be a flaky false-alarm machine —
+   the real <100 ms budget is asserted ONLY in the headless Windows
+   smoke. **Never tighten this constant.**
+
+Exact-equality discipline: exact match where the value is exactly
+representable (`vec3.scale(..., 0.5)` uses `assertEqual`,
+`tests/test_vec3.py:34-37`) and `assertAlmostEqual(..., places=12/15)`
+only where genuinely irrational (`tests/test_vec3.py:72-74`).
 
 ## Mocking
 
-**Framework:** `from unittest import mock` — but only TWO test files use it.
-The canonical use is **failure injection on OS calls**, never for the domain
-(`tests/test_persistence.py:164`):
+**Framework: none.** No `unittest.mock` for the plugin layer, no
+sys.modules stubs (forbidden by the purity contract). Isolation is by
+architecture, not by mocking:
+- Pure modules are tested directly in a bare interpreter.
+- Store abstraction: `BackupContractMixin` injects `MemoryStore` /
+  `FileStore` (`tests/test_backup.py`).
+- Qt/PyMOL-dependent modules are NOT unit-tested in-process; they are
+  covered by AST source gates (e.g. `tests/test_package_skeleton.py`
+  asserts `run_plugin_gui`'s lazy-import seam via source analysis:
+  "executing it needs pymol+Qt; SMOKE-11 covers that headlessly") and by
+  the smoke layer below.
 
-```python
-with mock.patch('os.replace', side_effect=OSError('boom')):
-    with self.assertRaises(OSError):
-        write_json_atomic(path, {'marker': 'new'})
+**What never to mock:** `pymol`, `cmd`, Qt — if you feel the need to mock
+them, the code belongs in the pure layer instead.
+
+## Smoke Testing (integration/e2e layer — headless Windows PyMOL)
+
+**Runner:** `smoke/run_smoke.sh` (17 lines). From WSL repo root:
+
+```bash
+bash smoke/run_smoke.sh smoke/smoke_NN_name.py [timeout_sec]   # default timeout 120
 ```
 
-**What to mock:** OS-level failure points (`os.replace`) to prove cleanup
-invariants (no `.tmp` litter, original file intact).
-**What NOT to mock:** pymol (impossible — cmd tier is proven by smokes, not
-unit tests; stubbing pymol is exactly the forbidden stub pattern), and never
-the module under test's pure logic.
+Mechanics: `cmd.exe /c "C:\src\run-conda-pymol.bat -cq smoke\<script>"`
+(launches Windows PyMOL 2.5.0 headless), output teed to
+`/tmp/smoke_out.txt`, then **`grep -q "=== SMOKE-$NN PASS ==="`**
+(`smoke/run_smoke.sh:15-17`). **The marker IS the verdict — exit codes
+cannot carry verdicts through cmd.exe.** `NN` is parsed from the script
+basename (`smoke_04_e2e.py` → `04`); scripts without an NN segment fall
+back to `01`.
 
-## Fixtures and Factories
+**21 smoke scripts** `smoke/smoke_01_bootstrap.py` …
+`smoke/smoke_21_demo_cleanup.py` covering bootstrap → manifest →
+generation → e2e → perf → wizard loop → upload → windows → lifecycle →
+checkpoint round-trips → cleanup.
 
-**Hand-scripted, module-level builder functions** with leading underscore —
-no factory libraries, no fixtures directories:
+**In-script conventions** (`smoke/smoke_01_bootstrap.py` is the template):
+- A `failures = []` list and a `check(name, cond, detail='')` helper that
+  prints `SMOKE-NN <name>  PASS/FAIL <detail>` and appends failures
+  (lines 63-69).
+- Every print stays on ONE line — the runner tees + tails the output;
+  multi-line prints complicate grepping (docstring, line 21).
+- Final verdict marker, the SOLE verdict carrier:
 
 ```python
-# tests/test_detector.py:38 — plain-dict atom records, hand-placed geometry
-def _lig_atom(idx, name, elem, x, y, z, fc=None):
-    """Ligand-side atom record; id == ligand-sublist index for clarity."""
-    record = {'side': 'lig', 'object': 'ligand', 'id': idx, 'name': name,
-              'elem': elem, 'resn': 'LIG', 'resi': 1, 'alt': '',
-              'x': float(x), 'y': float(y), 'z': float(z)}
-    ...
+print('=== SMOKE-01 %s ===' % ('FAIL: ' + ', '.join(failures) if failures else 'PASS'))
 ```
 
-Other examples: `_registry_two_molecules()` (`tests/test_wizard_core.py:35`),
-`_non_default_raw_state()` (`tests/test_setup_state.py:69`), scripted ligand
-geometries `_carbonyl_ligand`/`_ammonium_ligand` (`tests/test_detector.py:86-110`).
-Simple constants dicts (`EXPECTED_KEYS` at `tests/test_setup_state.py:58`) at
-module level. Real bundled data lives under `aamatch/data/` (consumed via
-`paths.package_data_path`), not under `tests/`.
-
-## The AST Gate Pattern (repo-specific, reuse it)
-
-Mechanical audits are unit tests over **source text**, not behavior. Every
-gate pair follows one shape (`tests/test_purity.py`, `tests/test_code_audit.py`,
-`tests/test_wizard_source.py`):
-
-1. **A pure finder function over source text** — e.g. `find_bad_imports(src)`
-   (`tests/test_purity.py:119`) walks the `ast` tree; immune to the
-   "docstring-says-the-token" grep tripwire by construction.
-2. **A NEGATIVE CONTROL** proving the finder can fail — synthetic source with
-   real `import pymol` + prose repeating the tokens; the gate must flag
-   exactly the real imports (`TestNegativeControl`,
-   `tests/test_purity.py:303-326`). "A gate that cannot fail proves nothing."
-3. **PROSE_PIN allowances with exact counts** (`tests/test_code_audit.py:64-69`)
-   when prose mentions are legitimate — any count drift fails and demands
-   human re-review: "inspect, never blind-fail" (Gate C discipline).
-4. **Registration-pin tests** when a registry grows — `PURE_MODULES` scans
-   skip unregistered modules silently, so `TestGeneratorRegistration`
-   (`tests/test_purity.py:279-289`) pins that each new pure module is
-   actually gated. Add one per new pure module.
-
-New cross-module source rules (banned calls, banned visuals, import
-whitelists): implement them THIS way, in a new `tests/test_*` file or by
-extending the existing gate files.
-
-## Smoke Tests (headless Windows PyMOL)
-
-**Runner:** `bash smoke/run_smoke.sh smoke/smoke_NN_name.py [timeout_sec]`
-(`smoke/run_smoke.sh`) — cds to repo root, launches
-`cmd.exe /c C:\src\run-conda-pymol.bat -cq smoke\<script>`, tees output, and
-`grep -q "=== SMOKE-$NN PASS ==="`. **Exit codes cannot cross cmd.exe; the
-printed marker is the sole verdict carrier.**
-
-**File conventions** (every smoke script; see `smoke/smoke_01_bootstrap.py`,
-`smoke/smoke_02_manifest.py`):
-
-- Leading docstring: purpose, run command, and the marker line to grep.
-- `_find_repo_root()` helper — anchor via `sys.argv` entry first, `os.getcwd()`
-  fallback, **NEVER `__file__`** (inside a `-cq` script `__file__` points at
-  `pymol/__init__.py`, probe-proven; `smoke/smoke_01_bootstrap.py:40-57`).
-- Module-level `failures = []` plus a `check` helper printing ONE line,
-  flushed:
-
-  ```python
-  def check(name, cond, detail=''):
-      print('SMOKE-02 %-38s %s %s' % (name, 'PASS' if cond else 'FAIL', detail),
-            flush=True)
-      if not cond:
-          failures.append(name)
-  ```
-- Try/except blocks around each part with `traceback.print_exc()` then
-  `check(..., False, ...)` — the smoke must reach its marker even when broken.
-- Post-`sys.path` imports may carry `# noqa: E402`
-  (`smoke/smoke_02_manifest.py:56-60`).
-- Final line: `print('=== SMOKE-NN %s ===' % ('FAIL: ' + ', '.join(failures)
-  if failures else 'PASS'))` — NN matches the filename number.
-- Import `aamatch` directly (identity `aamatch`) OR use the real
-  `plugin_load` loader (identity `pmg_tk.startup.aamatch`) — **never both in
-  one session** (`AGENTS.md` gate 5; `smoke_01` demonstrates each in separate
-  labelled parts).
-- RECORD-ONLY probes (`SMOKE-ENV` lines, `smoke_01` Part D) may gather facts
-  but never append to `failures`.
-- Written 3.6-safe even though it runs under PyMOL's Python 3.9.
+- Probe parts can be RECORD-ONLY: results print but never enter
+  `failures` (`smoke_01_bootstrap.py` Part D).
+- Teardown always cleans game objects — "never leave game objects"
+  (placement cleanup in `smoke/smoke_04_e2e.py`).
+- Repo-root anchoring does NOT trust `__file__` (inside a `-cq` script
+  `__file__` points at the PyMOL launcher): anchor order is
+  sys.argv-entry → `os.getcwd()` (`smoke_01_bootstrap.py:40-57`).
+- `bash -ic` VMD-side analog is not used here; this project is PyMOL-only.
 
 ## Coverage
 
-**None.** No coverage tool, no config, no target. Protection comes from the
-AST gates + RED-first hand-computed batteries + smokes. (Coverage gaps are a
-documented concern class, not a metric — see CONCERNS.md when written.)
+**None enforced** — no coverage config/plugin (stdlib-only constraint).
+Coverage expectations are structural instead: one test file per module, the
+mechanical audit suites above, refusal classes message-asserted, and the
+smoke layer for the PyMOL/Qt tier.
 
-## Test Types
+## Adding New Tests — checklist
 
-**Unit tests:** `tests/test_*.py` over the PURE layer only — pure functions,
-dict contracts, refusal message classes, seeded determinism
-(`random.Random(seed)`), invariant batteries
-(`tests/test_generator_invariants.py`, `tests/test_detector_invariance.py`).
-
-**Mechanical/architecture tests:** the AST gates above — these ARE the
-architectural enforcement; treat them as load-bearing.
-
-**Integration/E2E:** the smokes — real PyMOL, real `cmd`, GUI-adjacent flows
-proven headlessly (`smoke_07_wizard_loop.py` drives the whole wizard loop;
-`smoke_04_e2e.py` the engine op chain). There is no GUI automation tier;
-GUI real-mouse verification is a human checkpoint per `AGENTS.md`.
+1. New pure module → `tests/test_<module>.py` with the standard docstring +
+   bootstrap; register the module in `PURE_MODULES`
+   (`tests/test_purity.py:99`) AND add a registration-pinning test class.
+2. New refusal → subclass ValueError family, then message-assert with
+   `assertIn(...)` in the test before writing the message.
+3. New mechanical invariant → AST over source text (never grep), plus a
+   negative control proving the finder fires; add the audit class to the
+   relevant audit file.
+4. New PyMOL/Qt behavior → cannot be unit-tested in WSL; write/extend a
+   `smoke/smoke_NN_*.py` instead, with the `check()` helper, one-line
+   prints, and the `=== SMOKE-NN PASS ===` marker.
 
 ---
 
-*Testing analysis: 2026-09-12*
+*Testing analysis: 2026-10-03*

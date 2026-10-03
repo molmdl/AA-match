@@ -1,238 +1,177 @@
 # Coding Conventions
 
-**Analysis Date:** 2026-09-12
+**Analysis Date:** 2026-10-03
 
-## Scope Note
+## Hard Constraints (never violate)
 
-This repo is the PyMOL plugin subtree only: `aamatch/`, `tests/`, `smoke/`,
-`docs/`, `.planning/`. There is **no `pymol/` or `vmd/` directory and no Tcl
-code** in this repo, despite the parent `AGENTS.md` mentioning them — the
-viewer layers referenced there live in sibling projects (`pymol-src` and
-`Pymol-script-repo` are symlinks out of tree; do not treat them as code to
-edit). All conventions below are Python conventions.
+**Runtime is Python 3.6.9.** All code in `aamatch/` must compile under
+`python3.6 -m py_compile aamatch/*.py` (Gate D, `tests/test_purity.py:270`).
+Concretely:
+- NO 3.7+ syntax (no `dataclasses` in pure modules, no postponed-evaluation
+  annotations tricks requiring 3.7, no 3.7+-only stdlib).
+- f-strings ARE 3.6-legal but the codebase uses `%`-formatting everywhere
+  (`tests/test_purity.py:157`, `aamatch/persistence.py:53`). Use
+  `%`-formatting for consistency.
 
-## Language & Toolchain Discipline
+**Layer purity is mechanically enforced.** There are two tiers:
+- **PURE layer** — the 19 modules listed in `PURE_MODULES`
+  (`tests/test_purity.py:99-103`): `setup_state`, `level_spec`,
+  `persistence`, `backup`, `paths`, `vec3`, `spatial`, `manifest`,
+  `capability`, `thresholds`, `detector`, `generator`, `game_state`,
+  `wizard_core`, `wizard_text`, `setup_form`, `game_file`, `status_text`,
+  `checkpoint`. These import stdlib + other pure modules ONLY — no `pymol`,
+  no Qt, no numpy — at module level **OR inside any function body**
+  (Gate A scans every AST node, `tests/test_purity.py:152`).
+- **CMD/QT tier** — everything else (`engine.py`, `geometry.py`,
+  `placement.py`, `wizard.py`, `gamestart.py`, `setup_window.py`,
+  `game_window.py`, `upload.py`, `detector` helpers etc.). May import
+  `from pymol import cmd` / Qt. Must NEVER be added to `PURE_MODULES`
+  (`aamatch/engine.py:3-9` states this explicitly in its docstring).
 
-**Python 3.6 syntax floor, enforced.** Every `aamatch/*.py` must compile under
-`python3.6 -m py_compile` (Gate D in `tests/test_purity.py`), even though the
-runtime interpreter is Windows PyMOL's Python 3.9:
-- **No `dataclasses`, no f-strings at all.** f-strings are 3.6-legal but are
-  not used anywhere in the repo; string formatting is exclusively the `%`
-  operator (with one `.format()` in `aamatch/paths.py:50`):
-
-  ```python
-  # aamatch/level_spec.py:112 — % formatting with %r for found values
-  raise FormatError(
-      "unsupported level spec version %d (expected <= %d). "
-      "Please update AA-match." % (format_version, LEVEL_SPEC_VERSION))
-  ```
-- **Stdlib only in the pure layer.** No `numpy`, no `itertools` (recorded
-  02-01 convention: "comprehensions and explicit tuple arithmetic only" —
-  `aamatch/vec3.py:13-15`).
-
-**No lint/format config exists.** There is no `.flake8`, `setup.cfg`,
-`pyproject.toml`, `tox.ini`, `.editorconfig`, `.prettierrc`, or `.eslintrc`
-in the repo. (One stray `# noqa: E402` comment appears at
-`smoke/smoke_02_manifest.py:56-60` for post-`sys.path` imports — inherited
-habit, not a configured rule.) Style is enforced by the mechanical AST gates
-in `tests/` (see TESTING.md) and by matching the existing code. Derive style
-from the code itself.
-
-**Line width:** ~79 columns in source (a handful of overflow lines exist);
-assertion messages and docstrings wrap early with hanging indents.
-
-## Layer Architecture (the one structural rule)
-
-Every module docstring declares its layer on the first lines:
-
-- **PURE layer** — `aamatch/` modules registered in `PURE_MODULES`
-  (`tests/test_purity.py:87-90`): `setup_state`, `level_spec`, `persistence`,
-  `backup`, `paths`, `vec3`, `spatial`, `manifest`, `capability`,
-  `thresholds`, `detector`, `generator`, `game_state`, `wizard_core`,
-  `wizard_text`. These import whitelisted stdlib + pure siblings ONLY, at any
-  scope (module level or function body — Gate A scans both).
-- **CMD TIER** — `aamatch/` modules that import pymol: `engine.py`,
-  `placement.py`, `geometry.py`, `wizard.py`, `gamestart.py`. Their docstrings
-  open with the identical declaration (e.g. `aamatch/engine.py:3-8`):
-
-  ```
-  Layer: CMD TIER. ``from pymol import cmd`` at module level is LEGAL
-  here; this module must NEVER be added to ``PURE_MODULES`` in
-  ``tests/test_purity.py`` ... NO Qt anywhere.
-  ```
-
-  When adding a new cmd-tier module, copy this declaration verbatim (adapt the
-  module name). When adding a new pure module, register it in `PURE_MODULES`
-  AND add a registration-pin test (pattern: `TestGeneratorRegistration` in
-  `tests/test_purity.py:279-289`).
-- `aamatch/__init__.py` has **ZERO module-level imports** (Gate A2). Its
-  `# Version: x.y.z` / `# Citation-Required: No` comment block MUST be the
-  first lines of the file, before the docstring (PyMOL plugin-loader contract,
-  pinned by `tests/test_package_skeleton.py`). All imports are lazy inside
-  `__init_plugin__`/`run_plugin_gui`.
+**Adding a new pure module:** write it, then add its name to `PURE_MODULES` in
+`tests/test_purity.py` AND add a `Test<Name>Registration` pinning test
+following `TestGeneratorRegistration` (`tests/test_purity.py:294-304`) —
+unregistered pure modules are silently ungated, so the registration is
+itself pinned.
 
 ## Naming Patterns
 
-**Files:** `snake_case.py`, one module per concern
-(`aamatch/persistence.py`, `aamatch/level_spec.py`, `aamatch/game_state.py`).
+**Files:** `snake_case.py`, one test file per module: `tests/test_<module>.py`
+(`tests/test_vec3.py` ↔ `aamatch/vec3.py`). Smoke scripts:
+`smoke/smoke_NN_name.py` (`smoke/smoke_01_bootstrap.py`).
 
-**Functions:** snake_case, verb-first: `make_container`, `check_container`,
-`write_json_atomic`, `read_json_file`, `save_container`, `load_container`
-(`aamatch/persistence.py`); `to_windows_path`, `package_data_path`
-(`aamatch/paths.py`); `parse_level_spec_dict` (`aamatch/level_spec.py`).
-Verb pairs are consistent: make/check, save/load, write/read, parse/serialize.
+**Functions/methods:** `snake_case` verbs — `validate_state`,
+`randomize_state`, `write_json_atomic`, `extract_game_atoms`, `place_aa`.
 
-**Private helpers:** single leading underscore, at module level when they
-decompose a gate chain: `_is_int`, `_check_seed`, `_check_levels`,
-`_check_level`, `_check_molecule_grid` (`aamatch/level_spec.py:64-214`);
-`_to_int`, `_to_str`, `_clamp` (`aamatch/setup_state.py:65-87`). Tests call a
-leading-underscore helper directly when it is the documented test seam
-(`wizard_text._clip` in `tests/test_wizard_text.py:492`).
+**Private helpers:** leading underscore — `_to_int`, `_clamp`
+(`aamatch/setup_state.py:65-87`), `_read_source` (`tests/test_purity.py:184`).
 
-**Constants:** UPPER_SNAKE public constants at module top
-(`AAM_MAGIC`, `FORMAT_VERSION`, `KINDS` in `aamatch/persistence.py:34-37`;
-`DEFAULTS`, `INTERACTION_TYPES`, `MOLECULES_DEFAULT/MIN/CAP` in
-`aamatch/setup_state.py:40-50`); leading-underscore for module-private
-lookups (`_MATRIX_TOL`, `_IDENT_3X4`, `_KEY_NUDGES` in
-`aamatch/wizard.py:84-91`; `_CANONICAL_POSITION` in
-`aamatch/game_state.py:42`).
+**Constants:** `UPPER_SNAKE_CASE`, often grouped in
+`NAME_DEFAULT, NAME_MIN, NAME_CAP = ...` triples
+(`aamatch/setup_state.py:46-50`). Public enums as module-level lists in
+canonical order — `INTERACTION_TYPES` (`aamatch/setup_state.py:40`) is the
+single home; never duplicate it elsewhere (modules re-export, e.g.
+`thresholds.py` re-exports capability's `METAL_ELEMENTS`).
 
-**Classes:** PascalCase, rare (function-oriented design). Only plugin shell
-classes and exception types: `GameWizard(Wizard)` (`aamatch/wizard.py:100`),
-plus exceptions below.
+**Version constants:** each artifact pins its own gate —
+`FORMAT_VERSION` (`aamatch/persistence.py:37`), `DETECTOR_VERSION` /
+`LEVEL_SPEC_VERSION` (`aamatch/level_spec.py`), `CHECKPOINT_VERSION`
+(`aamatch/checkpoint.py`).
 
-**Single-home rule for enums/constants:** e.g. `INTERACTION_TYPES` lives ONLY
-in `aamatch/setup_state.py`; `thresholds` re-exports `capability`'s tables —
-"single homes, never duplicates" (`tests/test_purity.py:70-76`). Add a value
-to its home module; never re-declare.
+**Errors:** `<Area>Error` subclassing the ValueError family —
+`FormatError(ValueError)` (`aamatch/persistence.py:42`),
+`BackupError`, `EngineError`, generator's own error subclassing ValueError
+but **deliberately NOT** `persistence.FormatError`
+(`aamatch/generator.py:133`) — keep refusal families per-module unless a
+shared container parse is literally reused.
 
-## Code Style / Docstrings
+## Docstrings (a load-bearing convention)
 
-**Module docstring is the design contract.** Pattern (every module):
-1. First line: `aamatch.<name> -- <one-line purpose> (plan NN-MM)`.
-2. Layer declaration (PURE or CMD TIER, see above).
-3. Multi-paragraph design contract: data shapes, refusal semantics, versioning
-   policy, non-mutation guarantees — with citations to plan IDs (`(plan
-   02-13)`), requirement IDs (`DETECT-03`, `SCORE-01`, `PLAY-04`), research
-   docs (`materialization research §1.5`), and pitfall lines
-   (`PITFALLS.md:274-280`). Example: `aamatch/persistence.py:1-26`,
-   `aamatch/wizard.py:1-75`. Use `--` for em-dashes in docstrings (mixed with
-   `—`; both appear; `--` dominates).
+Every module opens with a LONG docstring naming: **layer** (`Layer: PURE` /
+`Layer: CMD TIER` — see `aamatch/engine.py:3`), the design contract, the
+research/trace references (e.g. `(D1-D4, R4, P5)`, `(SETUP-06)`) and the
+exact invariants/tests that guard it. Docstrings frequently cite upstream
+PyMOL source locations (e.g. `plugins/__init__.py:193-210`) and plan IDs
+(`(07-02)`). Write docstrings this way — they are the audit trail.
 
-**Function docstrings:** present on nearly every function, one-line summary
-for trivial helpers, multi-line where behavior is contractual. No numpydoc/
-Google-style sections; prose with inline ` ``code`` ` (double-backtick RST
-style) for identifiers:
+Trace tags used consistently: requirement IDs (`PERSIST-01`, `DETECT-03`,
+`PLAY-04`, `SCORE-01`, `SETUP-06`, `GEN-04`), pitfall refs
+(`PITFALLS.md:181`, `PITFALL 15`), research refs (`D2`, `B7`, `B8`, `R8.5`),
+and phase-plan refs (`(07-02)`, `02-15`).
 
-```python
-# aamatch/persistence.py:91
-def write_json_atomic(path, obj):
-    """Serialize `obj` to `path` atomically: temp file + fsync + os.replace.
+## Code Style
 
-    Byte-stable, diff-able output (sort_keys, indent=2, binary write) and
-    loud NaN/Infinity refusal (allow_nan=False). On any failure the temp
-    file is removed (best-effort) and the original file is left untouched.
-    """
-```
+**Formatting:** no formatter config (no black/ruff/flake8 files). Hand
+style: 4-space indent, ~79-char lines, hanging indents aligned, comments
+placed in inline columns (`aamatch/setup_state.py:54-62`). String
+formatting with `%`. Avoid semicolons/one-liners.
 
-**Comments:** explain WHY, cite provenance (`# Source: prior art
-demos.py:59-78; research F1-F2, R7` — `aamatch/paths.py:41`), call out
-load-bearing lines in CAPS (`# The ``len(parts) == 4`` term is LOAD-BEARING`
-— `aamatch/paths.py:37`), and record discoveries with dates (`# DISCOVERY
-(2026-09-06, headless probe ...)` — `aamatch/wizard.py`, smoke files).
+**Imports at module top:** one per line, stdlib-only in pure modules
+(`import copy\nimport random`). Relative imports for intra-package pure:
+`from .persistence import FormatError, check_container, make_container`
+(`aamatch/level_spec.py:58`).
 
-## Import Organization
+**`aamatch/__init__.py`:** ZERO module-level imports (Gate A2,
+`tests/test_purity.py:229-245`). Entry points `__init_plugin__` /
+`run_plugin_gui` lazy-import inside function bodies
+(`aamatch/__init__.py:25,38`). The `# Key: value` metadata block MUST be
+the first lines of the file — PyMOL's loader stops at the first non-`#`
+line (`aamatch/__init__.py:1-11`, pinned by `tests/test_package_skeleton.py`).
 
-Order, always (example `aamatch/engine.py:75-82`):
-1. stdlib (`import math`, `import time` — plain `import x` preferred over
-   `from x import y` for stdlib),
-2. `from pymol import cmd` and other pymol imports (cmd tier only),
-3. pure siblings — `from . import capability, detector, ...` grouped on one
-   line when several, and/or `from .persistence import read_json_file`
-   explicit-name form.
+**Multiple imports in tests:** parenthesized alphabetical lists
+(`tests/test_setup_state.py:33-56`).
 
-Pure modules never import `pymol`/Qt/`numpy` at ANY scope; gate-checked.
-Cmd-tier modules import pymol at module level (never lazily, except
-`__init__.py` which imports EVERYTHING lazily). Relative imports
-(`from . import engine`) inside cmd-tier bodies are used deliberately so the
-module behaves identically under both module identities (`aamatch` vs
-`pmg_tk.startup.aamatch` — `aamatch/wizard.py:19-29`).
+## State & Data Patterns
+
+**Plain dicts over classes for domain state.** The 7-field setup model is a
+module-level `DEFAULTS` dict (`aamatch/setup_state.py:54-62`); validators
+return NEW dicts deep-copied from DEFAULTS and **never mutate input**
+(contract D3/P6 — `aamatch/setup_state.py:90-106`). `GameState` is plain
+data with a `to_dict()` read path, not shared mutable globals.
+
+**Single source of truth per enum/table.** `INTERACTION_TYPES` lives only
+in `setup_state.py`; thresholds live only in `aamatch/thresholds.py`;
+typing tables only in `aamatch/capability.py`. Other modules import them —
+never inline copies (`tests/test_detector_invariance.py:44` imports
+`thresholds` and the boundary probes apply deltas to the constants, never
+to inline numbers).
+
+**Small pure helpers.** Private coercion helpers with explicit docstrings of
+edge behavior (`_to_int` documents `int('x') -> ValueError,
+int(None) -> TypeError`, `aamatch/setup_state.py:65-75`).
 
 ## Error Handling
 
-**Fail-closed with domain exceptions.** Each tier defines one exception type
-subclassing `ValueError`, message naming the cause:
+**Fail-closed with the ValueError family.** All format/refusal flows raise
+`<Area>Error` subclasses of ValueError with HUMAN-readable, prior-art-tested
+messages (`aamatch/persistence.py:8-13` pins the exact phrasing patterns:
+`"not an AA-match file (...)"`, `"unsupported AA-match format version ...
+Please update AA-match."`). Refusal messages are **message-asserted** in
+tests — pick stable wording before writing the test
+(`tests/test_level_spec.py:176-224`).
 
-```python
-# aamatch/persistence.py:40
-class FormatError(ValueError):
-    """An AA-match file is foreign, too new, misfiled, or unparseable."""
+**Multi-gate parsers.** Versioned-artifact parsers run a fixed gate chain
+(magic → version → kind → payload gates), each raising `FormatError` naming
+the failing gate (`aamatch/level_spec.py:81-121`).
 
-# aamatch/wizard.py:94 — peers pattern, documented in the class docstring
-class WizardError(ValueError):
-    """A failed WIZARD op (house fail-closed style, peers with
-    EngineError / PlacementError). ..."""
-```
+**The two version gates (never conflate — `aamatch/thresholds.py:13-18`):**
+- container `version` / payload `format_version`: **refuse-newer /
+  accept-older** (additive-only evolution; readers use `.get()` defaults —
+  `aamatch/persistence.py:71-73`),
+- `detector_version`: **EXACT match** (stale AND newer both refused —
+  `aamatch/level_spec.py:116-121`). Checkpoint adds its own refuse-newer
+  `checkpoint_format_version` gate.
 
-Existing peers: `FormatError` (`persistence`), `EngineError` (`engine`),
-`PlacementError` (`placement`), `WizardError` (`wizard`), `GenerationError`
-(`generator`). New domain errors: subclass `ValueError`, name
-`<Domain>Error`, message names the cause and includes the offending value via
-`%r`.
+**Atomic writes.** `write_json_atomic`: temp file + fsync + `os.replace`,
+`sort_keys`, `indent=2`, binary write, `allow_nan=False` (loud NaN/inf
+refusal), best-effort temp cleanup on failure
+(`aamatch/persistence.py:93-115`).
 
-**Message phrasing conventions** (`aamatch/persistence.py:8-12`): refusal
-messages follow frozen patterns — `"not an AA-match file (...)"`,
-`"unsupported ... Please update AA-match."`, `"expected an AA-match <kind>
-file, found kind=..."`, `"could not parse AA-match JSON: ..."`. Tests
-`assertIn` on these fragments, so **do not reword**.
+**Non-destructive cleanup discipline.** On refusal, original files stay
+untouched; game objects are always cleaned in `finally`/explicit cleanup —
+"never leave game objects" (`smoke/smoke_04_e2e.py` teardown). GUI slots
+catch ValueError-family refusals per button via a guard (`_guard`);
+unexpected exceptions propagate fail-closed
+(`aamatch/__init__.py:35-37`).
 
-**Never silent-catch.** Validation raises; no `except: pass`, no sentinel
-returns. Degenerate inputs raise (`vec3.unit` raises `ValueError` for the
-zero vector rather than producing NaN — `aamatch/vec3.py:64-69`). Fallback-to-
-default coercions are allowed ONLY where documented (`_to_int`, `_to_str` in
-`aamatch/setup_state.py`) — invalid enums fall back to defaults, that IS the
-contract there.
+## Banned calls (mechanically enforced)
 
-**Cleanup discipline:** `try/finally` for PyMOL object lifetimes (temp
-objects deleted in a `finally`, atomic-write temp removed on
-`except BaseException` — `aamatch/persistence.py:102-113`).
+`cmd.get_model` (OOM trap), `cmd.matrix_reset` (coordinate reverter),
+`cmd.get_object_ttt` (segfault hazard) must never be CALLED anywhere in
+`aamatch/` or `smoke/` (`tests/test_code_audit.py:56` `BANNED_CALLS`).
+Prose mentions exist only at pinned exact counts in
+`tests/test_code_audit.py:64-69` (`PROSE_PIN`); any count drift fails the
+audit. In UI modules `wizard.py`/`gamestart.py`/`setup_window.py`/
+`game_window.py` the helper-visual primitives `cmd.indicate`, `cmd.distance`,
+`cmd.load_cgo` are likewise banned (PLAY-04; `tests/test_wizard_source.py:59`).
 
-**Non-mutation (P6):** validators/validators take input, return NEW objects
-built from `deepcopy(DEFAULTS)`; inputs are never mutated
-(`aamatch/setup_state.py:15-16`).
+## WSL/Windows Path Discipline
 
-## Logging
-
-**None in library code.** No `logging` import anywhere. The pure/cmd tiers
-communicate by returning plain data and raising exceptions; PyMOL's menu
-handler surfaces tracebacks (`aamatch/__init__.py:36-37`). Smokes print
-single-line PASS/FAIL records (see TESTING.md). Do not introduce `logging`
-or `print` into `aamatch/` modules.
-
-## Function & Module Design
-
-**Functions over classes; plain data in/out.** Engine ops take/return plain
-dicts/lists/tuples ("each count-asserted; plain-data in/out" —
-`aamatch/engine.py:33`). Wizard instance attributes are plain picklable data
-ONLY (session-pickle contract — `aamatch/wizard.py:19-29`).
-
-**Small gate-chain decomposition:** one public validator delegates to
-`_check_*` helpers in declaration order (`aamatch/level_spec.py:98-214`).
-Follow this for new validators; each helper's docstring names its gate.
-
-**Constants over literals:** detection cutoffs live ONLY in
-`aamatch/thresholds.py` — "the tests never inline a cutoff"
-(`tests/test_detector.py:13-15`).
-
-## Version Control
-
-**Commit style: Conventional Commits with phase-plan scope**
-(`git log`): `feat(03-06):`, `fix(03-06):`, `test(03-06):`, `docs(03-06):`,
-`feat(03-05): ...`; repo-wide work uses bare type (`chore:`, `doc:`).
-Messages are short imperative summaries, often with dashes for subtleties
-(`test(03-06): SMOKE-07 PART F -- the field-bug batteries`). Planning docs
-are committed with the code they describe.
+Windows PyMOL/VMD cannot resolve `/mnt/c/...`. Path conversion goes through
+`aamatch/paths.py` (`to_windows_path`); smoke scripts that bootstrap the
+package itself carry a local `winpath()` mirror instead of importing the
+package (`smoke/smoke_01_bootstrap.py:28-37`, deliberately not circular).
 
 ---
 
-*Convention analysis: 2026-09-12*
+*Convention analysis: 2026-10-03*

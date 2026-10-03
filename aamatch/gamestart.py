@@ -23,7 +23,7 @@ switch tab -> countdown 3-2-1 -> GO -> ``activate_game(wiz)``.
 conditional replace AT ACTIVATION (the wizard stack can change during
 the countdown -- the 03-05 decision is re-checked, never cached) and
 anchors the per-molecule timer from zero via
-``engine._current_game().start_timer(time.time())``. The DEFAULT path
+``engine.current_game().start_timer(time.time())``. The DEFAULT path
 (``activate=True``) is byte-identical to the pre-Phase-5 behaviour: one
 call still goes from any state to a playable game, and SMOKE-08's
 checks (incl. the msm ORDER-LAW teeth) stay green unchanged.
@@ -406,7 +406,7 @@ def activate_game(wiz):
     from . import engine
     replace = 1 if isinstance(cmd.get_wizard(), GameWizard) else 0
     wiz.activate(replace=replace)
-    engine._current_game().start_timer(time.time())
+    engine.current_game().start_timer(time.time())
 
 
 def start_game(setup=None, seed=42, candidates=None, ligand_content=None,

@@ -32,7 +32,7 @@ discipline (engine.py:153-180), descriptor by descriptor:
    (``r['object'] == tmp`` over geometry.extract_game_atoms()) and
    must produce atoms;
 5. the bond block remaps through the 02-09-probed walk-position
-   mapping (``engine._remap_ligand_bonds`` -- nothing in it is
+   mapping (``engine.remap_ligand_bonds`` -- nothing in it is
    manifest-specific) and the capability profile comes from the ONE
    typing home (capability.ligand_profile);
 6. the temp is DELETED in a finally and the object list is asserted
@@ -150,7 +150,7 @@ def prepare_uploaded_set(records, fmt, source_name='<upload>'):
             if not records_i:
                 raise ValueError(
                     'upload record %d produced 0 atoms' % (number,))
-            lig_records, lig_bonds = engine._remap_ligand_bonds(
+            lig_records, lig_bonds = engine.remap_ligand_bonds(
                 records_i, [tmp])
             profile = capability.ligand_profile(lig_records, lig_bonds)
         finally:

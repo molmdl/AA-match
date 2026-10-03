@@ -68,7 +68,7 @@ OPS (each count-asserted; plain-data in/out):
 5c. ``ligand_profile_molecule(level_index, molecule_index) ->
     profile`` -- the molecule's ligand chemistry profile recomputed
     LIVE from its materialized ligand object (extract restricted to
-    that object -> _remap_ligand_bonds -> capability.ligand_profile);
+    that object -> remap_ligand_bonds -> capability.ligand_profile);
     byte-equal to generation-time (the ligand never changes during
     play). The PLAY-05 hint's "could form" input (05-08).
 6. ``score_current(level_index, molecule_index, required,
@@ -82,7 +82,7 @@ OPS (each count-asserted; plain-data in/out):
    Phase-3 Confirm handler wraps exactly this.
  8. ``game_status() -> dict`` -- the 05-07 READ path: the live
     GameState's to_dict() snapshot, no mutation; EngineError before
-    new_game (inherited from _current_game).
+    new_game (inherited from current_game).
  9. ``record_scored(level_index, molecule_index, required,
     records=None) -> (score, formed_types)`` -- the ONE lifecycle
     record site (06-03): refuses a second record via
@@ -99,7 +99,7 @@ OPS (each count-asserted; plain-data in/out):
     wizard owns range logic).
 12. ``total_score()`` -- the running total (SCORE-01 sum).
 13. ``is_over()`` -- the game_over bool gate (EngineError before
-    new_game via _current_game, like every read).
+    new_game via current_game, like every read).
 14. ``advance_level() -> registry`` -- SCORE-03 mechanics: cleanup ->
     materialize(L+1) -> GameState.advance_level LAST (fail-closed
     ordering; pure data cannot fail), the timer anchor untouched by
@@ -141,12 +141,16 @@ _game = None
 _ligand_content = None      # 06-03: advance_level's re-materialization input
 
 
-def _current_game():
-    """The live GameState (created by new_game; EngineError before)."""
+def current_game():
+    """Public seam (promoted quick-003): the live GameState (created
+    by new_game; EngineError before)."""
     if _game is None:
         raise EngineError(
             'engine: no live game -- call new_game(setup, seed) first')
     return _game
+
+
+_current_game = current_game  # legacy private name, retained for the byte-frozen standing smokes' alias calls (08.1-07 KEEP-smokes law) -- never for new code (promoted quick-003)
 
 
 def _current_registry():
@@ -157,9 +161,10 @@ def _current_registry():
     return _registry
 
 
-def _remap_ligand_bonds(records, lig_objects):
-    """Productionized SMOKE-03 remap helper (02-13 pattern, generalized
-    to multiple ligand objects).
+def remap_ligand_bonds(records, lig_objects):
+    """Public seam (promoted quick-003): the productionized SMOKE-03
+    bond-remap helper (02-13 pattern, generalized to multiple ligand
+    objects).
 
     ``records`` = extract_game_atoms output; ``lig_objects`` = the
     ligand object name(s) whose bond blocks to read. Bonds from
@@ -185,6 +190,9 @@ def _remap_ligand_bonds(records, lig_objects):
                         id_pos[(obj, index_to_id[j + 1])], int(order)))
     out.sort()
     return lig, out
+
+
+_remap_ligand_bonds = remap_ligand_bonds  # legacy private name, retained for the byte-frozen standing smokes' alias calls (08.1-07 KEEP-smokes law) -- never for new code (promoted quick-003)
 
 
 def _ligand_data_for(row, names_before, ligand_content=None):
@@ -258,7 +266,7 @@ def _ligand_data_for(row, names_before, ligand_content=None):
         records = [r for r in geometry.extract_game_atoms()
                    if r['object'] == tmp_name]
         center, radius = geometry.bounding_sphere(records)
-        lig_records, lig_bonds = _remap_ligand_bonds(records,
+        lig_records, lig_bonds = remap_ligand_bonds(records,
                                                      [tmp_name])
         profile = capability.ligand_profile(lig_records, lig_bonds)
         return {'centroid': center, 'radius': radius,
@@ -445,13 +453,13 @@ def detect():
 
     geometry.extract_game_atoms() + geometry.ligand_bonds per
     registered ligand object (probe-pinned remap via
-    _remap_ligand_bonds) -> detector.detect -- the 7-type surface, NOT
+    remap_ligand_bonds) -> detector.detect -- the 7-type surface, NOT
     detect_part1. Returns the canonically sorted record list.
     """
     registry = _current_registry()
     records = geometry.extract_game_atoms()
     lig_objects = [mol['ligand'][0] for mol in registry['molecules']]
-    _, lig_bonds = _remap_ligand_bonds(records, lig_objects)
+    _, lig_bonds = remap_ligand_bonds(records, lig_objects)
     return detector.detect(records, lig_bonds)
 
 
@@ -483,7 +491,7 @@ def detect_molecule(level_index, molecule_index):
     keep = slot_objects | set((lig_object,))
     records = [r for r in geometry.extract_game_atoms()
                if r['object'] in keep]
-    _, lig_bonds = _remap_ligand_bonds(records, [lig_object])
+    _, lig_bonds = remap_ligand_bonds(records, [lig_object])
     found = detector.detect(records, lig_bonds)
     return game_state.records_for_molecule(found, slot_objects,
                                            lig_object)
@@ -499,7 +507,7 @@ def ligand_profile_molecule(level_index, molecule_index):
     profile (level_spec shape, fields only) -- so the PLAY-05 "could
     form" input is read back from the LIVE object. Scoping mirrors
     detect_molecule: the record list is restricted to this molecule's
-    ligand object, bonds are remapped via _remap_ligand_bonds, and
+    ligand object, bonds are remapped via remap_ligand_bonds, and
     capability.ligand_profile consumes them.
 
     Byte-equality argument: the ligand object is loaded once at
@@ -524,7 +532,7 @@ def ligand_profile_molecule(level_index, molecule_index):
     lig_object = molecules[index]['ligand'][0]
     records = [r for r in geometry.extract_game_atoms()
                if r['object'] == lig_object]
-    lig_records, lig_bonds = _remap_ligand_bonds(records, [lig_object])
+    lig_records, lig_bonds = remap_ligand_bonds(records, [lig_object])
     return capability.ligand_profile(lig_records, lig_bonds)
 
 
@@ -539,7 +547,7 @@ def score_current(level_index, molecule_index, required, records=None):
     """
     if records is None:
         records = detect_molecule(level_index, molecule_index)
-    game = _current_game()
+    game = current_game()
     value = game.record_molecule_result(level_index, molecule_index,
                                         required, records)
     key = game_state.GameState.molecule_key(level_index, molecule_index)
@@ -580,7 +588,7 @@ def record_scored(level_index, molecule_index, required, records=None):
     score_current (the two views still record together -- they can
     never drift).
     """
-    game = _current_game()
+    game = current_game()
     if game.has_record(level_index, molecule_index):
         raise EngineError(
             'This molecule already has a recorded result (scored or '
@@ -606,7 +614,7 @@ def skip_molecule(level_index, molecule_index, required):
     """
     value, formed = record_scored(level_index, molecule_index,
                                   required)
-    _current_game().skip_count += 1
+    current_game().skip_count += 1
     return value, formed
 
 
@@ -617,14 +625,14 @@ def advance_molecule():
     its own books (the research-Q1 ownership split). Deliberately NO
     range check: GameState.advance_molecule is a plain transition and
     the wizard owns the last-molecule-of-level logic."""
-    _current_game().advance_molecule()
+    current_game().advance_molecule()
 
 
 def total_score():
     """Op 12: the running total (sum of the per-molecule recorded
     scores; SCORE-01's accumulated total). EngineError before
-    new_game (via _current_game)."""
-    return _current_game().total_score
+    new_game (via current_game)."""
+    return current_game().total_score
 
 
 def _molecule_counts():
@@ -664,7 +672,7 @@ def advance_level():
     ACROSS levels (only give_up/complete_game freeze it via
     stop_timer).
     """
-    game = _current_game()
+    game = current_game()
     if game.game_over:
         raise EngineError('engine.advance_level: the game is over')
     if _payload is None:
@@ -696,7 +704,7 @@ def give_up(now=None):
     ended_molecule). A second give_up (any game-over replay) refuses
     naming the cause.
     """
-    game = _current_game()
+    game = current_game()
     if game.game_over:
         raise EngineError('engine.give_up: the game is already over')
     game.giveup_count += 1
@@ -714,7 +722,7 @@ def complete_game(now=None):
     exit). Refuses when the game is already over, same message class
     as give_up.
     """
-    game = _current_game()
+    game = current_game()
     if game.game_over:
         raise EngineError(
             'engine.complete_game: the game is already over')
@@ -733,14 +741,14 @@ def endgame_summary():
     molecules_completed, skip_count, giveup_count, ended_level,
     ended_molecule.
     """
-    return _current_game().endgame_summary(_molecule_counts())
+    return current_game().endgame_summary(_molecule_counts())
 
 
 def is_over():
     """Op 13: whether the game has ended (give_up/complete_game set
     the flag via stop_timer). A cheap bool gate for wizard/tab
-    handlers; EngineError before new_game (via _current_game)."""
-    return _current_game().game_over
+    handlers; EngineError before new_game (via current_game)."""
+    return current_game().game_over
 
 
 def game_status():
@@ -750,4 +758,4 @@ def game_status():
     timer_anchor, formed_types_per_molecule, score_per_molecule,
     game_over, end_state, final_time. Raises EngineError when no
     game is live."""
-    return _current_game().to_dict()
+    return current_game().to_dict()

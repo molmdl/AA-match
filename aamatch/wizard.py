@@ -513,7 +513,7 @@ class GameWizard(Wizard):
         by construction; the tab poll reads plain wizard data, never
         the engine."""
         from . import engine
-        gs = engine._current_game()
+        gs = engine.current_game()
         self._game_over = bool(gs.game_over)
         self._end_state = gs.end_state
 

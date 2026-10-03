@@ -412,7 +412,7 @@ class GameTab(QtWidgets.QWidget):
         at 0 so a rebase edge case can never show a negative time.
         """
         from . import engine
-        gs = engine._current_game()
+        gs = engine.current_game()
         if gs.timer_anchor is None:
             return 0.0
         return max(0.0, time.time() - gs.timer_anchor)
@@ -446,7 +446,7 @@ class GameTab(QtWidgets.QWidget):
         if QtWidgets.QApplication.activeModalWidget() is not None:
             from . import engine
             try:
-                engine._current_game().rebase_timer(
+                engine.current_game().rebase_timer(
                     time.time(), self._last_shown_elapsed)
             except engine.EngineError:
                 return

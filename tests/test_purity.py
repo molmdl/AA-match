@@ -326,6 +326,61 @@ class TestCheckpointRegistration(unittest.TestCase):
             '(unregistered pure modules are silently ungated)')
 
 
+class TestPureModuleRegistrationPins(unittest.TestCase):
+    """quick-001 Task 1: EVERY name in PURE_MODULES is pinned, and every
+    aamatch/*.py file is either registered or documented non-pure.
+
+    Gates A/A2/B/D silently SKIP unregistered modules (01-08): Gate A,
+    Gate B and the relative-import target check all iterate PURE_MODULES,
+    so a pure module removed from the list (or a brand-new module never
+    added) fails nothing -- until these pins, deleting e.g. 'persistence'
+    from PURE_MODULES left the whole suite green with the module simply
+    ungated. The per-name pin loop below makes the registration list
+    itself load-bearing, and the package-coverage check makes sure a new
+    module file can never escape ALL gates silently.
+    """
+
+    def test_every_pure_module_name_is_pinned(self):
+        # Inline literal (NOT a module-level twin of PURE_MODULES) -- the
+        # 3 legacy pin classes use the same pattern; editing the test is
+        # the only way to silence it. Names in PURE_MODULES order.
+        # assertIn per name only: NO set-equality, NO length pin (adding
+        # a module stays governed by the per-module pin-class pattern).
+        expected = ['setup_state', 'level_spec', 'persistence', 'backup',
+                    'paths', 'vec3', 'spatial', 'manifest', 'capability',
+                    'thresholds', 'detector', 'generator', 'game_state',
+                    'wizard_core', 'wizard_text', 'setup_form', 'game_file',
+                    'status_text', 'checkpoint']
+        for name in expected:
+            with self.subTest(module=name):
+                self.assertIn(
+                    name, PURE_MODULES,
+                    'aamatch/%s.py must be registered in PURE_MODULES '
+                    '(unregistered pure modules are silently ungated)'
+                    % name)
+
+    def test_every_package_module_is_registered_or_documented_non_pure(self):
+        # The cmd/Qt-tier modules deliberately outside the purity gates;
+        # Gate D still compiles them.
+        non_pure = ['engine', 'geometry', 'placement', 'wizard',
+                    'gamestart', 'upload', 'setup_window', 'game_window']
+        # Gate-D directory-scan pattern: os and PKG_DIR already exist at
+        # module level -- no new imports.
+        for fname in sorted(name for name in os.listdir(PKG_DIR)
+                            if name.endswith('.py')):
+            mod = fname[:-len('.py')]
+            # Gate A2 covers __init__.py separately.
+            if mod == '__init__':
+                continue
+            with self.subTest(module=mod):
+                self.assertTrue(
+                    mod in PURE_MODULES or mod in non_pure,
+                    'aamatch/%s.py is registered in NEITHER PURE_MODULES '
+                    'nor the documented non-pure list -- register it '
+                    '(and gate it) or add it to the non-pure list with a '
+                    'reason' % mod)
+
+
 class TestNegativeControl(unittest.TestCase):
     """Proves Gate A can FAIL, and that docstring prose is immune (P2)."""
 

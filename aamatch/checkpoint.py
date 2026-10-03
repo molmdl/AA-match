@@ -1,10 +1,11 @@
 """aamatch.checkpoint -- the checkpoint sidecar schema + .aamz zip I/O (07-02).
 
 Layer: PURE (builds on persistence / game_file / game_state; imports
-stdlib json/os/tempfile/zipfile + those pure siblings ONLY -- zipfile is
-whitelisted in tests/test_purity.py ALLOWED_STDLIB for exactly this
-module). No pymol/Qt/numpy anywhere, module level or function body, so
-the module unit-tests in WSL with bare python3.6 and zero stubs.
+stdlib json/os/shutil/tempfile/zipfile + those pure siblings ONLY --
+zipfile and shutil are whitelisted in tests/test_purity.py
+ALLOWED_STDLIB for exactly this module). No pymol/Qt/numpy anywhere,
+module level or function body, so the module unit-tests in WSL with
+bare python3.6 and zero stubs.
 
 The checkpoint is the THIRD versioned artifact -- the two-gates-law
 extension story: container ``version`` (refuse-newer / accept-older,
@@ -80,6 +81,7 @@ and a present wizard block must be a dict.
 
 import json
 import os
+import shutil
 import tempfile
 import zipfile
 
@@ -342,8 +344,12 @@ def read_checkpoint_zip(zip_path):
     parse the sidecar through parse_checkpoint_data -- every gate
     refused BEFORE extraction hands off. The sidecar member is the FULL
     container JSON, so check_container gate 1 applies here. On success
-    game.pse is extracted into a tempfile.mkdtemp dir and
-    (extracted_path, parsed_data) returned; the CALLER owns the rmtree.
+    game.pse is STREAMED to disk by a single zf.extract INSIDE the
+    open-zip block (quick-003: no full-member RAM read -- the 2x
+    memory spike of read-then-write is halved) and
+    (extracted_path, parsed_data) returned using zf.extract's returned
+    path; the CALLER owns the rmtree on success, while an extract-time
+    refusal cleans its own tmp_dir before raising.
     """
     try:
         zf = zipfile.ZipFile(zip_path, 'r')
@@ -368,15 +374,13 @@ def read_checkpoint_zip(zip_path):
         except ValueError as exc:
             raise FormatError('could not parse AA-match JSON: %s' % exc)
         data = parse_checkpoint_data(container)      # ALL gates first
+        tmp_dir = tempfile.mkdtemp(prefix='aamatch_checkpoint_')
         try:
-            pse_bytes = zf.read(PSE_MEMBER)
+            pse_path = zf.extract(PSE_MEMBER, path=tmp_dir)
         except (zipfile.BadZipFile, RuntimeError) as exc:
+            shutil.rmtree(tmp_dir, ignore_errors=True)
             raise FormatError(
                 'not an AA-match archive (unreadable zip: %s)' % exc)
-    tmp_dir = tempfile.mkdtemp(prefix='aamatch_checkpoint_')
-    pse_path = os.path.join(tmp_dir, PSE_MEMBER)
-    with open(pse_path, 'wb') as handle:
-        handle.write(pse_bytes)
     return pse_path, data
 
 

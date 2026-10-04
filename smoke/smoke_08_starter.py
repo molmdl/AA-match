@@ -19,8 +19,11 @@ PART 1  start: start_game() returns the live GameWizard and it is
         len(registry['molecules']) x (1 + n*n) objects (the count is
         DERIVED from the returned wizard's registry/payload, never
         hard-coded); the 03-06 fix-pass asserts live here -- uniform
-        AA representations (every slot object reads the sticks bit
-        ONLY), the zoom-to-frame (view changed and the camera sits
+        AA representations extended 08.1-08 fix-batch to EVERY game
+        object (each slot AND each ligand object reads the sticks bit
+        ONLY -- the 08.1-08 human checkpoint found the raw-loaded
+        ligand keeping PyMOL's default extra rep bit, a mixed scene),
+        the zoom-to-frame (view changed and the camera sits
         outside the ACTIVE molecule's bounding sphere -- 03-07 human
         decision 2026-09-10: frame ONLY the active molecule's grid +
         ligand so the view matches the panel's "molecule 1 of 2"
@@ -239,17 +242,23 @@ try:
           'grew=%d want %d (derived from the returned registry)'
           % (len(grew), gen1_expected))
 
-    # -- 03-06 fix: uniform AA representations (sticks ONLY) ----------
+    # -- 03-06 fix: uniform representations (sticks ONLY); 08.1-08
+    # fix-batch extended the census from AA slots to EVERY game object
+    # (the ligand inherits _normalize_reps too -- raw cmd.load left the
+    # default extra rep bit on the ligand, the human checkpoint's
+    # mixed-line/stick finding) --
     reps_bad = []
     for mol in wiz1._registry['molecules']:
-        for slot_id, entry in mol['slots'].items():
+        census = [('ligand', mol['ligand'])]
+        census += sorted(mol['slots'].items())
+        for slot_id, entry in census:
             rows = []
             cmd.iterate(entry[0], 'stored.append(reps)',
                         space={'stored': rows})
             vals = sorted(set(int(r) for r in rows))
             if vals != [1]:        # bit 0 = sticks, nothing else
                 reps_bad.append('%s(%s)=%s' % (slot_id, entry[0], vals))
-    check('every AA reads the sticks bit ONLY (uniform reps)',
+    check('every game object reads the sticks bit ONLY (uniform reps)',
           not reps_bad,
           'non-uniform: %s (the old split was neutral 49 vs charged '
           '2176)' % reps_bad)

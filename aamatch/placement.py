@@ -158,12 +158,16 @@ def _sentinel_tag(object_name):
 
 
 def _normalize_reps(object_name):
-    """Uniform gameplay look for one AA slot object: clear the
-    auto-assigned representations, then sticks ONLY (03-06 field
-    report: the new-object display heuristic split the grid into
+    """Uniform gameplay look for ANY game object (AA slot or ligand):
+    clear the auto-assigned representations, then sticks ONLY (03-06
+    field report: the new-object display heuristic split the grid into
     sticks+cartoon for neutral fragments and lines+nonbonded dots for
     charged ones -- same class of object must LOOK the same; the
-    detector never reads representations)."""
+    detector never reads representations). 08.1-08 fix-batch (human
+    checkpoint finding 1): the LIGAND inherits this too -- a raw
+    cmd.load leaves PyMOL's default extra rep bit ON the ligand (probe:
+    bundled heme ligand read reps bits 17 vs the slots' 1 -- a visibly
+    mixed scene, worst on a 75-atom molecule)."""
     cmd.hide('everything', object_name)
     cmd.show('sticks', object_name)
 
@@ -361,6 +365,12 @@ def materialize(payload, level_index=0, ligand_content=None):
         n_lig = _assert_count(lig_name, 1,
                               'materialize ligand %s' % molecule_id)
         _sentinel_tag(lig_name)
+        # 08.1-08 fix-batch (human checkpoint finding 1): normalize the
+        # ligand's reps the same way slots are normalized -- cmd.load
+        # leaves PyMOL's per-object default extra rep bit set on the
+        # ligand while slots are sticks-only, which the player saw as a
+        # mixed line/stick scene (most obvious on the 75-atom heme).
+        _normalize_reps(lig_name)
         if offset != (0.0, 0.0, 0.0):
             cmd.translate(list(offset), lig_name, state=1, camera=0)
         lig_entry = (lig_name, _sorted_ids(lig_name))

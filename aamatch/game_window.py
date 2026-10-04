@@ -68,9 +68,20 @@ final elapsed, and pop the wizard via the local ``_pop_game_wizard``
  headline + rich-text stats are EXACTLY the pure
  ``status_text.endgame_lines`` block the info box also carries (two
  surfaces, one wording home: the modal is the MOMENT, the info box
- is the RECORD). The scheduling lives in the WRAPPERS ONLY (the
- smoke-99 law -- impls and the tick never own boxes, so headless
-    smokes drive the impls and never fire the tail). Plan 07-06 lands
+ is the RECORD). The scheduling is ARM-ONLY (never a synchronous
+ box -- P-6 + the smoke-99 receipt): the wrapper tails arm the
+ deferred shot on tab ends and -- plan 08.1-08 path-outcome parity
+ (human checkpoint directive 2026-10-01) -- the poll's game_over
+ transition arms the SAME deferred shot on panel ends, so every end
+ path converges on one moment. Impls and the tick still never OPEN
+ a box: the queued shot fires outside every callback stack. Headless
+ safety is the ENTRY GATE in ``_show_endgame_modal`` -- under
+ platform=offscreen the box refuses to open (smoke-99 receipt; the
+ smokes' event pumps CAN deliver armed shots -- observed live
+ 2026-10-01) -- so the real drive stays [HUMAN]-only by
+ construction. The once-latch (reset at
+ every fresh-game edge) makes the tab path's double arm -- the sync
+ refresh's transition PLUS the wrapper tail -- show exactly one box. Plan 07-06 lands
     the Save button (SCORE-08): a gate-first wrapper (silent no-op
     pre-GO/no-game/post-endgame, pre-dialog elapsed capture, the
     '.aamz' default+auto-append, NO success box -- the info-box 'Game
@@ -315,6 +326,14 @@ class GameTab(QtWidgets.QWidget):
         # (05-RESEARCH-status-surface.md pitfall 1).
         self._last_status = None
 
+        # The endgame-modal once-latch (08.1-08 path-outcome parity):
+        # the FIRST observer of the game_over transition arms the
+        # deferred modal (the 1 Hz tick for panel ends, the wrapper
+        # tail for tab ends -- the tab path arms twice); the latch
+        # makes exactly one box show per game. Reset at every
+        # fresh-game edge (here, _begin_play, the import-resume edge).
+        self._endgame_modal_shown = False
+
     # ---- the rolling info box ----
 
     def _log(self, line):
@@ -386,6 +405,7 @@ class GameTab(QtWidgets.QWidget):
         self._required_label.setText(
             status_text.required_display(state['required']))
         self._last_status = state
+        self._endgame_modal_shown = False  # fresh game: latch rearmed
         self._pending_wizard = None
         self._timer.stop()
         self._timer.start(1000)
@@ -542,12 +562,28 @@ class GameTab(QtWidgets.QWidget):
             # BEFORE _confirm_now/_skip_now/_giveup_now call
             # _endgame_sequence, which then re-runs the trio
             # idempotently (stop/stop, pin/pin, pop finds no
-            # GameWizard). The endgame MODAL stays wrapper-owned --
-            # the smoke-99/P-6 law keeps boxes out of the tick.
+            # GameWizard). 08.1-08 path-outcome parity (human checkpoint
+            # directive 2026-10-01): the transition ALSO arms the
+            # endgame modal -- the wrappers' exact deferral shape
+            # (queued 100 ms OUTSIDE this tick stack, after the pop's
+            # color-restore burst paints: P-6 holds because the box
+            # never opens inside a timer callback; Bug A's 100 ms gap
+            # holds for the same reason). The tab path arms a second
+            # time via its wrapper tail; the once-latch in
+            # _show_endgame_modal shows exactly one box. Headless
+            # safety is the ENTRY GATE, not event-loop absence: the
+            # smokes' processEvents pumps DO deliver armed shots
+            # (observed live 2026-10-01: the box printed the plugin
+            # embed warning and blocked the run) -- the gate refuses
+            # to open under platform=offscreen, so smokes stay
+            # hang-proof and the real drive stays [HUMAN]-only.
             self._timer.stop()
             self._timer_label.setText(
                 status_text.format_mss(summary['final_time']))
             self._pop_game_wizard()
+            cmd.refresh()
+            QtCore.QTimer.singleShot(
+                100, lambda: self._show_endgame_modal(summary))
         self._last_status = state
 
     # ---- the Hint handler (05-08 PLAY-05) ----
@@ -1112,6 +1148,7 @@ class GameTab(QtWidgets.QWidget):
         wiz = cmd.get_wizard()
         state = wiz.get_status()
         self._last_status = state
+        self._endgame_modal_shown = False  # resumed game: latch rearmed
         self._required_label.setText(
             status_text.required_display(state['required']))
         if summary['game_over']:
@@ -1144,9 +1181,12 @@ class GameTab(QtWidgets.QWidget):
         (the live tick value can be up to 1 s stale); then the
         isinstance-gated pop (the pop's own cleanup fires the
         color-restore burst that the 06-09 refresh+singleShot modal
-        lands AFTER). No modal here (P-6/the smoke-99 law): the
-        scheduling tail lives on the WRAPPERS only. Returns
-        nothing."""
+        lands AFTER). No modal OPENED here (P-6/the smoke-99 law):
+        boxes are only ever ARMED as deferred singleShots -- by the
+        wrapper tails and, since 08.1-08's path-outcome parity, by
+        the poll's game_over transition; the once-latch in
+        _show_endgame_modal dedupes the tab path's double arm.
+        Returns nothing."""
         from . import status_text
         self._timer.stop()
         self._timer_label.setText(
@@ -1163,10 +1203,24 @@ class GameTab(QtWidgets.QWidget):
         WRAPPER-ONLY -- NEVER call from an impl or the tick (the
         smoke-99 receipt: a static/modal box under platform=offscreen
         blocks a headless smoke indefinitely; and a modal inside a
-        timer callback re-enters a modal loop, P-6). Only the
-        wrappers schedule it, via ``cmd.refresh()`` +
-        ``QtCore.QTimer.singleShot(100, ...)``, AFTER the endgame
-        sequence's pop has fired its color-restore burst.
+        timer callback re-enters a modal loop, P-6). The ARM comes
+        from two dedup'd sites -- the wrapper tails (tab ends) and,
+        since 08.1-08's path-outcome parity, the poll's game_over
+        transition (panel ends) -- always via ``cmd.refresh()`` +
+        ``QtCore.QTimer.singleShot(100, ...)`` so the box opens from
+        a QUEUED event outside every callback stack, AFTER the
+        endgame sequence's pop has fired its color-restore burst.
+        The once-latch (``_endgame_modal_shown``, reset at every
+        fresh-game edge) makes the tab path's double arm -- the sync
+        refresh's transition PLUS the wrapper tail -- show exactly
+        one box per game. The ENTRY GATE opens the box only on a
+        REAL platform: under ``platform=offscreen`` (every smoke's
+        recipe) the call no-ops -- the smoke-99 receipt is that a
+        modal under offscreen blocks a headless run indefinitely,
+        and the smoke event pumps CAN deliver armed shots, so the
+        gate (not event-loop absence) is the hang-proofing. The
+        real exec_() drive therefore remains [HUMAN]-only by
+        construction, as recorded at the 06-10 checkpoint.
 
         Both v1 bug-fix rationales are retained verbatim. (Bug A --
         the clobbered redraw): exec_() runs a nested event loop that
@@ -1191,6 +1245,16 @@ class GameTab(QtWidgets.QWidget):
         the endgame sequence before this fires, so the modal needs no
         pause handling. Returns nothing."""
         from . import status_text
+        app = QtWidgets.QApplication.instance()
+        if app is None or str(app.platformName()) == 'offscreen':
+            # smoke-99 receipt (the recorded law): a modal under
+            # platform=offscreen blocks a headless run indefinitely.
+            # The real exec_() drive is [HUMAN]-only; smokes arm the
+            # shot freely -- here it lands and no-ops.
+            return
+        if getattr(self, '_endgame_modal_shown', False):
+            return  # the tab path's double arm -- one box per game
+        self._endgame_modal_shown = True
         lines = status_text.endgame_lines(summary)
         msg = QtWidgets.QMessageBox(self.window())
         msg.setIcon(QtWidgets.QMessageBox.Information)

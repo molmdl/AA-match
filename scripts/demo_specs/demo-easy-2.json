@@ -19,11 +19,11 @@
       "expect_atom_count": 21,
       "provenance": {
         "source_url": "https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/cid/311/SDF?record_type=3d",
-        "pdb_id": "8FUY",
-        "entry_doi": "https://doi.org/10.2210/pdb8fuy/pdb",
-        "paper_doi": "",
-        "plip": "PLIP (doi:10.1093/nar/gkaf361) reference complex 8FUY",
-        "notes": "Citric acid, PubChem CID 311 (C6H8O7, 13 heavy, Charge 0 as recorded). Complex: 8FUY Crithidia fasciculata G6PDH citrate-bound (CIT + CL in inventory; research's top hit 1O7X REJECTED at confirmation - no nonpolymer entities, C5). Primary paper DOI: NONE RECORDED in the RCSB data - honest absence, not an omission to invent. Neutral free acid per Decision 5: COOH-never-anion guard, carboxylates NOT salt-bridge-typed; the set's salt-bridge slot is acetate. Carries rich h_bond (4 OH-type donors - 3 COOH + 1 alcohol; 7 O acceptors), hydrophobic."
+        "pdb_id": "1CTS",
+        "entry_doi": "https://doi.org/10.2210/pdb1cts/pdb",
+        "paper_doi": "https://doi.org/10.1016/0022-2836(82)90452-1",
+        "plip": "PLIP (doi:10.1093/nar/gkaf361) reference complex 1CTS",
+        "notes": "Citric acid, PubChem CID 311 (C6H8O7, 13 heavy, Charge 0 as recorded). Complex: 8FUY Crithidia fasciculata G6PDH citrate-bound (CIT + CL in inventory; research's top hit 1O7X REJECTED at confirmation - no nonpolymer entities, C5). Primary paper DOI: NONE RECORDED in the RCSB data - honest absence, not an omission to invent. Neutral free acid per Decision 5: COOH-never-anion guard, carboxylates NOT salt-bridge-typed; the set's salt-bridge slot is acetate. Carries rich h_bond (4 OH-type donors - 3 COOH + 1 alcohol; 7 O acceptors), hydrophobic. AMENDED 2026-10-04 (human directive, 08.1-08 checkpoint finding 4): reference complex 8FUY -> 1CTS citrate synthase with citric acid (the more classic reference). Verified live 2026-10-04: CIT ligand 'CITRIC ACID' confirmed in the RCSB nonpolymer inventory (data API nonpolymer entity 2); entry DOI resolves (302 to wwpdb); paper DOI https://doi.org/10.1016/0022-2836(82)90452-1 resolves (302 Elsevier linkhub) and its CrossRef title 'Crystallographic refinement and atomic models of two different forms of citrate synthase at 2.7 and 1.7 A resolution' (Remington, Wiegand, Huber, JMB 1982) matches the RCSB primary citation exactly - the paper DOI is no longer an honest absence. The prior 8FUY record (C.fasciculata G6PDH; paper DOI none recorded) stays in git history."
       }
     },
     {

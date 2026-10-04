@@ -19,11 +19,11 @@
       "expect_atom_count": 17,
       "provenance": {
         "source_url": "https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/cid/2332/SDF?record_type=3d",
-        "pdb_id": "1S0R",
-        "entry_doi": "https://doi.org/10.2210/pdb1s0r/pdb",
-        "paper_doi": "",
-        "plip": "PLIP (doi:10.1093/nar/gkaf361) reference complex 1S0R",
-        "notes": "Benzamidine, PubChem CID 2332 (C7H8N2, 9 heavy, Charge 0 as recorded per approved C3 - the research's '+1 amidinium' claim is INCORRECT for this CID; the charged benzamidinium chloride CID 444655 alternate is approved but NOT substituted). Complex: 1S0R bovine trypsin-benzamidine, atomic resolution - THE classic serine-protease system (BEN confirmed in nonpolymer inventory; CA ion also present, second cleanup-analog datapoint, verified 2026-09-26); primary paper DOI NONE recorded in the RCSB data (honest absence; title verified 'Bovine Pancreatic Trypsin inhibited with Benzamidine at Atomic resolution'). Carries h_bond (amidine N-H donors + ring-N acceptors), pi_stacking (benzene), hydrophobic, cation_pi in the AA-cation-over-lig-ring direction only (ligand neutral)."
+        "pdb_id": "1V2L",
+        "entry_doi": "https://doi.org/10.2210/pdb1v2l/pdb",
+        "paper_doi": "https://doi.org/10.1016/j.jmb.2003.11.041",
+        "plip": "PLIP (doi:10.1093/nar/gkaf361) reference complex 1V2L",
+        "notes": "Benzamidine, PubChem CID 2332 (C7H8N2, 9 heavy, Charge 0 as recorded per approved C3 - the research's '+1 amidinium' claim is INCORRECT for this CID; the charged benzamidinium chloride CID 444655 alternate is approved but NOT substituted). Complex: 1S0R bovine trypsin-benzamidine, atomic resolution - THE classic serine-protease system (BEN confirmed in nonpolymer inventory; CA ion also present, second cleanup-analog datapoint, verified 2026-09-26); primary paper DOI NONE recorded in the RCSB data (honest absence; title verified 'Bovine Pancreatic Trypsin inhibited with Benzamidine at Atomic resolution'). Carries h_bond (amidine N-H donors + ring-N acceptors), pi_stacking (benzene), hydrophobic, cation_pi in the AA-cation-over-lig-ring direction only (ligand neutral). AMENDED 2026-10-04 (human directive, 08.1-08 checkpoint finding 4): reference complex 1S0R -> 1V2L. Verified live 2026-10-04: BEN 'BENZAMIDINE' confirmed in the RCSB nonpolymer inventory (data API nonpolymer entity 4; SO4 + CA ions also present); entry DOI resolves (302 wwpdb); paper DOI https://doi.org/10.1016/j.jmb.2003.11.041 resolves (302 Elsevier linkhub) and its CrossRef title 'Understanding Protein-Ligand Interactions: The Price of Protein Flexibility' (Rauh, Klebe, Stubbs, JMB 2004) matches the RCSB primary citation exactly - the paper DOI is no longer an honest absence. The prior 1S0R record (bovine trypsin-benzamidine, atomic resolution; paper DOI none recorded) stays in git history."
       }
     },
     {

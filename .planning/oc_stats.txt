@@ -1,50 +1,50 @@
 ┌────────────────────────────────────────────────────────┐
 │                       OVERVIEW                         │
 ├────────────────────────────────────────────────────────┤
-│Sessions                                            220 │
-│Messages                                          7,157 │
-│Days                                                 29 │
+│Sessions                                            224 │
+│Messages                                          7,505 │
+│Days                                                 30 │
 └────────────────────────────────────────────────────────┘
 
 ┌────────────────────────────────────────────────────────┐
 │                    COST & TOKENS                       │
 ├────────────────────────────────────────────────────────┤
-│Total Cost                                      $220.81 │
-│Avg Cost/Day                                      $7.61 │
-│Avg Tokens/Session                                 2.9M │
+│Total Cost                                      $238.92 │
+│Avg Cost/Day                                      $7.96 │
+│Avg Tokens/Session                                 3.0M │
 │Median Tokens/Session                              2.1M │
-│Input                                             51.0M │
-│Output                                             6.9M │
-│Cache Read                                       586.8M │
+│Input                                             52.9M │
+│Output                                             7.2M │
+│Cache Read                                       619.9M │
 │Cache Write                                           0 │
 └────────────────────────────────────────────────────────┘
 
 ┌────────────────────────────────────────────────────────┐
 │                      MODEL USAGE                       │
 ├────────────────────────────────────────────────────────┤
-│ synthetic/hf:zai-org/GLM-5.3-Flash                     │
-│  Messages                                        3,400 │
-│  Input Tokens                                    38.9M │
-│  Output Tokens                                    4.4M │
-│  Cache Read                                     298.3M │
-│  Cache Write                                         0 │
-│  Cost                                         $19.9837 │
-├────────────────────────────────────────────────────────┤
 │ synthetic/hf:moonshotai/Kimi-K3                        │
-│  Messages                                        3,356 │
-│  Input Tokens                                    11.5M │
-│  Output Tokens                                    2.4M │
-│  Cache Read                                     283.4M │
+│  Messages                                        3,608 │
+│  Input Tokens                                    12.3M │
+│  Output Tokens                                    2.5M │
+│  Cache Read                                     303.8M │
 │  Cache Write                                         0 │
-│  Cost                                        $197.4234 │
+│  Cost                                        $211.2475 │
+├────────────────────────────────────────────────────────┤
+│ synthetic/hf:zai-org/GLM-5.3-Flash                     │
+│  Messages                                        3,422 │
+│  Input Tokens                                    39.0M │
+│  Output Tokens                                    4.5M │
+│  Cache Read                                     301.7M │
+│  Cache Write                                         0 │
+│  Cost                                         $20.1558 │
 ├────────────────────────────────────────────────────────┤
 │ synthetic/hf:zai-org/GLM-5.3                           │
-│  Messages                                           61 │
-│  Input Tokens                                   543.8K │
-│  Output Tokens                                  100.6K │
-│  Cache Read                                       4.6M │
+│  Messages                                          111 │
+│  Input Tokens                                     1.5M │
+│  Output Tokens                                  178.8K │
+│  Cache Read                                      13.8M │
 │  Cache Write                                         0 │
-│  Cost                                          $2.4108 │
+│  Cost                                          $6.5172 │
 ├────────────────────────────────────────────────────────┤
 │ synthetic/hf:zai-org/GLM-5.2                           │
 │  Messages                                           12 │
@@ -59,14 +59,14 @@
 ┌────────────────────────────────────────────────────────┐
 │                      TOOL USAGE                        │
 ├────────────────────────────────────────────────────────┤
-│ bash               ████████████████████ 4183 (46.9%)   │
-│ read               ██████████           2261 (25.3%)   │
-│ edit               ███████              1469 (16.5%)   │
-│ write              █                    378 ( 4.2%)    │
-│ grep               █                    268 ( 3.0%)    │
-│ task               █                    209 ( 2.3%)    │
-│ webfetch           █                     83 ( 0.9%)    │
-│ glob               █                     52 ( 0.6%)    │
+│ bash               ████████████████████ 4443 (47.8%)   │
+│ read               ██████████           2288 (24.6%)   │
+│ edit               ██████               1530 (16.5%)   │
+│ write              █                    382 ( 4.1%)    │
+│ grep               █                    270 ( 2.9%)    │
+│ task               █                    214 ( 2.3%)    │
+│ webfetch           █                     88 ( 0.9%)    │
+│ glob               █                     53 ( 0.6%)    │
 │ invalid            █                     13 ( 0.1%)    │
 │ question           █                     11 ( 0.1%)    │
 └────────────────────────────────────────────────────────┘

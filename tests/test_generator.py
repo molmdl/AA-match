@@ -946,7 +946,14 @@ class TestGeneratePayload(unittest.TestCase):
         setup = setup_of('unset', ALL_TYPES, molecules=2, difficulty=1)
         with self.assertRaises(GenerationError) as ctx:
             generate(1, setup, rows, data, 1)
-        self.assertIn('distinct', str(ctx.exception))
+        # 08.1-08 fix-batch (human checkpoint finding 3): the refusal
+        # reaches the player VERBATIM via the Start/export warning
+        # popup, so it speaks student register -- whole-selection shape
+        # (1 candidate, m=2) pinned EXACTLY.
+        self.assertEqual(
+            str(ctx.exception),
+            "This set only has 1 molecule. Set 'Small molecules per "
+            "level' to 1 or less to play it.")
 
     def test_candidates_unsorted_input_resorted_defensively(self):
         # Candidates come pre-sorted per manifest enumerate_entries order;

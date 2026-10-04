@@ -807,15 +807,37 @@ def generate(seed, setup, candidates, ligand_data, difficulty_levels):
             available = [row for row in pool
                          if (row['set_id'], row['entry_id']) not in taken]
             if not available:
+                # 08.1-08 fix-batch (human checkpoint finding 3): the
+                # refusal is shown VERBATIM in the Start/export warning
+                # popup (_guard shows str(e)), so speak to the PLAYER,
+                # not the developer: name HOW MANY molecules the
+                # selected set/file really offers and say exactly what
+                # to change -- the setup widget is labelled 'Small
+                # molecules per level' (setup_window.py). Two honest
+                # shapes: when the WHOLE selection is thinner than
+                # molecules_per_level the message says so plainly
+                # ("This set only has 1 molecule..."); when the set has
+                # enough molecules overall but this level's size bucket
+                # is thin, it says that instead (never claim the
+                # student "only has N" when their set has more).
                 distinct = len(set((row['set_id'], row['entry_id'])
                                    for row in pool))
+                total = len(set((row['set_id'], row['entry_id'])
+                                for row in rows))
+                noun = ('file'
+                        if setup.get('source_mode') == 'upload'
+                        else 'set')
+                if total < molecules_per_level:
+                    raise GenerationError(
+                        "This %s only has %d molecule%s. Set 'Small "
+                        "molecules per level' to %d or less to play it."
+                        % (noun, total, '' if total == 1 else 's',
+                           total))
                 raise GenerationError(
-                    "size class %r (fallback target %r) has %d distinct "
-                    "candidate(s); level %d needs %d distinct molecules "
-                    "-- add candidates or lower molecules_per_level"
-                    % (params['molecule_size_class'],
-                       params['molecule_size_class'], distinct,
-                       level_index, molecules_per_level))
+                    "Only %d of the %d molecules in this %s fit the "
+                    "molecule size used in level %d. Set 'Small "
+                    "molecules per level' to %d or less to play it."
+                    % (distinct, total, noun, level_index + 1, distinct))
             picked = unit_rng.sample(available, 1)[0]
             identity = (picked['set_id'], picked['entry_id'])
             taken.add(identity)

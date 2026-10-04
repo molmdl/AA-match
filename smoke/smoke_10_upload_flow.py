@@ -47,7 +47,8 @@ live in 04-04-SUMMARY.md):
 1. Plan Task 3's setup snippet is used except for
    ``molecules_per_level=1``: ONE synthetic candidate row cannot fill
    the generator's two-DISTINCT-molecules-per-level DEFAULTS contract
-   (GenerationError "has 1 distinct candidate(s)"), so a
+   (GenerationError -- for uploads the 08.1-08 fix-batch student
+   wording reads "This file only has 1 molecule..."), so a
    single-candidate game must declare one molecule per level --
    SMOKE-04's own setup does exactly this for the same reason.
 2. The plan text says the level-0 ligand block "reads source

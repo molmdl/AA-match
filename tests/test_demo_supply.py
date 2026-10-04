@@ -102,24 +102,34 @@ MINIMUM_BUCKET_FLOOR = 3
 DEFAULT_MOLECULES = 2
 DEFAULT_DIFFICULTY = 3
 
-# The exact fail-closed refusal for a thin per-level pool (generator.py
-# distinctness raise site; identical across seeds -- the pool structure
-# is refused, not any draw).
-THIN_REFUSAL_SMALL = (
-    "size class 'small' (fallback target 'small') has 1 distinct "
-    "candidate(s); level 0 needs 2 distinct molecules -- add candidates "
-    "or lower molecules_per_level")
+# The two exact fail-closed refusal shapes for a thin per-level pool
+# (generator.py distinctness raise site; identical across seeds -- the
+# pool structure is refused, not any draw). 08.1-08 fix-batch (human
+# checkpoint finding 3): the refusal reaches the player VERBATIM via
+# the Start/export warning popup, so it speaks student register and
+# names the real count + the exact widget to change. The pins were
+# evolved DELIBERATELY here (06-05 convention), from the developer
+# register ("size class 'small' (fallback target 'small') has 1
+# distinct candidate(s) ...") to the player register below.
+THIN_REFUSAL_SET = (
+    "This set only has 1 molecule. Set 'Small molecules per level' to "
+    "1 or less to play it.")
+THIN_REFUSAL_BUCKET = (
+    "Only 1 of the 2 molecules in this set fit the molecule size used "
+    "in level 1. Set 'Small molecules per level' to 1 or less to play "
+    "it.")
 
 # Data-relative per-set expectations at the default config: the three
 # thin sets refuse with the pinned message (see module docstring);
 # every other curated set generates.
 EXPECTED_THIN_REFUSALS = {
-    'demo-easy-3': THIN_REFUSAL_SMALL,      # 1 entry (caffeine)
-    'demo-veryhard-1': THIN_REFUSAL_SMALL,  # level-0 small pool: only
-                                            # thyroxine (folic_acid is
-                                            # medium) -- the non-empty-
-                                            # but-thin case
-    'demo-veryhard-2': THIN_REFUSAL_SMALL,  # 1 entry (heme)
+    'demo-easy-3': THIN_REFUSAL_SET,        # 1 entry (caffeine)
+    'demo-veryhard-1': THIN_REFUSAL_BUCKET,  # level-0 small pool: only
+                                            # thyroxine of the set's 2
+                                            # (folic_acid is medium) --
+                                            # the non-empty-but-thin
+                                            # case
+    'demo-veryhard-2': THIN_REFUSAL_SET,    # 1 entry (heme)
 }
 
 # Three architecturally different seeds (generation must be

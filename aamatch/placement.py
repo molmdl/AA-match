@@ -158,18 +158,42 @@ def _sentinel_tag(object_name):
 
 
 def _normalize_reps(object_name):
-    """Uniform gameplay look for ANY game object (AA slot or ligand):
-    clear the auto-assigned representations, then sticks ONLY (03-06
-    field report: the new-object display heuristic split the grid into
+    """Uniform gameplay look for ANY AA SLOT object: clear the
+    auto-assigned representations, then sticks ONLY (03-06 field
+    report: the new-object display heuristic split the grid into
     sticks+cartoon for neutral fragments and lines+nonbonded dots for
     charged ones -- same class of object must LOOK the same; the
-    detector never reads representations). 08.1-08 fix-batch (human
-    checkpoint finding 1): the LIGAND inherits this too -- a raw
-    cmd.load leaves PyMOL's default extra rep bit ON the ligand (probe:
-    bundled heme ligand read reps bits 17 vs the slots' 1 -- a visibly
-    mixed scene, worst on a 75-atom molecule)."""
+    detector never reads representations). The LIGAND has its own
+    visual class since the 08.1-08 fix-batch-2 Q1 directive -- see
+    _normalize_ligand_reps."""
     cmd.hide('everything', object_name)
     cmd.show('sticks', object_name)
+
+
+# 08.1-08 fix-batch 2, HUMAN Q1 DIRECTIVE 2026-10-04 (verbatim): "make
+# AA and ligand different so easier for the player to see which is
+# target lig, which is AA to move. can be ligand as stick/ball-and-
+# stick, AA as line/stick (if lig as ball-and-stick). ... what i need
+# is for the two types of mol, AA and lig, same group same rep."
+# Design: ligand = BALL-AND-STICK (sticks + small spheres at this
+# object-scoped scale); AA slot objects = uniform sticks. Uniformity
+# WITHIN each class is load-bearing (the complaint was mixed
+# line+stick on one object).
+LIGAND_SPHERE_SCALE = 0.25
+
+
+def _normalize_ligand_reps(object_name):
+    """Ligand visual class: clear the auto-assigned representations,
+    then sticks + spheres (ball-and-stick) with the object-scoped
+    sphere scale LIGAND_SPHERE_SCALE. Distinct from the AA slots'
+    uniform sticks so the player can see at a glance which molecule is
+    the target ligand (human Q1 directive 2026-10-04); every ligand
+    object gets EXACTLY this pair of reps -- 'same group same rep'.
+    The detector never reads representations."""
+    cmd.hide('everything', object_name)
+    cmd.show('sticks', object_name)
+    cmd.show('spheres', object_name)
+    cmd.set('sphere_scale', LIGAND_SPHERE_SCALE, object_name)
 
 
 def _assert_pose(object_name, target, where):
@@ -366,11 +390,14 @@ def materialize(payload, level_index=0, ligand_content=None):
                               'materialize ligand %s' % molecule_id)
         _sentinel_tag(lig_name)
         # 08.1-08 fix-batch (human checkpoint finding 1): normalize the
-        # ligand's reps the same way slots are normalized -- cmd.load
-        # leaves PyMOL's per-object default extra rep bit set on the
-        # ligand while slots are sticks-only, which the player saw as a
-        # mixed line/stick scene (most obvious on the 75-atom heme).
-        _normalize_reps(lig_name)
+        # ligand's reps too -- cmd.load leaves PyMOL's per-object
+        # default extra rep bit set on the ligand while slots are
+        # sticks-only, which the player saw as a mixed line/stick
+        # scene (most obvious on the heme molecule). 08.1-08 fix-batch
+        # 2 (human Q1 directive 2026-10-04): the ligand's own visual
+        # class is ball-and-stick, distinct from the slots' sticks --
+        # "make AA and ligand different ... same group same rep".
+        _normalize_ligand_reps(lig_name)
         if offset != (0.0, 0.0, 0.0):
             cmd.translate(list(offset), lig_name, state=1, camera=0)
         lig_entry = (lig_name, _sorted_ids(lig_name))

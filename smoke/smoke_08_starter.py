@@ -20,9 +20,10 @@ PART 1  start: start_game() returns the live GameWizard and it is
         DERIVED from the returned wizard's registry/payload, never
         hard-coded); the 03-06 fix-pass asserts live here -- uniform
         AA representations extended 08.1-08 fix-batch to EVERY game
-        object (each slot AND each ligand object reads the sticks bit
-        ONLY -- the 08.1-08 human checkpoint found the raw-loaded
-        ligand keeping PyMOL's default extra rep bit, a mixed scene),
+        object, then evolved 08.1-08 fix-batch 2 (human Q1 directive
+        2026-10-04) into TWO visual classes: the ligand object reads
+        {sticks, spheres} (ball-and-stick), every AA slot object reads
+        the sticks bit ONLY ('same group same rep'),
         the zoom-to-frame (view changed and the camera sits
         outside the ACTIVE molecule's bounding sphere -- 03-07 human
         decision 2026-09-10: frame ONLY the active molecule's grid +
@@ -242,11 +243,13 @@ try:
           'grew=%d want %d (derived from the returned registry)'
           % (len(grew), gen1_expected))
 
-    # -- 03-06 fix: uniform representations (sticks ONLY); 08.1-08
-    # fix-batch extended the census from AA slots to EVERY game object
-    # (the ligand inherits _normalize_reps too -- raw cmd.load left the
-    # default extra rep bit on the ligand, the human checkpoint's
-    # mixed-line/stick finding) --
+    # -- 03-06 fix: uniform representations; 08.1-08 fix-batch extended
+    # the census from AA slots to EVERY game object; 08.1-08 fix-batch
+    # 2 (human Q1 directive 2026-10-04: 'make AA and ligand different
+    # so easier for the player to see which is target lig, which is AA
+    # to move ... same group same rep') evolved the census into TWO
+    # classes: the ligand is ball-and-stick {sticks, spheres}, every
+    # AA slot object is uniform sticks --
     reps_bad = []
     for mol in wiz1._registry['molecules']:
         census = [('ligand', mol['ligand'])]
@@ -256,9 +259,15 @@ try:
             cmd.iterate(entry[0], 'stored.append(reps)',
                         space={'stored': rows})
             vals = sorted(set(int(r) for r in rows))
-            if vals != [1]:        # bit 0 = sticks, nothing else
+            # 1 = sticks (cylinders), 2 = spheres; the atom 'reps'
+            # iterate field is the disjunction SUM of set rep values
+            # (headless probe 2026-10-04: ball-and-stick reads 3 = 1+2,
+            # NOT the bitmask list [1, 2]).
+            expected = [3] if slot_id == 'ligand' else [1]
+            if vals != expected:
                 reps_bad.append('%s(%s)=%s' % (slot_id, entry[0], vals))
-    check('every game object reads the sticks bit ONLY (uniform reps)',
+    check('ligand is ball-and-stick {sticks, spheres}; every AA slot '
+          'reads sticks ONLY (Q1 directive: same group same rep)',
           not reps_bad,
           'non-uniform: %s (the old split was neutral 49 vs charged '
           '2176)' % reps_bad)

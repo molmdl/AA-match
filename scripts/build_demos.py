@@ -106,6 +106,20 @@ METAL_ELEMENTS = frozenset(
     ('MG', 'ZN', 'FE', 'CA', 'MN', 'CU', 'NI', 'CO', 'CD'))
 HALOGEN_ELEMENTS = frozenset(('CL', 'BR', 'I'))
 
+# Registered post-fetch transforms (spec entry key 'post_fetch_transform').
+# A transform is a RECORDED, REPRODUCIBLE byte operation applied to the
+# fetched source BEFORE the file is written and BEFORE counts/sha256 are
+# derived in the same run. Adding a transform here is a recorded pipeline
+# change with its human directive cited, never a silent edit.
+KNOWN_TRANSFORMS = ('drop_artifact_OH_bonds',)
+
+# An O-H bond longer than this is a coordinate artifact: a real O-H bond
+# is ~0.96 A (the longest plausible X-H bond anywhere is ~1.6 A). The
+# 08.1-08 diagnosis measured the CCD HEM_ideal.sdf artifacts at 12.433 A
+# and 4.700 A; 4.0 A catches them with a huge margin while never touching
+# a real proton.
+ARTIFACT_OH_BOND_MIN_A = 4.0
+
 
 class BuildError(ValueError):
     """Spec invalid / source refused / derivation failed -- names the field."""
@@ -207,6 +221,12 @@ def _validate_entry(entry, where, index):
     if not isinstance(protonation, str) or not protonation:
         _fail("%s: 'protonation' must be a non-empty string (found %r)"
               % (where, protonation))
+    transform = entry.get('post_fetch_transform')
+    if transform is not None and transform not in KNOWN_TRANSFORMS:
+        _fail("%s: 'post_fetch_transform' must be one of %s (found %r) "
+              "-- a new transform kind is a recorded pipeline change with "
+              "its directive cited, never silent"
+              % (where, '/'.join(KNOWN_TRANSFORMS), transform))
     expect = entry.get('expect_atom_count')
     if expect is not None \
             and (not isinstance(expect, int) or isinstance(expect, bool)):
@@ -286,6 +306,9 @@ def resolve_ligand_bytes(spec, entry, fetch, dry_run):
     where = "spec set %r entry %r" % (spec['set_id'], entry['entry_id'])
     if fetch and entry.get('url'):
         data = _fetch_bytes(entry, where)
+        transform = entry.get('post_fetch_transform')
+        if transform == 'drop_artifact_OH_bonds':
+            data = drop_artifact_oh_bonds(data, where)
         if not dry_run:
             _write_bytes(target, data, where)
         return file_rel, data
@@ -404,6 +427,159 @@ def derive_v2000_fields(record_bytes, where):
         'metal_present': bool(element_set & METAL_ELEMENTS),
         'halogen_present': bool(element_set & HALOGEN_ELEMENTS),
     }
+
+
+def drop_artifact_oh_bonds(data, where):
+    """Post-fetch transform 'drop_artifact_OH_bonds' (recorded).
+
+    HUMAN DIRECTIVE 2026-10-04 (08.1-08 checkpoint fix-batch 2, heme):
+    "yes drop the 2 H since its supposed to be deprotonated, but since we
+    note the sdf source we should explicitly state what we have done to
+    this too [in DATA_SOURCES]". The bundled heme file is MODIFIED from
+    the RCSB HEM_ideal.sdf: the CCD ideal-coordinate record carries two
+    artifact O-H bonds (O14-H73 = 12.433 A, H74-O38 = 4.700 A) against
+    oxygens the file's OWN M CHG block marks deprotonated (-1 each; the
+    -4 charge sum includes them). The two hydrogens and their two bonds
+    are removed; M CHG is untouched (charge sum -4 preserved).
+
+    Identification is by the GEOMETRY+CHARGE rule, not by serial: every
+    bond whose endpoints are an H and an M-CHG-negatively-charged O with
+    a length over ARTIFACT_OH_BOND_MIN_A is cut, and the H atoms are
+    dropped. Fail-loud guards (a future CCD-side change must fail here,
+    never silently mis-derive):
+    - at least one artifact bond must match;
+    - every dropped atom must be H, carry no M CHG charge, and have
+      exactly ONE bond in the record (the artifact itself);
+    - formal_charge_sum pre == post (re-derived on the rebuilt record).
+    Counts are asserted downstream by the entry's expect_atom_count
+    (post-transform: heme 73 atoms / 80 bonds).
+    Returns the transformed record bytes; prints a one-line record of
+    what was dropped for the operator log.
+    """
+    where = '%s [transform drop_artifact_OH_bonds]' % where
+    records = split_sdf_records(data)
+    if len(records) != 1:
+        _fail('%s: transform requires a single-record source (%d '
+              'records found)' % (where, len(records)))
+    record = records[0]
+    try:
+        text = record.decode('utf-8')
+    except UnicodeDecodeError as exc:
+        _fail('%s: record is not valid UTF-8 (%s)' % (where, exc))
+    newline_end = text.endswith('\n')
+    lines = text.splitlines()
+    atom_count, bond_count = _counts_line_parse(lines, where)
+    atom_block = lines[4:4 + atom_count]
+    bond_first = 4 + atom_count
+    bond_block = lines[bond_first:bond_first + bond_count]
+    tail_block = lines[bond_first + bond_count:]
+    try:
+        coords = {serial: (float(line[0:10]), float(line[10:20]),
+                           float(line[20:30]))
+                  for serial, line in enumerate(atom_block, start=1)}
+        elements = {serial: line[31:34].strip().upper()
+                    for serial, line in enumerate(atom_block, start=1)}
+    except (ValueError, IndexError) as exc:
+        _fail('%s: atom-block coordinate parse failure (%s)'
+              % (where, exc))
+    bonds = []
+    for line in bond_block:
+        try:
+            bonds.append((int(line[0:3]), int(line[3:6]), line))
+        except ValueError:
+            _fail('%s: bond-block parse failure (%r)'
+                  % (where, line.rstrip('\r\n')))
+    charges = {}
+    for line in tail_block:
+        if not line.startswith('M  CHG'):
+            continue
+        tokens = line.split()
+        try:
+            n_pairs = int(tokens[2])
+            pairs = tokens[3:]
+            if len(pairs) != 2 * n_pairs:
+                raise ValueError
+            for index in range(n_pairs):
+                charges[int(pairs[2 * index])] = int(pairs[2 * index + 1])
+        except (ValueError, IndexError):
+            _fail('%s: M CHG line parse failure (%r)'
+                  % (where, line.strip()))
+    artifacts = []
+    for atom_a, atom_b, line in bonds:
+        pair = (atom_a, atom_b)
+        for hydrogen, oxygen in (pair, pair[::-1]):
+            if elements.get(hydrogen) == 'H' \
+                    and elements.get(oxygen) == 'O' \
+                    and charges.get(oxygen, 0) < 0:
+                pa, pb = coords[hydrogen], coords[oxygen]
+                length = sum((pa[axis] - pb[axis]) ** 2
+                             for axis in range(3)) ** 0.5
+                if length > ARTIFACT_OH_BOND_MIN_A:
+                    artifacts.append((hydrogen, oxygen, length))
+    if not artifacts:
+        _fail('%s: the spec declares this transform but the source '
+              'carries NO O-H bond longer than %.1f A to a negatively '
+              'charged oxygen -- the upstream file changed; re-diagnose '
+              'before trusting the derivation'
+              % (where, ARTIFACT_OH_BOND_MIN_A))
+    dropped = sorted(set(hydrogen for hydrogen, _, _ in artifacts))
+    for hydrogen in dropped:
+        if hydrogen in charges:
+            _fail('%s: artifact hydrogen %d carries an M CHG charge -- '
+                  'refusing to drop a charged atom' % (where, hydrogen))
+        touching = [bond for bond in bonds
+                    if bond[0] == hydrogen or bond[1] == hydrogen]
+        if len(touching) != 1:
+            _fail('%s: artifact hydrogen %d has %d bond(s), expected 1 -- '
+                  'refusing to alter real connectivity'
+                  % (where, hydrogen, len(touching)))
+    remap = {}
+    new_serial = 1
+    for serial in range(1, atom_count + 1):
+        if serial not in dropped:
+            remap[serial] = new_serial
+            new_serial += 1
+    new_counts = ('%3d%3d' % (atom_count - len(dropped),
+                              bond_count - len(artifacts))
+                  + lines[3][6:])
+    new_atoms = [line for serial, line in enumerate(atom_block, start=1)
+                 if serial not in dropped]
+    artifact_pairs = set(tuple(sorted((h, o))) for h, o, _ in artifacts)
+    new_bonds = ['%3d%3d%s' % (remap[a], remap[b], line[6:])
+                 for a, b, line in bonds
+                 if tuple(sorted((a, b))) not in artifact_pairs]
+    new_tail = []
+    for line in tail_block:
+        if line.startswith('M  CHG'):
+            tokens = line.split()
+            n_pairs = int(tokens[2])
+            pairs = tokens[3:]
+            rebuilt = 'M  CHG%3d' % n_pairs
+            for index in range(n_pairs):
+                rebuilt += '%4d%4d' % (remap[int(pairs[2 * index])],
+                                       int(pairs[2 * index + 1]))
+            new_tail.append(rebuilt)
+        else:
+            new_tail.append(line)
+    new_text = '\n'.join([lines[0], lines[1], lines[2], new_counts]
+                         + new_atoms + new_bonds + new_tail)
+    if newline_end:
+        new_text += '\n'
+    new_record = new_text.encode('utf-8')
+    post = derive_v2000_fields(new_record, where)
+    pre_charge = sum(charges.values())
+    if post['formal_charge_sum'] != pre_charge:
+        _fail('%s: formal_charge_sum changed by the transform (%d -> %d) '
+              '-- the charge model must be preserved verbatim'
+              % (where, pre_charge, post['formal_charge_sum']))
+    print('TRANSFORM drop_artifact_OH_bonds: dropped H serials %s '
+          '(artifact O-H lengths %s A); atoms %d -> %d, bonds %d -> %d, '
+          'formal_charge_sum %d preserved'
+          % (dropped,
+             ['%.3f' % length for _, _, length in artifacts],
+             atom_count, post['atom_count'], bond_count,
+             post['bond_count'], pre_charge))
+    return new_record
 
 
 def build_entry(spec, entry, file_rel, data):

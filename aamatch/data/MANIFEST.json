@@ -465,10 +465,10 @@
       {
         "entries": [
           {
-            "atom_count": 75,
-            "bond_count": 82,
+            "atom_count": 73,
+            "bond_count": 80,
             "bond_order_counts": {
-              "1": 67,
+              "1": 65,
               "2": 15
             },
             "entry_id": "heme",
@@ -479,7 +479,7 @@
             "heavy_atom_count": 43,
             "metal_present": true,
             "protonation": "as-recorded",
-            "sha256": "414ee8fbc00b4920edbb6d53788e8a6fa38ddfe2cd442a1a3574d1098b1eebbf",
+            "sha256": "89210c9bb6d5f17381772341924db6ba4a2047e2210f8bd9fb93aab7cd345242",
             "size_class": "medium",
             "states_expected": 1
           }

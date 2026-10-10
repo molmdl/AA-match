@@ -9,35 +9,35 @@
     "pubchem_citation": "Kim S, Chen J, Cheng T, et al. PubChem 2025 update. Nucleic Acids Res. 2025;53(D1):D1516-D1525. doi:10.1093/nar/gkae1059",
     "complex_license": "CC0 1.0 (wwPDB) - https://www.wwpdb.org/about/usage-policies",
     "fetched": "2026-09-26",
-    "notes": "Easy-tier household organics duo (08-PROPOSALS.md Set 1, APPROVED 2026-09-26): aspirin CID 2244 + benzoic acid CID 243 (C1 correction: research's 3979 is a different compound; 243 accepted by human '1 ok'). Per-record citation per U1: 'PubChem Identifier: CID <CID>; URL: https://pubchem.ncbi.nlm.nih.gov/compound/<CID>'. Complex reference metadata: CC0 1.0 (wwPDB)."
+    "notes": "Easy-tier household organics duo (08-PROPOSALS.md Set 1, APPROVED 2026-09-26): aspirin + benzoic acid. Per-record citation per U1: 'PubChem Identifier: CID <CID>; URL: https://pubchem.ncbi.nlm.nih.gov/compound/<CID>'. Complex reference metadata: CC0 1.0 (wwPDB). AMENDED 2026-10-05 (human PHYSIOLOGICAL-PROTONATION decision '2 go R1-R8', 08.1-08 protonation audit rows 1-2, directive: 'per our spec we want to assume physiological pH normally'): aspirin CID 2244 neutral -> acetylsalicylate CID 3434975 (-1, pKa 3.47 per PubChem AID 781325/781326; 3.38 Serjeant IUPAC) and benzoic acid CID 243 neutral -> benzoate CID 242 (-1, the 08-04-approved alternate; pKa 4.207-3.96 AID 781325-781330). Both fetched live 2026-10-05 as PubChem 3D records; heavy atoms unchanged (13/9), one carboxyl H removed each; easy-1 GAINS its first salt-bridge-capable ligands (bona-fide carboxylates)."
   },
   "entries": [
     {
       "entry_id": "aspirin",
-      "url": "https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/cid/2244/SDF?record_type=3d",
+      "url": "https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/cid/3434975/SDF?record_type=3d",
       "protonation": "as-recorded",
-      "expect_atom_count": 21,
+      "expect_atom_count": 20,
       "provenance": {
-        "source_url": "https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/cid/2244/SDF?record_type=3d",
+        "source_url": "https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/cid/3434975/SDF?record_type=3d",
         "pdb_id": "1OXR",
         "entry_doi": "https://doi.org/10.2210/pdb1oxr/pdb",
         "paper_doi": "https://doi.org/10.1080/10611860400024078",
         "plip": "PLIP (doi:10.1093/nar/gkaf361) reference complex 1OXR",
-        "notes": "Aspirin, PubChem CID 2244 (C9H8O4, 13 heavy, Charge 0 as recorded). Complex: 1OXR phospholipase A2-aspirin.Ca2+ complex (AIN in nonpolymer inventory, verified 2026-09-26; paper DOI human-verified via PDB website). Neutral free acid: capability's COOH-never-anion guard means the carboxyl is NOT salt-bridge-typed; carries h_bond (carboxyl O-H donor; ester + carboxyl O acceptors), pi_stacking (benzene), hydrophobic, cation_pi (AA-cation-over-ring). 1OXR's crystallographic Ca is the cleanup-scene real-world analog (Decision 7)."
+        "notes": "Aspirin as acetylsalicylate, PubChem CID 3434975 (C9H7O4-, 13 heavy, Charge -1 as recorded; ester intact). Complex: 1OXR phospholipase A2-aspirin.Ca2+ complex (AIN in nonpolymer inventory, verified 2026-09-26; paper DOI human-verified via PDB website). Carries salt_bridge (bona-fide carboxylate -1 - the physiological anion), h_bond (ester + carboxylate O acceptors, no acidic donor), pi_stacking (benzene), hydrophobic, cation_pi (AA-cation-over-ring). 1OXR's crystallographic Ca is the cleanup-scene real-world analog (Decision 7). AMENDED 2026-10-05 (human decision '2 go R1-R8', audit row 1/R3, directive 'per our spec we want to assume physiological pH normally'): was CID 2244 neutral free acid (Charge 0, 21 atoms {1:16,2:5}); swapped to the physiological anion CID 3434975 (99.99% at pH 7.4; pKa 3.47/3.5 PubChem AID 781325/781326, 3.49 Merck, 3.38 Serjeant IUPAC serjeant4540). The prior ester-based accidental '-' typing (capability.py ester false-positive, recorded) is SUPERSEDED by this bona-fide carboxylate anion. Neutral CID 2244 record stays in git history."
       }
     },
     {
       "entry_id": "benzoic_acid",
-      "url": "https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/cid/243/SDF?record_type=3d",
+      "url": "https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/cid/242/SDF?record_type=3d",
       "protonation": "as-recorded",
-      "expect_atom_count": 15,
+      "expect_atom_count": 14,
       "provenance": {
-        "source_url": "https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/cid/243/SDF?record_type=3d",
+        "source_url": "https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/cid/242/SDF?record_type=3d",
         "pdb_id": "5E4D",
         "entry_doi": "https://doi.org/10.2210/pdb5e4d/pdb",
         "paper_doi": "https://doi.org/10.1038/srep46738",
         "plip": "PLIP (doi:10.1093/nar/gkaf361) reference complex 5E4D",
-        "notes": "Benzoic acid, PubChem CID 243 (C7H6O2, 9 heavy, Charge 0 as recorded; correction C1: 3979 is a different compound). Complex: 5E4D hydroxynitrile lyase-benzoic acid (BEZ in inventory, verified 2026-09-26; paper DOI resolves 200). Neutral free acid: the research's 'salt_bridge as benzoate(-1)' does NOT hold for this CID (C3) - approved charged-form alternate is benzoate anion CID 242. Carries h_bond (COOH donor + O acceptors), pi_stacking (benzene), hydrophobic, cation_pi (AA-cation-over-ring). Smallest aromatic (9 heavy) keeps easy grids dense."
+        "notes": "Benzoate anion, PubChem CID 242 (C7H5O2-, 9 heavy, Charge -1 as recorded; the 08-04-approved charged-form alternate, now the shipped form). Complex: 5E4D hydroxynitrile lyase-benzoic acid (BEZ in inventory, verified 2026-09-26; paper DOI resolves 200). Carries salt_bridge (carboxylate -1 - easy tier's first bona-fide anion beside acetate), h_bond (carboxylate O acceptors, no donor), pi_stacking (benzene), hydrophobic, cation_pi (AA-cation-over-ring). Smallest aromatic (9 heavy) keeps easy grids dense. AMENDED 2026-10-05 (human decision '2 go R1-R8', audit row 2/R2, directive 'per our spec we want to assume physiological pH normally'): was CID 243 neutral free acid (Charge 0 as registered per C3, 15 atoms {1:11,2:4}); swapped to benzoate (-1, 99.94% at pH 7.4; pKa 4.207-3.96 AID 781325-781330, 4.19 LIDE, 4.204 CRC). Neutral CID 243 record stays in git history."
       }
     }
   ]

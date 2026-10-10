@@ -52,40 +52,40 @@
       {
         "entries": [
           {
-            "atom_count": 21,
-            "bond_count": 21,
+            "atom_count": 20,
+            "bond_count": 20,
             "bond_order_counts": {
-              "1": 16,
+              "1": 15,
               "2": 5
             },
             "entry_id": "aspirin",
             "file": "ligands/demo-easy-1-aspirin.sdf",
-            "formal_charge_sum": 0,
+            "formal_charge_sum": -1,
             "format": "sdf",
             "halogen_present": false,
             "heavy_atom_count": 13,
             "metal_present": false,
             "protonation": "as-recorded",
-            "sha256": "958bdc9d80712ac908b86087cf687d964639a9dda5393624484bf682d18ebdce",
+            "sha256": "57c2f6ed874ab9f3089ebb6eba8668d153a68bd88f59503902155e02cc58fae0",
             "size_class": "small",
             "states_expected": 1
           },
           {
-            "atom_count": 15,
-            "bond_count": 15,
+            "atom_count": 14,
+            "bond_count": 14,
             "bond_order_counts": {
-              "1": 11,
+              "1": 10,
               "2": 4
             },
             "entry_id": "benzoic_acid",
             "file": "ligands/demo-easy-1-benzoic_acid.sdf",
-            "formal_charge_sum": 0,
+            "formal_charge_sum": -1,
             "format": "sdf",
             "halogen_present": false,
             "heavy_atom_count": 9,
             "metal_present": false,
             "protonation": "as-recorded",
-            "sha256": "f188caa885937453e8a41f6953ae112f836c20b0b5fba9c44836483633e37e4e",
+            "sha256": "1775c091b14af74c49e3bba8ab5c48531431c36f9cdc944df06031b9d048aa19",
             "size_class": "small",
             "states_expected": 1
           }
@@ -95,7 +95,7 @@
           "complex_license": "CC0 1.0 (wwPDB) - https://www.wwpdb.org/about/usage-policies",
           "fetched": "2026-09-26",
           "license_url": "https://www.ncbi.nlm.nih.gov/home/about/policies/",
-          "notes": "Easy-tier household organics duo (08-PROPOSALS.md Set 1, APPROVED 2026-09-26): aspirin CID 2244 + benzoic acid CID 243 (C1 correction: research's 3979 is a different compound; 243 accepted by human '1 ok'). Per-record citation per U1: 'PubChem Identifier: CID <CID>; URL: https://pubchem.ncbi.nlm.nih.gov/compound/<CID>'. Complex reference metadata: CC0 1.0 (wwPDB).",
+          "notes": "Easy-tier household organics duo (08-PROPOSALS.md Set 1, APPROVED 2026-09-26): aspirin + benzoic acid. Per-record citation per U1: 'PubChem Identifier: CID <CID>; URL: https://pubchem.ncbi.nlm.nih.gov/compound/<CID>'. Complex reference metadata: CC0 1.0 (wwPDB). AMENDED 2026-10-05 (human PHYSIOLOGICAL-PROTONATION decision '2 go R1-R8', 08.1-08 protonation audit rows 1-2, directive: 'per our spec we want to assume physiological pH normally'): aspirin CID 2244 neutral -> acetylsalicylate CID 3434975 (-1, pKa 3.47 per PubChem AID 781325/781326; 3.38 Serjeant IUPAC) and benzoic acid CID 243 neutral -> benzoate CID 242 (-1, the 08-04-approved alternate; pKa 4.207-3.96 AID 781325-781330). Both fetched live 2026-10-05 as PubChem 3D records; heavy atoms unchanged (13/9), one carboxyl H removed each; easy-1 GAINS its first salt-bridge-capable ligands (bona-fide carboxylates).",
           "pubchem_citation": "Kim S, Chen J, Cheng T, et al. PubChem 2025 update. Nucleic Acids Res. 2025;53(D1):D1516-D1525. doi:10.1093/nar/gkae1059",
           "source_url": "https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/cid/<CID>/SDF?record_type=3d"
         },

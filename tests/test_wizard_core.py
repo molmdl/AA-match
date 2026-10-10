@@ -27,6 +27,7 @@ Covered pure logic (03-RESEARCH-wizard-interaction.md):
   before the first recolor, restore via {ID: color} maps (section 4).
 """
 
+import math
 import unittest
 
 from aamatch import wizard_core
@@ -168,6 +169,201 @@ class TestViewCameraToWorld(unittest.TestCase):
             with self.assertRaises(ValueError) as cm:
                 wizard_core.view_camera_to_world(view, (1, 0, 0))
             self.assertIn('9', str(cm.exception))
+
+
+class TestViewCameraToWorldFullSO3(unittest.TestCase):
+    """Frozen R^T camera->world nudge convention for FULL SO(3), not
+    just yaw (08.2-02; closes the 03-01/03-04 yaw-only pin gap
+    "pitch/roll never live-tested").
+
+    Provenance:
+    - P1 probe verdict (08.2-RESEARCH-probes.md section 2): the R^T
+      convention was pressed live for FULL SO(3) -- 30/30 presses moved
+      the AA exactly along the intended screen direction (max screen
+      direction angle 0.0000 deg, max convention deviation 2.51e-07 A),
+      over identity, Rz90, the ACTUAL rolled post-start view, and two
+      synthetic SO(3) views -- so P1-VERDICT: "R^T holds for FULL SO(3)
+      incl. the actual rolled start view: YES". This class formalizes
+      P1 at unit level: any future regression against the frozen
+      convention now fails loudly in WSL, decision-independent (every
+      8.2 disposition A/B/C/D keeps the math untouched).
+    - Frozen movement-model laws M5/M6 (RESEARCH-history.md section 2):
+      M5 = "step_world = R^T . step over get_view's row-major
+      world->camera block; identity view = pass-through"
+      (wizard_core.py:135-159 pins the exact formula); M6 =
+      wizard_core.view_camera_to_world is the SINGLE fix site.
+    - Probe-log cross-check (test_s2_probe_log_cross_check): the three
+      exact literals come from tmp/probe_082_p1_output.log
+      (P1-POSTSTART-VIEW row; P1-VIEW S2-ACTUAL-poststart table rows).
+
+    Derivation rule (anti-tautology, mirroring
+    test_rz90_hand_computed): for a unit camera step e_i the expected
+    world vector is R^T . e_i == ROW i of the rotation block
+    (view[3i:3i+3]) -- that IS the transposed-matrix convention itself,
+    so every expected tuple below is a hand-derived literal, never a
+    runtime recomputation of the formula under test.
+
+    Tolerance note: per-element delta 1e-9 -- this function is pure
+    double-precision math. The 1.12e-06 tolerance class seen in P1
+    belongs to PyMOL float32 view storage / live displacement
+    measurement, NOT to this pure helper.
+
+    Fixtures (each a 9-number row-major world->camera block + an
+    arbitrary tail padded to 18 numbers -- view_camera_to_world reads
+    ONLY view[0:9]):
+
+    S2  The P1-captured ACTUAL post-start rolled view (the historical
+        trigger of the 2026-09-21 re-open / standing request) --
+        P1-POSTSTART-VIEW row of tmp/probe_082_p1_output.log, rotation
+        block only.
+    S3  Synthetic Rx(30) * Ry(50) * Rz(20), row-major composed by hand:
+            Ry(50).Rz(20) =
+              ( c50*c20,  -c50*s20,  s50)     = ( 0.604022774, -0.219846310,  0.766044443)
+              ( s20,       c20,      0.0)     = ( 0.342020143,  0.939692621,  0.0)
+              (-s50*c20,   s50*s20,  c50)     = (-0.719846310,  0.262002630,  0.642787610)
+            Rx(30).(above) =
+              (  r00,               r01,               r02)
+              ( c30*r10 - s30*r20,  c30*r11 - s30*r21, c30*r12 - s30*r22)
+              ( s30*r10 + c30*r20,  s30*r11 + c30*r21, s30*r12 + c30*r22)
+        evaluated ONCE with plain math.cos/math.sin arithmetic while
+        writing this fixture, then hard-coded below at full double
+        (repr) precision -- full precision, not 6-decimal rounding, so
+        the block is orthogonal at double precision and the 1e-12
+        norm-preservation pin (test_norm_preservation_*) is honest.
+    S4  Synthetic Rz(200) * Rx(25), row-major composed by hand:
+            ( c200, -s200*c25,  s200*s25)
+            ( s200,  c200*c25, -c200*s25)
+            ( 0.0,   s25,       c25)
+        same full-double-precision hard-coding discipline as S3.
+    S5  Pure pitch Rx(-90): cos=0, sin=-1 exactly.
+    """
+
+    # S2 -- P1-captured ACTUAL post-start rolled view block
+    # (tmp/probe_082_p1_output.log, P1-POSTSTART-VIEW row:
+    # "-0.447214 0.894427 0 -0.894427 -0.447214 -0 0 0 1 ..."; -0 == 0.0
+    # in floats, normalized here). Tail is arbitrary (view_camera_to_world
+    # reads ONLY view[0:9]).
+    S2_VIEW = (-0.447214, 0.894427, 0.0,
+               -0.894427, -0.447214, 0.0,
+               0.0, 0.0, 1.0,
+               0.0, 0.0, -97.2456,      # origin from the probe row
+               0.158331, 0.149332, 9.2822,
+               76.6692, 117.822, -20.0)
+
+    # S3 -- Rx(30) * Ry(50) * Rz(20), full-double literals (derivation
+    # rows in the class docstring).
+    S3_VIEW = (0.6040227735550537, -0.2198463103929542, 0.766044443118978,
+               0.6561212879225009, 0.6827963662346814, -0.3213938048432696,
+               -0.4523951199579622, 0.6967472440299423, 0.5566703992264195,
+               9.0, 8.0, 7.0, 40.0, 0.0, 100.0, 1.0, 2.0, 3.0)
+
+    # S4 -- Rz(200) * Rx(25), full-double literals (derivation rows in
+    # the class docstring).
+    S4_VIEW = (-0.9396926207859084, 0.3099755192194446, -0.144543958452599,
+               -0.34202014332566866, -0.8516507396391465, 0.39713126196710286,
+               0.0, 0.42261826174069944, 0.9063077870366499,
+               1.0, 2.0, 3.0, 40.0, 0.0, 100.0, 9.0, 8.0, 7.0)
+
+    # S5 -- pure pitch Rx(-90): cos(-90)=0, sin(-90)=-1 exactly.
+    S5_VIEW = (1.0, 0.0, 0.0,
+               0.0, 0.0, 1.0,
+               0.0, -1.0, 0.0,
+               0.0, 0.0, 0.0, 40.0, 0.0, 100.0, 0.0, 0.0, 0.0)
+
+    def _assert_vec3_almost(self, actual, expected):
+        # Per-element delta 1e-9: pure double-precision math, NOT the
+        # 1.12e-06 PyMOL float32 storage tolerance class (see class
+        # docstring "Tolerance note").
+        self.assertEqual(len(actual), 3)
+        for a, e in zip(actual, expected):
+            self.assertAlmostEqual(a, e, delta=1e-9)
+
+    def _expected_rows(self):
+        """{name: (view, {step: hand-derived ROW/negated-ROW literal})}.
+        The expected vector for +e_i is ROW i of the block (the R^T
+        convention itself); for -e_i it is the negated row. ALL tuples
+        are literals transcribed from the fixture blocks above, not
+        computed expressions (anti-tautology discipline)."""
+        neg = lambda r: (-r[0], -r[1], -r[2])
+        tables = {}
+        for name, view in (('S2', self.S2_VIEW), ('S3', self.S3_VIEW),
+                           ('S4', self.S4_VIEW), ('S5', self.S5_VIEW)):
+            rows = (view[0:3], view[3:6], view[6:9])
+            tables[name] = (view, {
+                (1, 0, 0): rows[0],
+                (-1, 0, 0): neg(rows[0]),
+                (0, 1, 0): rows[1],
+                (0, -1, 0): neg(rows[1]),
+                (0, 0, 1): rows[2],
+                (0, 0, -1): neg(rows[2]),
+            })
+        return tables
+
+    def _run_fixture(self, name):
+        view, expectations = self._expected_rows()[name]
+        for step, expected in expectations.items():
+            with self.subTest(step=step):
+                self._assert_vec3_almost(
+                    wizard_core.view_camera_to_world(view, step), expected)
+
+    def test_s2_actual_poststart_rolled_view_all_unit_steps(self):
+        # S2: the historical trigger view -- rolled, not yaw-only.
+        self._run_fixture('S2')
+
+    def test_s3_rx30_ry50_rz20_all_unit_steps(self):
+        # S3: arbitrary SO(3) -- roll+pitch+yaw composed.
+        self._run_fixture('S3')
+
+    def test_s4_rz200_rx25_all_unit_steps(self):
+        # S4: rolled-then-pitched SO(3).
+        self._run_fixture('S4')
+
+    def test_s5_pure_pitch_rx_neg90_all_unit_steps(self):
+        # S5: pure pitch -- Up(+y) nudges toward +z (toward viewer) and
+        # +z nudges toward -y; pitch finally unit-tested.
+        self._run_fixture('S5')
+
+    def test_s2_probe_log_cross_check(self):
+        # EXACT literals from tmp/probe_082_p1_output.log, P1-VIEW
+        # "S2-ACTUAL-poststart" table:
+        #   RIGHT(+x)         -> world (-0.447214, 0.894427, 0.000000)
+        #   UP(+y)            -> world (-0.894427, -0.447214, 0.000000)
+        #   TOWARD-VIEWER(+z) -> world (0.000000, 0.000000, 1.000000)
+        # (block itself from the P1-POSTSTART-VIEW row; observed press
+        # displacements in the P1-PRESS S2 rows match these to ~1e-7,
+        # i.e. the live float32 tolerance class -- here the value IS the
+        # stored block row, so plain equality is the cross-check).
+        self.assertEqual(
+            wizard_core.view_camera_to_world(self.S2_VIEW, (1, 0, 0)),
+            (-0.447214, 0.894427, 0.0))
+        self.assertEqual(
+            wizard_core.view_camera_to_world(self.S2_VIEW, (0, 1, 0)),
+            (-0.894427, -0.447214, 0.0))
+        self.assertEqual(
+            wizard_core.view_camera_to_world(self.S2_VIEW, (0, 0, 1)),
+            (0.0, 0.0, 1.0))
+
+    def test_linearity_composite_step_s3_s4(self):
+        # Composite step (1,-2,3): result must equal the weighted sum
+        # r0 - 2*r1 + 3*r2 of the three unit-row results -- a property
+        # of the frozen convention independent of rote transcription.
+        for view in (self.S3_VIEW, self.S4_VIEW):
+            actual = wizard_core.view_camera_to_world(view, (1, -2, 3))
+            expected = (
+                view[0] - 2.0 * view[3] + 3.0 * view[6],
+                view[1] - 2.0 * view[4] + 3.0 * view[7],
+                view[2] - 2.0 * view[5] + 3.0 * view[8])
+            self._assert_vec3_almost(actual, expected)
+
+    def test_norm_preservation_composite_step_s3_s4(self):
+        # R^T over an SO(3) block preserves vector norm exactly at
+        # double precision (fixture literals are full-repr so the block
+        # IS orthogonal -- see the S3 fixture comment): |(1,-2,3)| is
+        # sqrt(14); the world step must match within 1e-12.
+        for view in (self.S3_VIEW, self.S4_VIEW):
+            actual = wizard_core.view_camera_to_world(view, (1, -2, 3))
+            norm = math.sqrt(sum(v * v for v in actual))
+            self.assertAlmostEqual(norm, math.sqrt(14.0), delta=1e-12)
 
 
 class TestColorSnapshotBookkeeping(unittest.TestCase):

@@ -269,10 +269,10 @@ Provenance and constraints seeded in .planning/phases/08.1-confirm-pass-gate-res
 **Plans:** 10 plans
 
 Plans:
-- [ ] 08.2-01-PLAN.md — decision menu + [HUMAN] disposition checkpoint + dated [GATE] amendment record (wave 1)
-- [ ] 08.2-02-PLAN.md — full-SO(3) camera->world unit pins, P1 formalized (wave 1)
-- [ ] 08.2-03-PLAN.md — keyboard-channel + movement-discipline AST source pins (wave 1)
-- [ ] 08.2-04-PLAN.md — SMOKE-23 direction battery: live keyboard drives + rolled-view Toward pin (wave 1)
+- [x] 08.2-01-PLAN.md — decision menu + [HUMAN] disposition checkpoint + dated [GATE] amendment record (wave 1)
+- [x] 08.2-02-PLAN.md — full-SO(3) camera->world unit pins, P1 formalized (wave 1)
+- [x] 08.2-03-PLAN.md — keyboard-channel + movement-discipline AST source pins (wave 1)
+- [x] 08.2-04-PLAN.md — SMOKE-23 direction battery: live keyboard drives + rolled-view Toward pin (wave 1)
 - [ ] 08.2-05-PLAN.md — roll-fate start composition per disposition + SMOKE-08 deliberate evolution (wave 2)
 - [ ] 08.2-06-PLAN.md — Toward-ligand step/acceleration per disposition + SMOKE-07/23 evolution (wave 2)
 - [ ] 08.2-07-PLAN.md — Game-tab arrow keys (disposition-gated) + SMOKE-16 handler proof (wave 2)
@@ -335,7 +335,7 @@ Lifted from PITFALLS.md "Pitfall-to-Phase Mapping" (topic names → this roadmap
 | 7. Checkpoint & Game-File Persistence | 12/12 | Complete (verified 2026-09-26 — 07-VERIFICATION.md passed 51/51) | 2026-09-26 |
 | 8. Demo Curation & Citations | 11/11 | Complete (verified 2026-10-05 — 08-VERIFICATION.md passed 4/4; 08-11-SUMMARY criterion map closed in the combined session) | 2026-10-05 |
 | 8.1 Confirm Pass-Gate Restoration | 8/8 | Complete (verified 2026-10-05 — 08.1-VERIFICATION.md passed 40/40) | 2026-10-05 |
-| 8.2 Direction-Control Restoration (INSERTED) | 0/TBD | Not started | - |
+| 8.2 Direction-Control Restoration (INSERTED) | 4/10 | In progress — wave 1 complete 2026-10-11, [GATE] disposition recorded | - |
 | 9. Help, Docs & Release Audit | 0/TBD | Not started | - |
 
 ## Coverage

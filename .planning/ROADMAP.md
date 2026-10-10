@@ -320,8 +320,8 @@ Lifted from PITFALLS.md "Pitfall-to-Phase Mapping" (topic names → this roadmap
 | 5. Game Status Tab & Start Sequence | 11/11 | Complete (verified 2026-09-20 — 05-VERIFICATION.md passed 88/88) | 2026-09-20 |
 | 6. Scoring Lifecycle & Endgame | 10/10 | Complete (verified 2026-09-21 — 06-VERIFICATION.md passed 39/39) | 2026-09-21 |
 | 7. Checkpoint & Game-File Persistence | 12/12 | Complete (verified 2026-09-26 — 07-VERIFICATION.md passed 51/51) | 2026-09-26 |
-| 8. Demo Curation & Citations | 11/11 | Complete | 2026-10-05 |
-| 8.1 Confirm Pass-Gate Restoration | 8/8 | Complete | 2026-10-05 |
+| 8. Demo Curation & Citations | 11/11 | Complete (verified 2026-10-05 — 08-VERIFICATION.md passed 4/4; 08-11-SUMMARY criterion map closed in the combined session) | 2026-10-05 |
+| 8.1 Confirm Pass-Gate Restoration | 8/8 | Complete (verified 2026-10-05 — 08.1-VERIFICATION.md passed 40/40) | 2026-10-05 |
 | 8.2 Direction-Control Restoration (INSERTED) | 0/TBD | Not started | - |
 | 9. Help, Docs & Release Audit | 0/TBD | Not started | - |
 

@@ -74,6 +74,7 @@ The player can place amino acids onto a small molecule in the PyMOL 3D viewer an
 | Demo sets: agent proposes with citations, human approves before fetch/commit | spec.md truthfulness constraint | — Pending |
 | No helper visuals during gameplay (spec) | Preserves the 3D-practice core value | — Pending |
 | (Amendment 2026-09-27, human) Confirm is the PASS GATE: the molecule records its score and advances ONLY when all required interactions are formed; a confirm without them records nothing, advances nothing, and shows the Formed/Missing debrief + retry line (timer keeps running). Skip/Give Up keep their escape roles | Restores the spec pass-gate reading (spec.md:38/52) and the human-validated Phase-3 semantics (commit 1c3737c, 03-06/03-07 checkpoints); supersedes the 06-10-approved advance-on-confirm reading (SCORE-01 over-specification defect; repaired in Phase 8.1) | — Applied in Phase 8.1 |
+| (Amendment 2026-10-11, human) Phase-8.2 movement-UX disposition: Option A "Straight start" — start roll dropped (a1 front-only), Toward-ligand step 2.5 Å (acceleration off), no Game-tab arrows, movement hint deferred to Phase 9, no re-align button; freeform verdict "A" | probe-derived (P1/P2/P3), see STATE Phase 8.2 Decisions | — Applied in Phase 8.2 |
 
 ---
-*Last updated: 2026-09-27 — Confirm pass-gate amendment (Phase 8.1); prior: 2026-09-05 after initialization*
+*Last updated: 2026-10-11 — Phase-8.2 movement-UX disposition amendment (Option A "Straight start"); prior: 2026-09-27 — Confirm pass-gate amendment (Phase 8.1); prior: 2026-09-05 after initialization*

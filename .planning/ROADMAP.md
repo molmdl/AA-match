@@ -265,6 +265,7 @@ Provenance and constraints seeded in .planning/phases/08.1-confirm-pass-gate-res
   1. [HUMAN] The human can move amino acids onto the ligand without confusion inside a fresh session, using the panel's Toward-ligand AND the re-decided arrow/keyboard scheme.
   2. [GATE] The movement-model decision (if any change) is recorded as a dated human amendment.
   3. [WSL/HEADLESS] The frozen-model invariants (baked-transform, identity asserts, SMOKE-07/15/16 chains) stay green.
+**NOTE (2026-10-11, human disposition — Phase 8.2):** Option A "Straight start" — the start roll is DROPPED (a1 front-only), Toward-ligand step 2.5 Å (acceleration off), no Game-tab arrow keys, movement hint deferred to Phase 9, no mid-game re-align button; freeform verdict "A"; this supersedes the 03-06 framing-chain "camera-only roll" clause (front-offset composition survives; the 03-07 screen-relative movement law survives per P1); full record: STATE.md Phase 8.2 Decisions.
 **Plans:** 10 plans
 
 Plans:

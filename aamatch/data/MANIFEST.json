@@ -411,21 +411,21 @@
       {
         "entries": [
           {
-            "atom_count": 51,
-            "bond_count": 53,
+            "atom_count": 49,
+            "bond_count": 51,
             "bond_order_counts": {
-              "1": 42,
+              "1": 40,
               "2": 11
             },
             "entry_id": "folic_acid",
             "file": "ligands/demo-veryhard-1-folic_acid.sdf",
-            "formal_charge_sum": 0,
+            "formal_charge_sum": -2,
             "format": "sdf",
             "halogen_present": false,
             "heavy_atom_count": 32,
             "metal_present": false,
             "protonation": "as-recorded",
-            "sha256": "95eb0e4060d879a97329c98976048ad32a0bba26950ffcc8423d86471e79837f",
+            "sha256": "5a654975379bfb761ac8dad599ee59371c10a4caaa06a43b7cd3856c329f845f",
             "size_class": "medium",
             "states_expected": 1
           },
@@ -444,7 +444,7 @@
             "heavy_atom_count": 24,
             "metal_present": false,
             "protonation": "as-recorded",
-            "sha256": "3a7e110e519adf0a55d9c14602a7a9ae13ad8007ddddc4639cf778b53ad6999b",
+            "sha256": "ada5a8420cffd1b34089cee5c3a85953545449ab6ec7dc0f7a988519e13a8340",
             "size_class": "small",
             "states_expected": 1
           }
@@ -454,7 +454,7 @@
           "complex_license": "CC0 1.0 (wwPDB) - https://www.wwpdb.org/about/usage-policies",
           "fetched": "2026-09-26",
           "license_url": "https://www.ncbi.nlm.nih.gov/home/about/policies/",
-          "notes": "Very-challenging-tier set (08-PROPOSALS.md Set 8, APPROVED 2026-09-26): folic_acid CID 135398658 (C19H19N7O6, 32 heavy per approved C2 correction - MEDIUM bucket) + thyroxine CID 5819 (C15H11I4NO4, 24 heavy per C2 - 1 below the SIZE_S1=25 boundary; the iodine halogen case via 4x C-I). No alternates for either row. Per-record citation per U1: 'PubChem Identifier: CID <CID>; URL: https://pubchem.ncbi.nlm.nih.gov/compound/<CID>'. Complex reference metadata: CC0 1.0 (wwPDB).",
+          "notes": "Very-challenging-tier set (08-PROPOSALS.md Set 8, APPROVED 2026-09-26): folic acid + thyroxine. Per-record citation per U1: 'PubChem Identifier: CID <CID>; URL: https://pubchem.ncbi.nlm.nih.gov/compound/<CID>'. Complex reference metadata: CC0 1.0 (wwPDB). AMENDED 2026-10-05 (human PHYSIOLOGICAL-PROTONATION decision '2 go R1-R8', 08.1-08 protonation audit rows 13-14, directive: 'per our spec we want to assume physiological pH normally'): folic acid CID 135398658 neutral -> folate(2-) CID 135761165 (pKa 3.5/4.3 carboxylic moieties, /Estimated/ SPARC Hilal et al. 1994 via the CID record - estimated but robust: both pKas far below 7.4) and thyroxine CID 5819 free acid/amine -> L-thyroxine zwitterion CID 25201348 (COO-/NH3+ net 0; HSDB sections in the CID 5819 record, estimated pKa 7.43/9.43: 'levothyroxine will exist in the zwitterion form ... at pH values of 5 to 9'; phenolic OH KEPT - the ~50% phenolate coexisting microstate is recorded honestly in the audit). Heavy atoms unchanged (32/24 - bucket assignments MEDIUM/small unchanged); the iodine 4x C-I halogen case is UNCHANGED.",
           "pubchem_citation": "Kim S, Chen J, Cheng T, et al. PubChem 2025 update. Nucleic Acids Res. 2025;53(D1):D1516-D1525. doi:10.1093/nar/gkae1059",
           "source_url": "https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/cid/<CID>/SDF?record_type=3d"
         },

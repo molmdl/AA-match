@@ -195,21 +195,21 @@
       {
         "entries": [
           {
-            "atom_count": 17,
-            "bond_count": 17,
+            "atom_count": 18,
+            "bond_count": 18,
             "bond_order_counts": {
-              "1": 13,
+              "1": 14,
               "2": 4
             },
             "entry_id": "benzamidine",
             "file": "ligands/demo-hard-1-benzamidine.sdf",
-            "formal_charge_sum": 0,
+            "formal_charge_sum": 1,
             "format": "sdf",
             "halogen_present": false,
             "heavy_atom_count": 9,
             "metal_present": false,
             "protonation": "as-recorded",
-            "sha256": "484b30982d943fca6a7e92342167898cf8a525588cedef8178f4b8545ffcad00",
+            "sha256": "d468c24a1b37878c0de2fcc1d9ab4103eabf9b33de3b4f26c09d80e5d3e5616a",
             "size_class": "small",
             "states_expected": 1
           },
@@ -238,7 +238,7 @@
           "complex_license": "CC0 1.0 (wwPDB) - https://www.wwpdb.org/about/usage-policies",
           "fetched": "2026-09-26",
           "license_url": "https://www.ncbi.nlm.nih.gov/home/about/policies/",
-          "notes": "Hard-tier trypsin-classics pair (08-PROPOSALS.md Set 4, APPROVED 2026-09-26): benzamidine CID 2332 (neutral free base as-registered per C3; the charged benzamidinium chloride CID 444655 alternate NOT substituted - plan's default row followed) + guanidinium CID 32838 (+1, 3D status resolved VERIFIED during 08-04 per C4; no alternate needed). Per-record citation per U1: 'PubChem Identifier: CID <CID>; URL: https://pubchem.ncbi.nlm.nih.gov/compound/<CID>'. Complex reference metadata: CC0 1.0 (wwPDB).",
+          "notes": "Hard-tier trypsin-classics pair (08-PROPOSALS.md Set 4, APPROVED 2026-09-26): benzamidine + guanidinium CID 32838 (+1, 3D status resolved VERIFIED during 08-04 per C4; no alternate needed). Per-record citation per U1: 'PubChem Identifier: CID <CID>; URL: https://pubchem.ncbi.nlm.nih.gov/compound/<CID>'. Complex reference metadata: CC0 1.0 (wwPDB). AMENDED 2026-10-05 (human PHYSIOLOGICAL-PROTONATION decision '2 go R1-R8', 08.1-08 protonation audit row 5, directive: 'per our spec we want to assume physiological pH normally'): benzamidine CID 2332 neutral free base -> benzamidinium CID 444655 (+1; pKaH1 11.6 @20C IUPAC Digitized pKa Dataset 'perrin671' - 99.993% protonated at pH 7.4). MISLABEL FIX: CID 444655 is the BARE benzamidinium cation C7H9N2+ (IUPAC [amino(phenyl)methylidene]azanium), single component - prior repo prose called it 'benzamidinium chloride'; the CID was right, the prose was wrong (audit section 6).",
           "pubchem_citation": "Kim S, Chen J, Cheng T, et al. PubChem 2025 update. Nucleic Acids Res. 2025;53(D1):D1516-D1525. doi:10.1093/nar/gkae1059",
           "source_url": "https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/cid/<CID>/SDF?record_type=3d"
         },

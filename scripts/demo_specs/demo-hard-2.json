@@ -9,21 +9,21 @@
     "pubchem_citation": "Kim S, Chen J, Cheng T, et al. PubChem 2025 update. Nucleic Acids Res. 2025;53(D1):D1516-D1525. doi:10.1093/nar/gkae1059",
     "complex_license": "CC0 1.0 (wwPDB) - https://www.wwpdb.org/about/usage-policies",
     "fetched": "2026-09-26",
-    "notes": "Hard-tier charged-messengers pair (08-PROPOSALS.md Set 5, APPROVED 2026-09-26): glutamic acid CID 33032 (neutral free acid as-registered per C3 - physiological zwitterion deliberately NOT synthesized; parallel policy to citrate Decision 5) + acetylcholine CID 187 (+1 quaternary N - the DEFAULT approved pick; imidazolium CID 444234 and tetramethylammonium CID 6380 alternates NOT substituted). Per-record citation per U1: 'PubChem Identifier: CID <CID>; URL: https://pubchem.ncbi.nlm.nih.gov/compound/<CID>'. Complex reference metadata: CC0 1.0 (wwPDB)."
+    "notes": "Hard-tier charged-messengers pair (08-PROPOSALS.md Set 5, APPROVED 2026-09-26): glutamic acid + acetylcholine CID 187 (+1 quaternary N - the DEFAULT approved pick; imidazolium CID 444234 and tetramethylammonium CID 6380 alternates NOT substituted). Per-record citation per U1: 'PubChem Identifier: CID <CID>; URL: https://pubchem.ncbi.nlm.nih.gov/compound/<CID>'. Complex reference metadata: CC0 1.0 (wwPDB). AMENDED 2026-10-05 (human PHYSIOLOGICAL-PROTONATION decision '2 go R1-R8', 08.1-08 protonation audit row 7, directive: 'per our spec we want to assume physiological pH normally' — the decision SUPERSEDES the C3 free-acid/Decision-5-parallel policy now that the audit verified a clean stereo-explicit 3D route): glutamic acid CID 33032 neutral free acid -> L-glutamate zwitterion CID 5460299 (net -1: 2x carboxylate -1 + alpha-NH3+ +1; pK1 2.19 / pK2 4.25 / pK3 9.67 Merck 2013 via the CID 33032 record; (2S) stereo-explicit matches shipped L). Rejected candidates recorded in the audit: 5128032 (wrong bare dianion with neutral NH2), 4525487 (stereo-unspecified twin). The zwitterion covers BOTH salt-bridge signs (additive to acetylcholine's '+' slot)."
   },
   "entries": [
     {
       "entry_id": "glutamic_acid",
-      "url": "https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/cid/33032/SDF?record_type=3d",
+      "url": "https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/cid/5460299/SDF?record_type=3d",
       "protonation": "as-recorded",
-      "expect_atom_count": 19,
+      "expect_atom_count": 18,
       "provenance": {
-        "source_url": "https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/cid/33032/SDF?record_type=3d",
+        "source_url": "https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/cid/5460299/SDF?record_type=3d",
         "pdb_id": "2JFO",
         "entry_doi": "https://doi.org/10.2210/pdb2jfo/pdb",
         "paper_doi": "https://doi.org/10.1038/nature05689",
         "plip": "PLIP (doi:10.1093/nar/gkaf361) reference complex 2JFO",
-        "notes": "L-Glutamic acid, PubChem CID 33032 (C5H9NO4, 10 heavy, Charge 0 as recorded per approved C3 - the research's '-1' claim is INCORRECT for this CID). Complex: 2JFO Enterococcus faecalis glutamate racemase with D- and L-glutamate (GLU confirmed as a bound nonpolymer ligand - hits 2CT6/1J0F rejected at confirmation, verified 2026-09-26; paper DOI resolves 200). Neutral free acid: physiological zwitterion deliberately NOT synthesized; parallel policy to citrate (Decision 5). Carries h_bond rich (NH2 donor + 2 COOH donors; carboxyl + amino N/O acceptors), hydrophobic (C3 spacer). No salt bridge as-recorded; the set's salt-bridge slot is carried by acetylcholine."
+        "notes": "L-Glutamate zwitterion, PubChem CID 5460299 ((2S)-2-azaniumylpentanedioate, C5H8NO4-, 10 heavy, Charge -1 as recorded: 2x carboxylate -1 M CHG + 1x alpha-NH3+ +1 M CHG; stereo-explicit (2S) matches the shipped L form). Complex: 2JFO Enterococcus faecalis glutamate racemase with D- and L-glutamate (GLU confirmed as a bound nonpolymer ligand - hits 2CT6/1J0F rejected at confirmation, verified 2026-09-26; paper DOI resolves 200). Carries salt_bridge in BOTH directions (two deprotonated carboxylates '-' AND the alpha-ammonium '+' - the zwitterion covers both signs; the NH3+ also types '+' structurally per capability's ammonium rule), h_bond rich (NH3+ donor; carboxylate O acceptors), hydrophobic (C3 spacer). AMENDED 2026-10-05 (human decision '2 go R1-R8', audit row 7/R5, directive 'per our spec we want to assume physiological pH normally'): was CID 33032 neutral free acid (Charge 0 as recorded per approved C3 - the research's '-1' claim is INCORRECT for THAT CID; 19 atoms {1:16,2:2}); swapped to the physiological zwitterion (COO- x2 ~100%: pK1 2.19 / pK2 4.25; NH3+ 99.5%: pK3 9.67 - Merck 2013 via the CID 33032 record). Rejected candidates: 5128032 (wrong bare dianion, neutral N), 4525487 (stereo-unspecified twin) - do NOT use. Prior prose said 'this set's salt-bridge slot is acetylcholine' - the zwitterion is now BOTH-sign-capable (additive; acetylcholine keeps its '+' slot). Neutral CID 33032 record stays in git history."
       }
     },
     {

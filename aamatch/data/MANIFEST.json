@@ -249,21 +249,21 @@
       {
         "entries": [
           {
-            "atom_count": 19,
-            "bond_count": 18,
+            "atom_count": 18,
+            "bond_count": 17,
             "bond_order_counts": {
-              "1": 16,
+              "1": 15,
               "2": 2
             },
             "entry_id": "glutamic_acid",
             "file": "ligands/demo-hard-2-glutamic_acid.sdf",
-            "formal_charge_sum": 0,
+            "formal_charge_sum": -1,
             "format": "sdf",
             "halogen_present": false,
             "heavy_atom_count": 10,
             "metal_present": false,
             "protonation": "as-recorded",
-            "sha256": "d30a909cad9f3e7e3d3f20fb4ad4f8c5417686537f03c92bee6ed003eed7e16c",
+            "sha256": "c846665122e7ea9edf6a474b98d79c8205186c72b0cc5f8572a8bcd488c89db2",
             "size_class": "small",
             "states_expected": 1
           },
@@ -292,7 +292,7 @@
           "complex_license": "CC0 1.0 (wwPDB) - https://www.wwpdb.org/about/usage-policies",
           "fetched": "2026-09-26",
           "license_url": "https://www.ncbi.nlm.nih.gov/home/about/policies/",
-          "notes": "Hard-tier charged-messengers pair (08-PROPOSALS.md Set 5, APPROVED 2026-09-26): glutamic acid CID 33032 (neutral free acid as-registered per C3 - physiological zwitterion deliberately NOT synthesized; parallel policy to citrate Decision 5) + acetylcholine CID 187 (+1 quaternary N - the DEFAULT approved pick; imidazolium CID 444234 and tetramethylammonium CID 6380 alternates NOT substituted). Per-record citation per U1: 'PubChem Identifier: CID <CID>; URL: https://pubchem.ncbi.nlm.nih.gov/compound/<CID>'. Complex reference metadata: CC0 1.0 (wwPDB).",
+          "notes": "Hard-tier charged-messengers pair (08-PROPOSALS.md Set 5, APPROVED 2026-09-26): glutamic acid + acetylcholine CID 187 (+1 quaternary N - the DEFAULT approved pick; imidazolium CID 444234 and tetramethylammonium CID 6380 alternates NOT substituted). Per-record citation per U1: 'PubChem Identifier: CID <CID>; URL: https://pubchem.ncbi.nlm.nih.gov/compound/<CID>'. Complex reference metadata: CC0 1.0 (wwPDB). AMENDED 2026-10-05 (human PHYSIOLOGICAL-PROTONATION decision '2 go R1-R8', 08.1-08 protonation audit row 7, directive: 'per our spec we want to assume physiological pH normally' \u2014 the decision SUPERSEDES the C3 free-acid/Decision-5-parallel policy now that the audit verified a clean stereo-explicit 3D route): glutamic acid CID 33032 neutral free acid -> L-glutamate zwitterion CID 5460299 (net -1: 2x carboxylate -1 + alpha-NH3+ +1; pK1 2.19 / pK2 4.25 / pK3 9.67 Merck 2013 via the CID 33032 record; (2S) stereo-explicit matches shipped L). Rejected candidates recorded in the audit: 5128032 (wrong bare dianion with neutral NH2), 4525487 (stereo-unspecified twin). The zwitterion covers BOTH salt-bridge signs (additive to acetylcholine's '+' slot).",
           "pubchem_citation": "Kim S, Chen J, Cheng T, et al. PubChem 2025 update. Nucleic Acids Res. 2025;53(D1):D1516-D1525. doi:10.1093/nar/gkae1059",
           "source_url": "https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/cid/<CID>/SDF?record_type=3d"
         },

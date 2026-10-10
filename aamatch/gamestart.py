@@ -67,26 +67,17 @@ checks (incl. the msm ORDER-LAW teeth) stay green unchanged.
    (it pushed the GRID nearer on screen -- the human's "placement
    still behind") and its pivot write-back of view[9:12] across a
    ~180 Angstrom camera lever arm had already thrown the whole scene
-   out of frame once (both mechanisms in the regression law below).
-   A world translate is immune to all of it: no view field is ever
-   written, sentinels (segi/b) are untouched, and every later camera
-   op preserves what this step bought -- the roll rewrites R rows 0/1
-   only (cam-z invariant), the final zoom preserves R exactly. The
-   offset is GAMESTART-ONLY composition: Phase-2 materialize semantics
+    out of frame once (both mechanisms in the regression law below).
+    A world translate is immune to all of it: no view field is ever
+    written, sentinels (segi/b) are untouched, and every later camera
+    op preserves what this step bought -- the final zoom preserves R
+    exactly. The offset is GAMESTART-ONLY composition: Phase-2
+    materialize semantics
    are untouched, so SMOKE-03/04 (which run materialize directly,
    never start_game) are unaffected; engine ops (place / detect /
    score / confirm / reset_to_grid) all read LIVE geometry, so nothing
    assumes the ligand sits at its grid's center.
-6. Roll the camera about its forward axis so the ACTIVE ligand (the
-   one Confirm scores) composes ABOVE its own AA grid on screen (03-06
-   human preference). CAMERA COMPOSITION ONLY -- only R rows 0/1 are
-   rewritten, so the step-5 front-offset (a pure cam-z matter) is
-   invariant under it; the wizard's nudge math re-reads cmd.get_view()
-   per press so a rolled start view needs no movement-side change. The
-   roll reads ONLY the active molecule's grid (its registry slot
-   objects) for the composition centroid, so an out-of-frame inactive
-   molecule can never tilt the start composition.
-7. Zoom the camera to frame ONLY the ACTIVE molecule -- molecule 0 in
+ 6. Zoom the camera to frame ONLY the ACTIVE molecule -- molecule 0 in
    the Phase-3 loop: its grid slot objects PLUS its ligand object,
    identified by name from the materialize registry output -- with a
    small spatial margin -- LAST, after ALL composition (03-06 field
@@ -102,24 +93,36 @@ checks (incl. the msm ORDER-LAW teeth) stay green unchanged.
    pick behavior unchanged). The retired whole-scene sentinel
    selection ('segi AAM' -- every game atom carries it, so it always
    pulled BOTH molecules into frame) is replaced by the registry's own
-    name list, which no user object can ever match either. PHASE 5/6
-    NOTE (updated 06-04): re-framing when the active molecule advances
-    is a scoring-lifecycle concern (Phase 6), NOT start_game's -- but
-    the composition itself is NOW AVAILABLE for any molecule index via
-    ``compose_molecule_view(registry, molecule_index)`` (06-04; the
-    same three helper calls, parameterized). Phase 6's wizard
-    lifecycle consumes it on every molecule/level advance; the history
-    above stands (gamestart composes level-0 molecule-0 starts only;
-    start_game calls compose_molecule_view with the default index 0,
-    byte-identical to the retired inline sequence).
-   cmd.zoom is a pure dolly/re-aim: it preserves the rotation matrix
-   exactly (headless probe: element delta 0.0) and therefore the roll
-   composition and every relative camera-space depth established by
-   step 5, while it re-derives the origin fields and clip slab from
-   the current R.
+     name list, which no user object can ever match either. PHASE 5/6
+     NOTE (updated 06-04): re-framing when the active molecule advances
+     is a scoring-lifecycle concern (Phase 6), NOT start_game's -- but
+     the composition itself is NOW AVAILABLE for any molecule index via
+     ``compose_molecule_view(registry, molecule_index)`` (06-04; the
+     same helper calls, parameterized). Phase 6's wizard
+     lifecycle consumes it on every molecule/level advance; the history
+     above stands (gamestart composes level-0 molecule-0 starts only;
+     start_game calls compose_molecule_view with the default index 0,
+     byte-identical to the retired inline sequence).
+    cmd.zoom is a pure dolly/re-aim: it preserves the rotation matrix
+    exactly (headless probe: element delta 0.0) and therefore every
+    relative camera-space depth established by step 5, while it
+    re-derives the origin fields and clip slab from the current R.
+    RETIRED (the old step 6, 03-06 human preference): the camera roll
+    about the forward axis that composed the active ligand above its
+    grid -- retired per the Phase-8.2 human disposition amendment
+    (STATE.md Phase 8.2 Decisions, 2026-10-11: roll_fate drop, variant
+    a1 front-only). The P2 probe proved the roll a pure disorientation
+    cost (+114.8..127.9 deg for <= 0.89 A of cam-y payoff) while the
+    step-5 front-offset delivers 100% of the visible composition, so
+    every fresh session now opens with the rotation block UNCHANGED
+    from pre-compose (screen axes == world/grid axes). The 03-07
+    DECISION LAW below is unbroken: the roll is REMOVED, not replaced
+    by camera surgery (the geometry-side preference now covers ALL
+    composition).
 
    03-07 REGRESSION LAW (blank start view): an earlier build zoomed
-   FIRST (step 7 before 5/6) and the then-current camera pitch rewrote
+   FIRST (ahead of the front-offset composition) and the then-current
+   camera pitch rewrote
    view[9:12] -- the rotation origin RELATIVE TO THE CAMERA in camera
    coords (pymolwiki Get_View layout: 0:9 R, 9:12 origin-in-cam, 12:15
    origin in world, 15/16 front/rear clip distances, 17 ortho) --
@@ -154,7 +157,6 @@ Python floor: PyMOL's Windows Python 3.9 at runtime, written 3.6-safe
 (Gate D compiles every aamatch/*.py under python3.6).
 """
 
-import math
 import time
 
 from pymol import cmd
@@ -214,7 +216,7 @@ def _active_molecule_selection(registry, molecule_index=0):
 
     Used as the final zoom target (03-07 human decision 2026-09-10:
     frame only the active molecule's grid + ligand -- module docstring
-    step 7). Name-based (``_aam_*`` reserved prefix): a user object can
+    step 6). Name-based (``_aam_*`` reserved prefix): a user object can
     never match, and -- unlike the retired whole-scene ``segi AAM``
     selection -- the INACTIVE molecule's objects are not named, so they
     stay out of the initial frame.
@@ -226,67 +228,6 @@ def _active_molecule_selection(registry, molecule_index=0):
     names = [molecule['ligand'][0]]
     names.extend(entry[0] for entry in molecule['slots'].values())
     return ' or '.join(names)
-
-
-def _frame_ligand_above_grid(registry, molecule_index=0):
-    """Roll the camera so the ACTIVE molecule's ligand sits ABOVE its
-    own AA grid.
-
-    Camera composition only (03-06 human preference) -- no game object
-    moves. ``view`` per cmd.get_view(): view[0:9] = row-major world->cam
-    rotation R, view[9:12] = origin, view[12:14] clip front/rear,
-    view[15:] flag block; this rewrites ONLY rows 0/1 of R. Fail-soft:
-    an empty/distributed scene keeps the plain zoom view.
-
-    The composition centroid is the ACTIVE molecule's grid ONLY (its
-    registry slot objects): with the start view framing just that
-    molecule (03-07 human decision), an out-of-frame inactive grid
-    must never pull the roll alignment off the framed grid.
-
-    ``molecule_index`` defaults to 0 (the start path); the Phase-6
-    lifecycle passes the advanced index.
-    """
-    view = list(cmd.get_view())
-    atoms = geometry.extract_game_atoms()
-    molecule = registry['molecules'][molecule_index]
-    lig_name = molecule['ligand'][0]
-    lig = [a for a in atoms
-           if a['side'] == 'lig' and a['object'] == lig_name]
-    slot_objects = set(entry[0] for entry in molecule['slots'].values())
-    grid = [a for a in atoms
-            if a['side'] == 'aa' and a['object'] in slot_objects]
-    if not lig or not grid:
-        return
-
-    def centroid(rows):
-        return (sum(a['x'] for a in rows) / len(rows),
-                sum(a['y'] for a in rows) / len(rows),
-                sum(a['z'] for a in rows) / len(rows))
-
-    def cam_x(p):   # screen-x of a world point, R row 0 . (p - origin)
-        return (view[0] * (p[0] - view[9])
-                + view[1] * (p[1] - view[10])
-                + view[2] * (p[2] - view[11]))
-
-    def cam_y(p):   # screen-y (up) of a world point, R row 1
-        return (view[3] * (p[0] - view[9])
-                + view[4] * (p[1] - view[10])
-                + view[5] * (p[2] - view[11]))
-
-    lpt, gpt = centroid(lig), centroid(grid)
-    sx = cam_x(lpt) - cam_x(gpt)
-    sy = cam_y(lpt) - cam_y(gpt)
-    h = math.hypot(sx, sy)
-    if h < 1.0e-8:      # grid<->ligand axis along the sight line: no roll
-        return
-    phi = math.atan2(-sx, sy)           # roll: ligand->up, centered-x
-    c, s = math.cos(phi), math.sin(phi)
-    r0 = list(view[0:3])
-    r1 = list(view[3:6])
-    for i in range(3):
-        view[0 + i] = c * r0[i] + s * r1[i]
-        view[3 + i] = -s * r0[i] + c * r1[i]
-    cmd.set_view(view)
 
 
 def _move_ligand_in_front(registry, molecule_index=0):
@@ -321,13 +262,12 @@ def _move_ligand_in_front(registry, molecule_index=0):
     start runs it on FRESH materialize output, so restarts reproduce
     the same composed scene. Fail-soft: an empty/second-generation
     degenerate scene (no ligand rows or no grid rows) just keeps the
-    materialized geometry (the roll + final zoom still run).
+    materialized geometry (the final zoom still runs).
 
-    Invariance under the later steps: the offset adds nothing to cam-x
+    Invariance under the later step: the offset adds nothing to cam-x
     or cam-y (translate along a depth row is orthogonal to both screen
-    rows), so the step-6 roll reads the same screen separation either
-    way; the roll rewrites R rows 0/1 only, so the bought cam-z lead
-    survives; the final zoom preserves R exactly. Phase-2 materialize
+    rows) and writes no view field at all; the final zoom preserves R
+    exactly, so the bought cam-z lead survives. Phase-2 materialize
     NEVER sees this offset -- it is gamestart-only composition.
     """
     view = list(cmd.get_view())
@@ -364,20 +304,25 @@ def _move_ligand_in_front(registry, molecule_index=0):
 
 
 def compose_molecule_view(registry, molecule_index=0):
-    """Compose the camera + world geometry onto ONE molecule: the 03-07
-    framing laws, parameterized. GEOMETRY first -- move the molecule's
-    ligand IN FRONT of its own grid in world space (03-07 human
+    """Compose the view onto ONE molecule: the 03-07 framing laws,
+    parameterized. GEOMETRY first -- move the molecule's ligand
+    IN FRONT of its own grid in world space (03-07 human
     decision: the geometry-side offset replaced the camera-only pitch,
     whose pivot regressed the frame blank; see _move_ligand_in_front)
-    -- then the 03-06 above-grid camera roll, then ONE final framing
+    -- then ONE final framing
     zoom LAST over the molecule's own objects only (03-07 human
     decision: frame the active molecule's grid + ligand so the view
     matches the "molecule 1 of 2" panel notice; regression law: zoom
     is a pure dolly/re-aim that preserves R, so every composition
-    depth survives while the origin + clip slab re-derive).
+    depth survives while the origin + clip slab re-derive). The 03-06
+    above-grid camera roll that once sat between these steps is
+    RETIRED per the Phase-8.2 human disposition amendment (STATE.md
+    Phase 8.2 Decisions, 2026-10-11: roll_fate drop, variant a1
+    front-only) -- the compose now writes NO rotation change, so every
+    fresh session opens with screen axes == world/grid axes.
 
     THE ONE compose home for starts AND Phase-6 molecule/level
-    advances (06-04; module docstring step 7's PHASE 5/6 NOTE):
+    advances (06-04; module docstring step 6's PHASE 5/6 NOTE):
     ``start_game`` calls it with the default index 0 (byte-identical
     to the pre-06-04 inline sequence); the Phase-6 wizard lifecycle
     calls it with the advanced molecule index so a newly advanced
@@ -385,7 +330,6 @@ def compose_molecule_view(registry, molecule_index=0):
     duplicated logic.
     """
     _move_ligand_in_front(registry, molecule_index)
-    _frame_ligand_above_grid(registry, molecule_index)
     cmd.zoom(_active_molecule_selection(registry, molecule_index),
              buffer=5.0)
 

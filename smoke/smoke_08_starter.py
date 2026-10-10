@@ -300,11 +300,30 @@ try:
            'camera dist %.2f >= active-molecule radius %.2f (view '
            'changed: %s)' % (cam_d, r_scene, view_post != pre_view))
 
-    # -- 03-06/03-07: ligand composes ABOVE and IN FRONT OF its own
-    # grid at start (deterministic view-matrix asserts -- no rendering;
-    # ACTIVE molecule only). Camera-space coords of a world point: R
-    # rows of get_view . (p - origin); cam-z grows toward the camera
-    # (sign law proven by the fit theorem below). --------------------
+    # -- 03-07: ligand sits IN FRONT OF its own grid at start + the
+    # 8.2 no-rotation start (deterministic view-matrix asserts -- no
+    # rendering; ACTIVE molecule only). Camera-space coords of a world
+    # point: R rows of get_view . (p - origin); cam-z grows toward the
+    # camera (sign law proven by the fit theorem below). The 03-06
+    # above-grid CAMERA-ROLL asserts that lived here ('composes above
+    # the grid (camera-space y)', 'screen-aligned') were retired WITH
+    # the roll per the dated disposition (06-05 deliberate-evolution
+    # bridge: first no-roll build 2026-10-10, ONLY those two checks
+    # failed, everything else passed). Their replacement pins the NEW
+    # composition truth: the chain (world-space front-offset translate
+    # + final framing zoom) writes NO rotation change -- the P2 probe
+    # fact behind the disposition (the no-roll compose adds nothing to
+    # R; cmd.zoom preserves R exactly), so a fresh session's start view
+    # keeps the pre-start rotation block: screen axes open aligned with
+    # the world/grid axes. --------------------------------------------
+    _rot_drift = max(abs(a - b)
+                     for a, b in zip(pre_view[0:9], view_post[0:9]))
+    check('start compose writes no rotation (camera roll retired by '
+          'the 8.2 amendment)',
+           _rot_drift <= 1.0e-6,
+           'max rotation-element drift pre->post start %.3e (rotation '
+           'blocks of the PART-0 pre-view vs the post-start view)'
+           % _rot_drift)
     _lig = [a for a in atoms
             if a['side'] == 'lig' and a['object'] == _lig_name]
     _grid = [a for a in atoms
@@ -317,15 +336,8 @@ try:
         return (view_post[0] * px + view_post[1] * py + view_post[2] * pz,
                 view_post[3] * px + view_post[4] * py + view_post[5] * pz,
                 view_post[6] * px + view_post[7] * py + view_post[8] * pz)
-    _lx, _ly, _lz = _cam_xyz(_lig)
-    _gx, _gy, _gz = _cam_xyz(_grid)
-    check('active ligand composes above the grid (camera-space y)',
-           _ly > _gy,
-           'ligand cam-y %.3f > grid cam-y %.3f' % (_ly, _gy))
-    check('ligand and grid screen-aligned (camera roll composed)',
-           abs(_lx - _gx) <= max(1.0e-6, r_scene * 0.01),
-           'cam-x delta %.4f within 1%% of scene radius %.2f'
-           % (abs(_lx - _gx), r_scene))
+    _lz = _cam_xyz(_lig)[2]
+    _gz = _cam_xyz(_grid)[2]
     # 03-07: depth composition -- now GEOMETRY-side (gamestart moved
     # the ligand in world space toward the camera; the camera-only
     # pitch is retired). DEPTH SIGN, proven by the fit theorem below:

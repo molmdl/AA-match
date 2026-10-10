@@ -717,13 +717,22 @@ class GameWizard(Wizard):
         self._guard(self._rotate_axis_impl, axis, float(deg), None)
 
     def step_to_ligand(self):
-        """One NUDGE_STEP towards the ligand: unit vector from the
+        """One TOWARD_STEP towards the ligand: unit vector from the
         selected AA's centroid towards the current molecule's ligand
-        centroid, scaled by NUDGE_STEP, baked through the SAME path as
-        nudge_cam (cmd.translate camera=0) + identity assert."""
+        centroid, scaled by wizard_core.TOWARD_STEP (2.5 A per the
+        Phase-8.2 human disposition, STATE.md Phase 8.2 Decisions
+        2026-10-11: toward_step 2.5, toward_accel none -- NO press
+        acceleration), baked through the SAME path as nudge_cam
+        (cmd.translate camera=0) + identity assert."""
         self._guard(self._step_to_ligand_impl)
 
     def _step_to_ligand_impl(self):
+        # TOWARD_STEP-scaled step (disposition 2026-10-11): everything
+        # else in this impl is the unchanged frozen model -- world-frame
+        # centroids, unit direction, the < 1e-9 'Already at the ligand.'
+        # guard, state=1/camera=0 bake, identity assert. Comment (not a
+        # docstring): the 08.2-03 AST discipline pin requires
+        # _require_playing() to be the FIRST statement in this body.
         self._require_playing()
         obj = self._current_object()
         if obj is None:
@@ -736,7 +745,7 @@ class GameWizard(Wizard):
             self._error = 'Already at the ligand.'
             cmd.refresh_wizard()
             return
-        step = wizard_core.NUDGE_STEP
+        step = wizard_core.TOWARD_STEP
         cmd.translate([step * d[0] / length,
                        step * d[1] / length,
                        step * d[2] / length], obj, state=1, camera=0)

@@ -46,6 +46,13 @@ The wizard-side logic that is NOT a ``cmd`` call lives here:
 
 # Movement model constants (03-RESEARCH-movement-spike.md verdict):
 NUDGE_STEP = 1.0               # Angstrom per nudge press
+TOWARD_STEP = 2.5              # Angstrom per Toward-ligand press --
+                               # the Phase-8.2 human disposition
+                               # (STATE.md Phase 8.2 Decisions,
+                               # 2026-10-11: toward_step 2.5,
+                               # toward_accel none); the single home
+                               # read by wizard._step_to_ligand_impl and
+                               # the owning smokes.
 ROTATE_STEP_DEG = 10.0         # keyboard rotate step, degrees
 ROTATE_BUTTON_STEP_DEG = 90.0  # panel rotate-button step, degrees
 

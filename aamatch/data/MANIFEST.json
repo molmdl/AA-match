@@ -106,21 +106,21 @@
       {
         "entries": [
           {
-            "atom_count": 21,
-            "bond_count": 20,
+            "atom_count": 18,
+            "bond_count": 17,
             "bond_order_counts": {
-              "1": 17,
+              "1": 14,
               "2": 3
             },
             "entry_id": "citric_acid",
             "file": "ligands/demo-easy-2-citric_acid.sdf",
-            "formal_charge_sum": 0,
+            "formal_charge_sum": -3,
             "format": "sdf",
             "halogen_present": false,
             "heavy_atom_count": 13,
             "metal_present": false,
             "protonation": "as-recorded",
-            "sha256": "121c21362fbc459b209a870d648de2376f3e68f047b43aa432b959678e94f027",
+            "sha256": "780b88eb1b73a258031cdf44e5206e6d66a81f348e840c9ba4c61babd1ea3415",
             "size_class": "small",
             "states_expected": 1
           },
@@ -149,7 +149,7 @@
           "complex_license": "CC0 1.0 (wwPDB) - https://www.wwpdb.org/about/usage-policies",
           "fetched": "2026-09-26",
           "license_url": "https://www.ncbi.nlm.nih.gov/home/about/policies/",
-          "notes": "Easy-tier central metabolite + minimal charged ion (08-PROPOSALS.md Set 2, APPROVED 2026-09-26): citric acid CID 311 (free acid as-recorded per Decision 5; deprotonatized citrate sourcing REJECTED for v1) + acetate anion CID 175 (the set's salt-bridge carrier, formal charge -1). Per-record citation per U1: 'PubChem Identifier: CID <CID>; URL: https://pubchem.ncbi.nlm.nih.gov/compound/<CID>'. Complex reference metadata: CC0 1.0 (wwPDB).",
+          "notes": "Easy-tier central metabolite + minimal charged ion (08-PROPOSALS.md Set 2, APPROVED 2026-09-26): citric acid + acetate anion CID 175 (formal charge -1). Per-record citation per U1: 'PubChem Identifier: CID <CID>; URL: https://pubchem.ncbi.nlm.nih.gov/compound/<CID>'. Complex reference metadata: CC0 1.0 (wwPDB). AMENDED 2026-10-05 (human PHYSIOLOGICAL-PROTONATION decision '2 go R1-R8', 08.1-08 protonation audit row 3, directive: 'per our spec we want to assume physiological pH normally' \u2014 the decision SUPERSEDES Decision 5's 'deprotonated citrate sourcing REJECTED for v1' which had only the 2D ChEBI route; the audit found the clean PubChem 3D route): citric acid CID 311 neutral free acid -> citrate(3-) CID 31348 (C6H5O7^3-, 90.9% at pH 7.4; pKa1 3.13 / pKa2 4.76 / pKa3 6.39-6.40 Wikipedia chembox citing Sigma/Silva et al. Dalton Trans 2009). The set's salt-bridge capability was acetate-only; citrate now ALSO a salt-bridge carrier (second '-' carrier, additive).",
           "pubchem_citation": "Kim S, Chen J, Cheng T, et al. PubChem 2025 update. Nucleic Acids Res. 2025;53(D1):D1516-D1525. doi:10.1093/nar/gkae1059",
           "source_url": "https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/cid/<CID>/SDF?record_type=3d"
         },

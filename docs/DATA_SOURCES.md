@@ -230,11 +230,20 @@ amended row carries its dated amendment note inline).
   source naming the entry — split or choose at curation, never collapse silently;
   `cmd.count_states == 1` is asserted at every ligand load, engine.py / placement.py).
   All 16 curated candidates were verified single-record at approval time (one `$$$$` each).
-- **Protonation chosen at PROPOSAL time, per candidate.** The ionization state was picked
-  deliberately and the *why* recorded per row in §2 (e.g., acetate anion CID 175 chosen
-  over acetic acid; guanidinium +1 chosen over neutral bases; citrate as free acid per
-  Decision 5). The manifest string stays `'as-recorded'` (dev precedent); the why lives in
-  this document, not the schema.
+- **Protonation chosen at PROPOSAL time, per candidate — re-ratified as PHYSIOLOGICAL
+  (pH ~7.4) states by the 2026-10-05 human protonation decision.** The ionization state
+  was picked deliberately at proposal time (e.g., acetate anion CID 175 chosen over
+  acetic acid; guanidinium +1 chosen over neutral bases) and the *why* recorded per row
+  in §2. **Amended 2026-10-05 (human verbatim "2 go R1-R8, 3 +1" + "per our spec we want
+  to assume physiological pH normally"):** all eight audit-flagged mismatch rows
+  (aspirin, benzoic_acid, citric_acid, benzamidine, glutamic_acid, quinine, folic_acid,
+  thyroxine) were substituted with their verified PubChem 3D physiological-form records —
+  including **citrate³⁻, which SUPERSEDES Decision 5's "free acid" verdict** (that
+  verdict lacked a clean 3D route; the 08.1-08 audit found CID 31348 and the human
+  accepted it). ATP/NAD remain neutral-as-registered — phosphate charge-typing is a
+  separate DETECTOR_VERSION decision (audit §2). The manifest string stays
+  `'as-recorded'` (dev precedent — each shipped file is its PubChem record unmodified);
+  the why lives in this document, not the schema.
 - **Ions are scene context, never ligand content.** Separate components (e.g., 1OXR's
   crystallographic Ca²⁺, 5IT5's AGS/MG/ZN) are never merged into a ligand SDF; they may
   appear in a cleanup-demo scene as non-game objects only.

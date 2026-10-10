@@ -422,6 +422,10 @@ class TestMovementAndFeedbackConstants(unittest.TestCase):
 
     def test_constants_exact(self):
         self.assertEqual(wizard_core.NUDGE_STEP, 1.0)
+        # Toward-ligand step: 2.5 A per the Phase-8.2 human disposition
+        # (STATE.md Phase 8.2 Decisions, 2026-10-11: toward_step 2.5,
+        # toward_accel none -- NO acceleration constants exist to pin).
+        self.assertEqual(wizard_core.TOWARD_STEP, 2.5)
         self.assertEqual(wizard_core.ROTATE_STEP_DEG, 10.0)
         self.assertEqual(wizard_core.ROTATE_BUTTON_STEP_DEG, 90.0)
         self.assertEqual(wizard_core.HIGHLIGHT_COLOR, 'green')
@@ -437,6 +441,7 @@ class TestMovementAndFeedbackConstants(unittest.TestCase):
 
     def test_constants_are_float_steps(self):
         self.assertIsInstance(wizard_core.NUDGE_STEP, float)
+        self.assertIsInstance(wizard_core.TOWARD_STEP, float)
         self.assertIsInstance(wizard_core.ROTATE_STEP_DEG, float)
         self.assertIsInstance(wizard_core.ROTATE_BUTTON_STEP_DEG, float)
 

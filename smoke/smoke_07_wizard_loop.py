@@ -31,7 +31,9 @@ PART B  MOVEMENT + THE IDENTITY INVARIANT: wizard_core.
         steps along the scripted world vector with the object matrix
         identity after every press; rotate_view / rotate_axis keep the
         centroid (rotation about the centroid) and move atoms;
-        step_to_ligand lands exactly 1.0 A towards the ligand centroid.
+        step_to_ligand lands exactly TOWARD_STEP towards the ligand
+        centroid (the 08.2-06 2026-10-11 disposition evolution 1.0 ->
+        2.5 A, read from the wizard_core single home).
 PART C  CONFIRM COMPOSITION (the PLAY-02 payoff, 06-05 ADVANCE
         SEMANTICS) + the RESET proof (moved in from PART D at 06-06 --
         the game-over lockdown law refuses every gameplay handler once
@@ -516,25 +518,51 @@ try:
           % (cen_dev_ra, moved_ra))
     REC['rotate_axis_centroid_dev'] = cen_dev_ra
 
-    # step_to_ligand: centroid lands exactly 1.0 A towards the ligand
-    # centroid (the scripted 02-09 direction).
+    # step_to_ligand: centroid lands exactly TOWARD_STEP towards the
+    # ligand centroid (the scripted 02-09 direction). The step is read
+    # from its single home in wizard_core (never a hard-coded number).
+    # 08.2-06 deliberate evolution per the Phase-8.2 2026-10-11
+    # disposition (1.0 -> 2.5 A); dated EXPECTED-RED bridge 2026-10-11
+    # (06-05 smoke-evolution law: rework-never-delete).
     cen_s0 = _tofloat(geometry.centroid_of(sel_obj))
     lig_cen = _tofloat(geometry.centroid_of(lig_obj))
     d = _sub(lig_cen, cen_s0)
     dlen = _norm(d)
     want_s = _add(cen_s0,
-                  _scale(wizard_core.NUDGE_STEP / dlen, d))
+                  _scale(wizard_core.TOWARD_STEP / dlen, d))
     wiz.step_to_ligand()
     cen_s1 = _tofloat(geometry.centroid_of(sel_obj))
     dev_s = _max_axis_dev(cen_s1, want_s)
     tol_s = _max_axis_tol(cen_s1, want_s)
-    check('step_to_ligand lands 1.0 A toward the ligand',
+    check('step_to_ligand lands TOWARD_STEP toward the ligand',
           dev_s <= tol_s and _is_identity(_obj_matrix(sel_obj))
           and wiz._error is None,
           'dev=%.3g tol=%.3g (ligand distance %.3f -> %.3f A)'
           % (dev_s, tol_s, dlen,
              _norm(_sub(lig_cen, cen_s1))))
     REC['step_to_ligand_dev'] = dev_s
+
+    # 08.2-06 convergence sanity: while the AA->ligand distance
+    # remains > TOWARD_STEP, a second press shrinks that distance by
+    # exactly TOWARD_STEP (nothing else changed between presses --
+    # same geometry, same unit direction); object matrix identity
+    # clean after both presses.
+    dist_s1 = _norm(_sub(lig_cen, cen_s1))
+    if dist_s1 > wizard_core.TOWARD_STEP:
+        wiz.step_to_ligand()
+        cen_s2 = _tofloat(geometry.centroid_of(sel_obj))
+        dist_s2 = _norm(_sub(lig_cen, cen_s2))
+        shrink = dist_s1 - dist_s2
+        tol_shrink = POSE_TOL + ULP_REL * max(dist_s1, dist_s2)
+        check('step_to_ligand second press shrinks AA->ligand '
+              'distance by exactly TOWARD_STEP',
+              abs(shrink - wizard_core.TOWARD_STEP) <= tol_shrink
+              and _is_identity(_obj_matrix(sel_obj))
+              and wiz._error is None,
+              'shrink=%.3g tol=%.3g want=%.6f (ligand distance '
+              '%.3f -> %.3f A)'
+              % (shrink, tol_shrink, wizard_core.TOWARD_STEP,
+                 dist_s1, dist_s2))
 except Exception:
     traceback.print_exc()
     check('part B movement', False, 'raised (see traceback above)')

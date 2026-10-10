@@ -25,10 +25,11 @@ tail copied verbatim from the captured live view (the smoke_07 PART B
 pattern -- the tail is build-dependent state: origin, dolly, clips).
 Whichever direction-control disposition the human lands on, these
 scripted views remain valid orientations and the pinned behavior
-remains TRUE. The Toward-ligand pin (PART C(b)) lands at the CURRENT
-wizard_core.NUDGE_STEP constant (1.0 A) -- the pre-evolution baseline
-that 08.2-06 will deliberately evolve IF the disposition changes the
-Toward step (the 06-05/08.1 documented-evolution precedent).
+remains TRUE. The Toward-ligand pin (PART C(b)) reads the
+wizard_core.TOWARD_STEP constant from its single home -- EVOLVED by
+08.2-06 per the Phase-8.2 2026-10-11 disposition (1.0 -> 2.5 A; dated
+EXPECTED-RED bridge 2026-10-11 -- the 06-05/08.1 documented-evolution
+precedent, rework-never-delete).
 
 PART 0  REAL GAME + SCRIPTED PICK: gamestart.start_game() (DEFAULTS,
         seed 42, bundled manifest -- the P1 recipe; the REAL start path
@@ -65,10 +66,11 @@ PART C  SCRIPTED S2 ROLLED VIEW (the FIXED historical block from the P1
         the screen-direction angle between R.observed and the intended
         step (P1's viewer-relative metric) prints ~0.0000 deg.
         (b) step_to_ligand() WITH THE ROLLED VIEW STILL APPLIED lands
-        the AA centroid EXACTLY NUDGE_STEP toward the LIVE ligand
+        the AA centroid EXACTLY TOWARD_STEP toward the LIVE ligand
         centroid (computed from geometry.centroid_of of both objects,
-        the smoke_07 :519-537 shape) -- the view-INVARIANCE pin of the
-        Toward direction.
+        the smoke_07 step_to_ligand shape, read from the wizard_core
+        single home) -- the view-INVARIANCE pin of the Toward direction,
+        plus a convergence sanity press while distance > TOWARD_STEP.
 PART D  FULL-SO(3) LIVE PIN (yaw+pitch+roll, closing the 03-04
         yaw-only-control gap at smoke level): script S3 = the FIXED
         Rx(30deg)*Ry(50deg)*Rz(20deg) rotation block (hand-derived
@@ -402,26 +404,50 @@ try:
 
     # step_to_ligand WITH the rolled view still applied: the Toward
     # direction is view-INVARIANT (world-frame ligand centroid aim).
-    # This pin lands at the CURRENT NUDGE_STEP -- the pre-evolution
-    # baseline 08.2-06 deliberately evolves if the disposition changes
-    # the Toward step (documented-evolution precedent 06-05/08.1).
+    # The step is read from its single home wizard_core.TOWARD_STEP --
+    # EVOLVED by 08.2-06 per the Phase-8.2 2026-10-11 disposition
+    # (1.0 -> 2.5 A); dated EXPECTED-RED bridge 2026-10-11
+    # (documented-evolution precedent 06-05/08.1, rework-never-delete).
+    toward_step = wizard_core.TOWARD_STEP
     cen_s0 = _tofloat(geometry.centroid_of(target))
     lig_cen = _tofloat(geometry.centroid_of(lig_obj))
     d = _sub(lig_cen, cen_s0)
     dlen = _norm(d)
-    want_s = _add(cen_s0, _scale(step / dlen, d))
+    want_s = _add(cen_s0, _scale(toward_step / dlen, d))
     wiz.step_to_ligand()
     cen_s1 = _tofloat(geometry.centroid_of(target))
     dev_s = _max_axis_dev(cen_s1, want_s)
     tol_s = _max_axis_tol(cen_s1, want_s)
     ident_ok = _is_identity(_obj_matrix(target))
-    check('S2 rolled view: step_to_ligand view-INVARIANT 1.0 A',
+    check('S2 rolled view: step_to_ligand view-INVARIANT TOWARD_STEP',
           dev_s <= tol_s and ident_ok and wiz._error is None,
           'dev=%.3g tol=%.3g (ligand distance %.3f -> %.3f A) '
           'identity=%s error=%r'
           % (dev_s, tol_s, dlen, _norm(_sub(lig_cen, cen_s1)),
              ident_ok, wiz._error))
     REC['partC_toward_dev'] = dev_s
+
+    # 08.2-06 convergence sanity (the smoke_07 shape): while the
+    # AA->ligand distance remains > TOWARD_STEP, a second press shrinks
+    # that distance by exactly TOWARD_STEP -- unchanged geometry, same
+    # unit direction, identity clean after both presses (rolled view
+    # STILL applied -- view-invariance holds per press).
+    dist_s1 = _norm(_sub(lig_cen, cen_s1))
+    if dist_s1 > toward_step:
+        wiz.step_to_ligand()
+        cen_s2 = _tofloat(geometry.centroid_of(target))
+        dist_s2 = _norm(_sub(lig_cen, cen_s2))
+        shrink = dist_s1 - dist_s2
+        tol_shrink = POSE_TOL + ULP_REL * max(dist_s1, dist_s2)
+        ident_ok = _is_identity(_obj_matrix(target))
+        check('S2 rolled view: second Toward press shrinks AA->ligand '
+              'distance by exactly TOWARD_STEP',
+              abs(shrink - toward_step) <= tol_shrink
+              and ident_ok and wiz._error is None,
+              'shrink=%.3g tol=%.3g want=%.6f (ligand distance '
+              '%.3f -> %.3f A) identity=%s error=%r'
+              % (shrink, tol_shrink, toward_step, dist_s1, dist_s2,
+                 ident_ok, wiz._error))
 
     # ============================================================
     # PART D: full-SO(3) live pin (yaw+pitch+roll; the 03-04 yaw-only

@@ -273,10 +273,10 @@ Plans:
 - [x] 08.2-02-PLAN.md — full-SO(3) camera->world unit pins, P1 formalized (wave 1)
 - [x] 08.2-03-PLAN.md — keyboard-channel + movement-discipline AST source pins (wave 1)
 - [x] 08.2-04-PLAN.md — SMOKE-23 direction battery: live keyboard drives + rolled-view Toward pin (wave 1)
-- [ ] 08.2-05-PLAN.md — roll-fate start composition per disposition + SMOKE-08 deliberate evolution (wave 2)
-- [ ] 08.2-06-PLAN.md — Toward-ligand step/acceleration per disposition + SMOKE-07/23 evolution (wave 2)
-- [ ] 08.2-07-PLAN.md — Game-tab arrow keys (disposition-gated) + SMOKE-16 handler proof (wave 2)
-- [ ] 08.2-08-PLAN.md — movement-header direction hint (disposition-gated) + wording pins (wave 2)
+- [x] 08.2-05-PLAN.md — roll-fate start composition per disposition + SMOKE-08 deliberate evolution (wave 2)
+- [x] 08.2-06-PLAN.md — Toward-ligand step/acceleration per disposition + SMOKE-07/23 evolution (wave 2)
+- [x] 08.2-07-PLAN.md — Game-tab arrow keys (disposition-gated) + SMOKE-16 handler proof (wave 2)
+- [x] 08.2-08-PLAN.md — movement-header direction hint (disposition-gated) + wording pins (wave 2)
 - [ ] 08.2-09-PLAN.md — full regression battery: WSL + smokes 01-23 re-green receipts (wave 3)
 - [ ] 08.2-10-PLAN.md — [HUMAN] fresh-session GUI checkpoint per 06-10 + phase close-out records (wave 4)
 
@@ -335,7 +335,7 @@ Lifted from PITFALLS.md "Pitfall-to-Phase Mapping" (topic names → this roadmap
 | 7. Checkpoint & Game-File Persistence | 12/12 | Complete (verified 2026-09-26 — 07-VERIFICATION.md passed 51/51) | 2026-09-26 |
 | 8. Demo Curation & Citations | 11/11 | Complete (verified 2026-10-05 — 08-VERIFICATION.md passed 4/4; 08-11-SUMMARY criterion map closed in the combined session) | 2026-10-05 |
 | 8.1 Confirm Pass-Gate Restoration | 8/8 | Complete (verified 2026-10-05 — 08.1-VERIFICATION.md passed 40/40) | 2026-10-05 |
-| 8.2 Direction-Control Restoration (INSERTED) | 4/10 | In progress — wave 1 complete 2026-10-11, [GATE] disposition recorded | - |
+| 8.2 Direction-Control Restoration (INSERTED) | 8/10 | In progress — waves 1-2 complete 2026-10-11 ([GATE] disposition recorded; 05/06 landed, 07/08 superseded); PAUSED before wave-3 battery | - |
 | 9. Help, Docs & Release Audit | 0/TBD | Not started | - |
 
 ## Coverage

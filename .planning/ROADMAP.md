@@ -24,7 +24,8 @@ AA-match ships as a standard PyMOL 2.5.0 plugin implementing an educational smal
 - [x] **Phase 5: Game Status Tab & Start Sequence** — start sequence, live status tab (info box / timer / required interactions), Hint
 - [x] **Phase 6: Scoring Lifecycle & Endgame** — confirm/debrief/advance, skip/give-up, endgame screen, restart/reset
 - [x] **Phase 7: Checkpoint & Game-File Persistence** — save/restore round-trip, Import of exported games
-- [ ] **Phase 8: Demo Curation & Citations** — ~9 curated tier slots under propose → approve → fetch/commit; DATA_SOURCES.md
+- [x] **Phase 8: Demo Curation & Citations** — ~9 curated tier slots under propose → approve → fetch/commit; DATA_SOURCES.md
+- [ ] **Phase 8.2: Direction-Control Restoration (INSERTED)** — playable direction control: arrow-key/camera-step probe + ligand-relative control candidates within the frozen movement MODEL; [HUMAN] GUI checkpoint
 - [ ] **Phase 9: Help, Docs & Release Audit** — in-game help, README, final docs audit, perf budgets
 
 ## Phase Details
@@ -221,17 +222,17 @@ Plans:
 **Plans**: 11 plans in 7 waves
 
 Plans:
-- [ ] 08-01-PLAN.md — bundling pipeline: committed scripts/build_demos.py (multi-set, derived counts, sha256-in-run, single-record) + data-integrity tests (wave 1)
-- [ ] 08-02-PLAN.md — dropdown tier grouping: pure manifest_sets_grouped + Qt separators + 3 hazard fixes (wave 1)
-- [ ] 08-03-PLAN.md — smoke de-hardcoding: data-relative entry counts / largest-entry (wave 1)
-- [ ] 08-04-PLAN.md — [GATE] demo proposal document (08-PROPOSALS.md) + human approval checkpoint BEFORE any fetch/commit (wave 2)
-- [ ] 08-05-PLAN.md — bundle Easy sets: demo-easy-1/2/3 (aspirin, benzoic acid, citric acid, acetate, caffeine) (wave 3)
-- [ ] 08-06-PLAN.md — bundle Hard sets: demo-hard-1/2/3 (benzamidine, guanidinium, glutamic acid, acetylcholine, ATP, NAD) (wave 4)
-- [ ] 08-07-PLAN.md — bundle Challenge + Very-challenging sets (chloramphenicol, quinine, folic acid, thyroxine, heme) (wave 5)
-- [ ] 08-08-PLAN.md — SMOKE-02 curated-coverage extension + messy-scene cleanup field smoke smoke_21 (wave 6)
-- [ ] 08-09-PLAN.md — docs/DATA_SOURCES.md consolidation (HELP-02 gate-doc format) (wave 6)
-- [ ] 08-10-PLAN.md — (conditional) curated-manifest supply measurement + SIZE_S1/S2 re-tune verdict (wave 6)
-- [ ] 08-11-PLAN.md — [HUMAN] GUI checkpoint (grouped dropdown + DATA_SOURCES sign-off) + full regression battery + detector-coverage verdict (wave 7)
+- [x] 08-01-PLAN.md — bundling pipeline: committed scripts/build_demos.py (multi-set, derived counts, sha256-in-run, single-record) + data-integrity tests (wave 1)
+- [x] 08-02-PLAN.md — dropdown tier grouping: pure manifest_sets_grouped + Qt separators + 3 hazard fixes (wave 1)
+- [x] 08-03-PLAN.md — smoke de-hardcoding: data-relative entry counts / largest-entry (wave 1)
+- [x] 08-04-PLAN.md — [GATE] demo proposal document (08-PROPOSALS.md) + human approval checkpoint BEFORE any fetch/commit (wave 2)
+- [x] 08-05-PLAN.md — bundle Easy sets: demo-easy-1/2/3 (aspirin, benzoic acid, citric acid, acetate, caffeine) (wave 3)
+- [x] 08-06-PLAN.md — bundle Hard sets: demo-hard-1/2/3 (benzamidine, guanidinium, glutamic acid, acetylcholine, ATP, NAD) (wave 4)
+- [x] 08-07-PLAN.md — bundle Challenge + Very-challenging sets (chloramphenicol, quinine, folic acid, thyroxine, heme) (wave 5)
+- [x] 08-08-PLAN.md — SMOKE-02 curated-coverage extension + messy-scene cleanup field smoke smoke_21 (wave 6)
+- [x] 08-09-PLAN.md — docs/DATA_SOURCES.md consolidation (HELP-02 gate-doc format) (wave 6)
+- [x] 08-10-PLAN.md — (conditional) curated-manifest supply measurement + SIZE_S1/S2 re-tune verdict (wave 6)
+- [x] 08-11-PLAN.md — [HUMAN] GUI checkpoint (grouped dropdown + DATA_SOURCES sign-off) + full regression battery + detector-coverage verdict (wave 7)
   - NOTE (2026-09-27): 08-11 auto tasks 1-2 COMPLETE (battery GREEN + detector verdict recorded); Task 3 ([HUMAN] checkpoint + SUMMARY) DEFERRED to Phase 8.1's final human-checkpoint plan per human decision — one combined GUI session will close both.
   - NOTE (2026-09-27, CONTEXT constraint 8): Phase 8's /gsd-verify-phase runs AFTER Phase 8.1 lands (on the corrected tree).
 
@@ -243,17 +244,31 @@ Plans:
 **Plans:** 8 plans in 5 waves
 
 Plans:
-- [ ] 08.1-01-PLAN.md — records repair: SCORE-01 rewrite + ROADMAP criterion-1 NOTE + PROJECT Key-Decisions row + STATE dated amendment (+ sequencing notes) (wave 1)
-- [ ] 08.1-02-PLAN.md — [TDD] pure pass gate: CONFIRM_PASS_RULE + confirm_passes + score_preview in game_state.py (wave 1)
-- [ ] 08.1-03-PLAN.md — gate wiring: wizard pass gate + failed-confirm contract (truthy dict, _result debrief) + status_text confirm_failed kind (15→16) + tooltip reword (wave 2)
-- [ ] 08.1-04-PLAN.md — SMOKE-15 rework: Design B re-game + failed-contract block + passing-confirm drives (wave 3)
-- [ ] 08.1-05-PLAN.md — SMOKE-16 rework: tab-side pass-gate pins + F keeps the panel-confirm end + 9870561 pins byte-surviving (wave 3)
-- [ ] 08.1-06-PLAN.md — smoke_19/20 accrual conversion: blind confirms → skips (wave 3)
-- [ ] 08.1-07-PLAN.md — full regression battery (py_compile + WSL 912+ + smokes 01-21, 23-run recipe) + verdict record (wave 4)
-- [ ] 08.1-08-PLAN.md — [HUMAN] combined 8.1-retest + 08-11-Task-3 checkpoint + close-out (08-11-SUMMARY + STATE + ROADMAP tick-up) (wave 5)
+- [x] 08.1-01-PLAN.md — records repair: SCORE-01 rewrite + ROADMAP criterion-1 NOTE + PROJECT Key-Decisions row + STATE dated amendment (+ sequencing notes) (wave 1)
+- [x] 08.1-02-PLAN.md — [TDD] pure pass gate: CONFIRM_PASS_RULE + confirm_passes + score_preview in game_state.py (wave 1)
+- [x] 08.1-03-PLAN.md — gate wiring: wizard pass gate + failed-confirm contract (truthy dict, _result debrief) + status_text confirm_failed kind (15→16) + tooltip reword (wave 2)
+- [x] 08.1-04-PLAN.md — SMOKE-15 rework: Design B re-game + failed-contract block + passing-confirm drives (wave 3)
+- [x] 08.1-05-PLAN.md — SMOKE-16 rework: tab-side pass-gate pins + F keeps the panel-confirm end + 9870561 pins byte-surviving (wave 3)
+- [x] 08.1-06-PLAN.md — smoke_19/20 accrual conversion: blind confirms → skips (wave 3)
+- [x] 08.1-07-PLAN.md — full regression battery (py_compile + WSL 912+ + smokes 01-21, 23-run recipe) + verdict record (wave 4)
+- [x] 08.1-08-PLAN.md — [HUMAN] combined 8.1-retest + 08-11-Task-3 checkpoint + close-out (08-11-SUMMARY + STATE + ROADMAP tick-up) (wave 5)
 
 **Details:**
 Provenance and constraints seeded in .planning/phases/08.1-confirm-pass-gate-restoration/CONTEXT.md (items 1-8 are LOCKED); research: 08.1-RESEARCH-code.md / -tests.md / -records.md. Carry-forward items (arrow-key probe, Phase-9 decision candidates) are explicitly OUT of scope.
+
+### Phase 8.2: Direction-Control Restoration (INSERTED)
+
+**Goal**: Restore playable direction control per the standing human request — asked repeatedly since Phase 3, recording-miss repaired 2026-10-04 (Phase-8.1 Decisions fix-batch-2 record, item (4)): the camera-frame nudge/arrow controls are confusing to play with. Re-open the movement UX: the arrow-key direction probe (03-06 dead UP/DOWN keys + the camera-step convention), ligand-relative control candidates (Toward-ligand behavior / ligand-frame steps / in-Game-tab movement), all within the frozen Phase-3 movement MODEL (baked world-frame transforms — the probe may propose, the human disposes). A [HUMAN] GUI checkpoint per the 06-10 precedent.
+**Depends on**: Phase 8.1 (this phase plays on the completed, human-approved game)
+**Requirements**: PLAY-02 (refinement — no new IDs; the existing 45-ID set is closed)
+**Success criteria** (sketch):
+  1. [HUMAN] The human can move amino acids onto the ligand without confusion inside a fresh session, using the panel's Toward-ligand AND the re-decided arrow/keyboard scheme.
+  2. [GATE] The movement-model decision (if any change) is recorded as a dated human amendment.
+  3. [WSL/HEADLESS] The frozen-model invariants (baked-transform, identity asserts, SMOKE-07/15/16 chains) stay green.
+**Plans**: TBD (planned via /gsd-plan-phase 8.2 with a CONTEXT seeded from the STATE standing-request record + this session's history)
+
+**Details:**
+Inserted 2026-10-05 per human verbatim '4 yes'. Standing-request history: the human confirms asking for the direction-control fix repeatedly; the prior records' carry-forward notes (STATE 'Nudge-direction RE-OPEN' 2026-09-21 standing bullet + the 2026-10-04 recording-miss reparation) are the provenance, never to be re-derived.
 
 ### Phase 9: Help, Docs & Release Audit
 **Goal**: A new user can learn the game from in-game help alone; every user-facing document matches shipped reality; performance budgets are confirmed on the final build.
@@ -294,7 +309,7 @@ Lifted from PITFALLS.md "Pitfall-to-Phase Mapping" (topic names → this roadmap
 
 ## Progress
 
-**Execution order:** 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9
+**Execution order:** 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 8.1 → 8.2 → 9
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
@@ -305,7 +320,9 @@ Lifted from PITFALLS.md "Pitfall-to-Phase Mapping" (topic names → this roadmap
 | 5. Game Status Tab & Start Sequence | 11/11 | Complete (verified 2026-09-20 — 05-VERIFICATION.md passed 88/88) | 2026-09-20 |
 | 6. Scoring Lifecycle & Endgame | 10/10 | Complete (verified 2026-09-21 — 06-VERIFICATION.md passed 39/39) | 2026-09-21 |
 | 7. Checkpoint & Game-File Persistence | 12/12 | Complete (verified 2026-09-26 — 07-VERIFICATION.md passed 51/51) | 2026-09-26 |
-| 8. Demo Curation & Citations | 0/11 | Not started | - |
+| 8. Demo Curation & Citations | 11/11 | Complete | 2026-10-05 |
+| 8.1 Confirm Pass-Gate Restoration | 8/8 | Complete | 2026-10-05 |
+| 8.2 Direction-Control Restoration (INSERTED) | 0/TBD | Not started | - |
 | 9. Help, Docs & Release Audit | 0/TBD | Not started | - |
 
 ## Coverage

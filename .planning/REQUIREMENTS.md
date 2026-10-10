@@ -32,7 +32,7 @@ Requirements for initial release. Each maps to roadmap phases.
 - [x] **GEN-0- [ ] **GEN-03**: For each molecule, an NxN grid (N by difficulty) of randomized, capped amino acids is laid out around the molecule beyond a gap
 - [x] **GEN-0- [ ] **GEN-04**: Every generated level is solvable by construction (grid contains AAs able to form all required interactions, plus distractors)
 - [x] **GEN-0- [ ] **GEN-05**: Difficulty is expressed through grid N, molecule size, and count of required interaction types
-- [ ] **GEN-06**: Demo sets ship pre-downloaded (~9 tier slots: Easy ×3, Hard ×3, Challenge, Very challenging ×2) with protonation/interaction provenance from known binding databases; each entry records its selection rationale (educational coverage, tier fit) and chemical/interaction diversity across the set
+- [x] **GEN-06**: Demo sets ship pre-downloaded (~9 tier slots: Easy ×3, Hard ×3, Challenge, Very challenging ×2) with protonation/interaction provenance from known binding databases; each entry records its selection rationale (educational coverage, tier fit) and chemical/interaction diversity across the set
 
 ### Viewer Gameplay
 
@@ -72,7 +72,7 @@ Requirements for initial release. Each maps to roadmap phases.
 ### Help & Attribution
 
 - [ ] **HELP-01**: Setup window and game tab provide clear but sufficient in-game explanation (help panel + tooltips)
-- [ ] **HELP-02**: All demo data citations live in a dedicated sources document, human-verified before shipping (propose → approve → fetch/commit protocol); each entry records download source and the verified license permitting bundling/redistribution
+- [x] **HELP-02**: All demo data citations live in a dedicated sources document, human-verified before shipping (propose → approve → fetch/commit protocol); each entry records download source and the verified license permitting bundling/redistribution
 
 ### Documentation
 
@@ -132,7 +132,7 @@ Which phases cover which requirements. Updated during roadmap creation (2026-09-
 | GEN-03 | Phase 2 | Complete |
 | GEN-04 | Phase 2 | Complete |
 | GEN-05 | Phase 2 | Complete |
-| GEN-06 | Phase 8 | Pending |
+| GEN-06 | Phase 8 | Complete |
 | PLAY-01 | Phase 3 | Complete |
 | PLAY-02 | Phase 3 | Complete |
 | PLAY-03 | Phase 3 | Complete |
@@ -157,7 +157,7 @@ Which phases cover which requirements. Updated during roadmap creation (2026-09-
 | PERSIST-02 | Phase 7 | Complete |
 | PERSIST-03 | Phase 7 | Complete |
 | HELP-01 | Phase 9 | Pending |
-| HELP-02 | Phase 8 | Pending |
+| HELP-02 | Phase 8 | Complete |
 | DOCS-01 | Phase 9 | Pending |
 | DOCS-02 | Phase 9 | Pending |
 
@@ -170,4 +170,4 @@ Which phases cover which requirements. Updated during roadmap creation (2026-09-
 
 ---
 *Requirements defined: 2026-09-05*
-*Last updated: 2026-09-27 — SCORE-01 amended to pass-gate semantics (human directive; repair + re-verify in Phase 8.1). Prior: 2026-09-21 — Phase 6 closed (SCORE-01/02/03/05/06/07/09/10 → Complete; 06-VERIFICATION.md passed 39/39, step-1 re-verify closed 2026-09-21)*
+*Last updated: 2026-10-05 — Phase 8 closed by the combined [HUMAN] checkpoint session: GEN-06 + HELP-02 → Complete (grouped dropdown / curated-set play / cleanup PASS; DATA_SOURCES human sign-off '5 pass' 2026-10-05). SCORE-01 (amended row) + SCORE-03 remain Complete (pass-gate semantics re-verified in Phase 8.1's combined session). Prior: 2026-09-27 — SCORE-01 amended to pass-gate semantics (human directive; repair + re-verify in Phase 8.1). Prior: 2026-09-21 — Phase 6 closed (SCORE-01/02/03/05/06/07/09/10 → Complete; 06-VERIFICATION.md passed 39/39, step-1 re-verify closed 2026-09-21)*

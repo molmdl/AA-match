@@ -265,7 +265,19 @@ Provenance and constraints seeded in .planning/phases/08.1-confirm-pass-gate-res
   1. [HUMAN] The human can move amino acids onto the ligand without confusion inside a fresh session, using the panel's Toward-ligand AND the re-decided arrow/keyboard scheme.
   2. [GATE] The movement-model decision (if any change) is recorded as a dated human amendment.
   3. [WSL/HEADLESS] The frozen-model invariants (baked-transform, identity asserts, SMOKE-07/15/16 chains) stay green.
-**Plans**: TBD (planned via /gsd-plan-phase 8.2 with a CONTEXT seeded from the STATE standing-request record + this session's history)
+**Plans:** 10 plans
+
+Plans:
+- [ ] 08.2-01-PLAN.md — decision menu + [HUMAN] disposition checkpoint + dated [GATE] amendment record (wave 1)
+- [ ] 08.2-02-PLAN.md — full-SO(3) camera->world unit pins, P1 formalized (wave 1)
+- [ ] 08.2-03-PLAN.md — keyboard-channel + movement-discipline AST source pins (wave 1)
+- [ ] 08.2-04-PLAN.md — SMOKE-23 direction battery: live keyboard drives + rolled-view Toward pin (wave 1)
+- [ ] 08.2-05-PLAN.md — roll-fate start composition per disposition + SMOKE-08 deliberate evolution (wave 2)
+- [ ] 08.2-06-PLAN.md — Toward-ligand step/acceleration per disposition + SMOKE-07/23 evolution (wave 2)
+- [ ] 08.2-07-PLAN.md — Game-tab arrow keys (disposition-gated) + SMOKE-16 handler proof (wave 2)
+- [ ] 08.2-08-PLAN.md — movement-header direction hint (disposition-gated) + wording pins (wave 2)
+- [ ] 08.2-09-PLAN.md — full regression battery: WSL + smokes 01-23 re-green receipts (wave 3)
+- [ ] 08.2-10-PLAN.md — [HUMAN] fresh-session GUI checkpoint per 06-10 + phase close-out records (wave 4)
 
 **Details:**
 Inserted 2026-10-05 per human verbatim '4 yes'. Standing-request history: the human confirms asking for the direction-control fix repeatedly; the prior records' carry-forward notes (STATE 'Nudge-direction RE-OPEN' 2026-09-21 standing bullet + the 2026-10-04 recording-miss reparation) are the provenance, never to be re-derived.

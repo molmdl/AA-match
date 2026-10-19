@@ -293,6 +293,7 @@ Inserted 2026-10-05 per human verbatim '4 yes'. Standing-request history: the hu
   1. [HUMAN] The human can drag the selected AA in the viewer (custom-wired gesture) to pose it onto the ligand; the wizard panel's movement list shows ONLY Toward-ligand; no direction keys remain bound.
   2. [WSL/HEADLESS] Drag paths BAKE world-frame coordinates with identity asserts; the deletion battery is receipted with dated EXPECTED-RED bridges for every removed direction surface (keys/buttons, camera-step law if orphaned, SMOKE-07/08/16/23 direction portions, 08.2-03 movement pins); purity + identity gates stay green.
   3. [HUMAN] The full loop (pick → drag-pose → Confirm → score) passes a fresh-session GUI checkpoint; gesture mapping is a recorded [HUMAN] decision; help-text wording notes updated for the Phase-9 re-word.
+**NOTE (2026-10-19, human disposition -- Phase 8.3):** gesture mapping = Option A shift-left drag ('dgmv') with ctrl+shift-left depth-drag ('dgmz') and shift+right-drag drag-rotate ('dgrt', slot ('right','shft','dgrt')) — the panel Rotate-90 button and keyboard ','/'.' fine-rotation keys are DELETED (explicit human overrides of the menu's proposed rehome/keep defaults), with the dgrt gesture as the surviving FINE rotation source (so the disposition is IN scope); drag_move ships (event_mask derives to 3; 'Movement:' header; prompt tail deferred to Phase 9; SMOKE-23 renamed smoke_23_movement_battery.py; PLAY-02 records-only). Full record: STATE.md Phase 8.3 Decisions.
 **Plans:** 16 plans in 7 waves
 
 Plans:

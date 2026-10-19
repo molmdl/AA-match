@@ -26,6 +26,7 @@ AA-match ships as a standard PyMOL 2.5.0 plugin implementing an educational smal
 - [x] **Phase 7: Checkpoint & Game-File Persistence** — save/restore round-trip, Import of exported games
 - [x] **Phase 8: Demo Curation & Citations** — ~9 curated tier slots under propose → approve → fetch/commit; DATA_SOURCES.md
 - [ ] **Phase 8.2: Direction-Control Restoration (INSERTED)** — playable direction control: arrow-key/camera-step probe + ligand-relative control candidates within the frozen movement MODEL; [HUMAN] GUI checkpoint
+- [ ] **Phase 8.3: Drag-Movement Pivot (INSERTED)** — mouse-drag becomes THE movement input; all keyboard direction keys removed; wizard-panel movement list keeps ONLY Toward-ligand (2026-10-18 decision)
 - [ ] **Phase 9: Help, Docs & Release Audit** — in-game help, README, final docs audit, perf budgets
 
 ## Phase Details
@@ -284,6 +285,22 @@ Plans:
 **Details:**
 Inserted 2026-10-05 per human verbatim '4 yes'. Standing-request history: the human confirms asking for the direction-control fix repeatedly; the prior records' carry-forward notes (STATE 'Nudge-direction RE-OPEN' 2026-09-21 standing bullet + the 2026-10-04 recording-miss reparation) are the provenance, never to be re-derived.
 
+### Phase 8.3: Drag-Movement Pivot (INSERTED)
+
+**Goal**: Implement the 2026-10-18 human design decision: mouse-drag becomes THE movement input — ALL keyboard direction keys removed, and the wizard panel's movement list keeps ONLY Toward-ligand (TOWARD_STEP 2.5 Å, world/goal-directed, view-invariant — survives unchanged), deleting the direction-input class that carried the 08.2-10 dispute (closed as SUPERSEDED — the movement law itself was exonerated machine + live-GUI per the d4 receipt, 2026-10-18). Planners must carry the standing notes recorded in STATE.md Phase 8.2 Decisions 2026-10-18 bullet + the seeded .planning/phases/08.3-drag-movement-pivot/CONTEXT.md.
+**Depends on**: Phase 8.2 (landed movement tree, criterion-3 receipt GREEN 2026-10-11)
+**Success criteria** (sketch):
+  1. [HUMAN] The human can drag the selected AA in the viewer (custom-wired gesture) to pose it onto the ligand; the wizard panel's movement list shows ONLY Toward-ligand; no direction keys remain bound.
+  2. [WSL/HEADLESS] Drag paths BAKE world-frame coordinates with identity asserts; the deletion battery is receipted with dated EXPECTED-RED bridges for every removed direction surface (keys/buttons, camera-step law if orphaned, SMOKE-07/08/16/23 direction portions, 08.2-03 movement pins); purity + identity gates stay green.
+  3. [HUMAN] The full loop (pick → drag-pose → Confirm → score) passes a fresh-session GUI checkpoint; gesture mapping is a recorded [HUMAN] decision; help-text wording notes updated for the Phase-9 re-word.
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 8.3 to break down)
+
+**Details:**
+Inserted 2026-10-18 per the human decision recorded verbatim in all amendment homes ("mouse to replace all keyboard direction buttons, and replace the directions in wizard panel, only keep the towards ligand in that list."). Provenance chain: 08.2-10 step-4 dispute → debug session (.planning/debug/nudge-direction-mouse-rotation.md: decode recompute + d4 scripted real-GUI repro) → USER RULING + design decision 2026-10-18 → this insertion. Requirements surface = PLAY-02 refinement only (no new IDs; the closed 45-ID set stays closed). Standing hazards for the planner: Pitfall-6 drag mechanics (Dragging-wizard replaces the active game wizard; baked world-frame coordinates only; rigid-body AA-object targeting only); no stock gesture fits (ctrl-left = torsion 'torf'; ctsh-left = move-ATOM) — custom wiring required.
+
 ### Phase 9: Help, Docs & Release Audit
 **Goal**: A new user can learn the game from in-game help alone; every user-facing document matches shipped reality; performance budgets are confirmed on the final build.
 **Depends on**: Phases 1–8 (docs must match shipped reality)
@@ -323,7 +340,7 @@ Lifted from PITFALLS.md "Pitfall-to-Phase Mapping" (topic names → this roadmap
 
 ## Progress
 
-**Execution order:** 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 8.1 → 8.2 → 9
+**Execution order:** 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 8.1 → 8.2 → 8.3 → 9
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
@@ -337,6 +354,7 @@ Lifted from PITFALLS.md "Pitfall-to-Phase Mapping" (topic names → this roadmap
 | 8. Demo Curation & Citations | 11/11 | Complete (verified 2026-10-05 — 08-VERIFICATION.md passed 4/4; 08-11-SUMMARY criterion map closed in the combined session) | 2026-10-05 |
 | 8.1 Confirm Pass-Gate Restoration | 8/8 | Complete (verified 2026-10-05 — 08.1-VERIFICATION.md passed 40/40) | 2026-10-05 |
 | 8.2 Direction-Control Restoration (INSERTED) | 8/10 | In progress — waves 1-2 complete 2026-10-11 ([GATE] disposition recorded; 05/06 landed, 07/08 superseded); PAUSED before wave-3 battery | - |
+| 8.3 Drag-Movement Pivot (INSERTED) | 0/0 | Not planned (inserted 2026-10-18 per the movement input-model pivot decision) | - |
 | 9. Help, Docs & Release Audit | 0/TBD | Not started | - |
 
 ## Coverage

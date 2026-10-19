@@ -293,10 +293,25 @@ Inserted 2026-10-05 per human verbatim '4 yes'. Standing-request history: the hu
   1. [HUMAN] The human can drag the selected AA in the viewer (custom-wired gesture) to pose it onto the ligand; the wizard panel's movement list shows ONLY Toward-ligand; no direction keys remain bound.
   2. [WSL/HEADLESS] Drag paths BAKE world-frame coordinates with identity asserts; the deletion battery is receipted with dated EXPECTED-RED bridges for every removed direction surface (keys/buttons, camera-step law if orphaned, SMOKE-07/08/16/23 direction portions, 08.2-03 movement pins); purity + identity gates stay green.
   3. [HUMAN] The full loop (pick → drag-pose → Confirm → score) passes a fresh-session GUI checkpoint; gesture mapping is a recorded [HUMAN] decision; help-text wording notes updated for the Phase-9 re-word.
-**Plans:** 0 plans
+**Plans:** 16 plans in 7 waves
 
 Plans:
-- [ ] TBD (run /gsd-plan-phase 8.3 to break down)
+- [ ] 08.3-01-PLAN.md — [GATE] gesture-mapping + rotation-scope decision menu (options A-D + sub-decisions + [HUMAN]-lite rows, proposed defaults; 08.2-01 pattern); human disposition recorded in all four amendment homes BEFORE any implementation (wave 1)
+- [ ] 08.3-02-PLAN.md — SMOKE-24 shell + the PERMANENT Pitfall-6 positive-control pin (stock drag displaces the game wizard; pop restores; probe B1-B6 receipts) — decision-independent, passable pre-implementation (wave 1)
+- [ ] 08.3-03-PLAN.md — production deletion per disposition: wizard.py keyboard channels + nudge chain + event-mask, wizard_text Toward-only panel (± re-homed Rotate), wizard_core orphan sweep (NUDGE_STEP; scope rows), gamestart prose iff C6 orphaned; captures the dated EXPECTED-RED roster (wave 2)
+- [ ] 08.3-04-PLAN.md — drag core production: wizard_core pure drag-scale math (a_per_px + drag_world_step, probe_083c receipts) + wizard.py _arm_drag/_dearm lifecycle (selection-form wizard=0 edit=0, re-arm LAST in do_pick, matrix_mode=0 guard, gesture wiring + button_mode snapshot-after-push/restore) (wave 3)
+- [ ] 08.3-05-PLAN.md — tests/test_wizard_source.py evolution: keyboard-channel class out per scope; GATED_IMPLS/EXPECTED_BAKE_SITES shrink; Rule-3 exemption + negative controls preserved (dated bridges first) (wave 3)
+- [ ] 08.3-06-PLAN.md — tests/test_wizard_text.py evolution: inventory/codes/header pins per the new panel; structural contract tests untouched (dated bridges first) (wave 3)
+- [ ] 08.3-07-PLAN.md — SMOKE-07 evolution: nudge/R^T rows out; Toward chain + per-scope rotate rows kept (dated bridge) (wave 3)
+- [ ] 08.3-08-PLAN.md — SMOKE-14/15/16 error-vehicle re-points (nudge vehicles -> step_to_ligand; rotate per scope; invariants preserved) (wave 3)
+- [ ] 08.3-09-PLAN.md — SMOKE-23 rework into the movement battery (keyboard parts out; Toward view-invariance + harness kept; rename per disposition; roster 23 preserved) (wave 3)
+- [ ] 08.3-10-PLAN.md — wizard-side programmatic drag_move(dx,dy) + do_dirty hook (disposition-gated drag_move field; on the sanctioned seam; captures the new-bake-site RED bridge for 08.3-13) (wave 4)
+- [ ] 08.3-11-PLAN.md — tests/test_wizard_core.py evolution: constants pins per scope (T3/T4 per C6 fate) + NEW TestDragScaleMath battery (probe-G exact 0.07145 + R^T equivalence + fail-closed) (wave 4)
+- [ ] 08.3-12-PLAN.md — SMOKE-24 authoring rows 1-6 + 8-9: arm contract, re-arm law, deactivation/hygiene, gesture wiring, matrix_mode guard, non-AA + game-over refusals (RQ6 receipts) (wave 4)
+- [ ] 08.3-13-PLAN.md — drag-discipline source pins: _drag_move_impl enumerated+gated (bridge pair GREEN) + arm selection-form / arm-last-in-do_pick / snapshot-order / cleanup-restore AST pins + trap negative controls (wave 5)
+- [ ] 08.3-14-PLAN.md — SMOKE-24 row 7: drag math battery (float32-budget world deltas + rigidity + S2/S3 view-invariance) — the retired full-SO(3) proof's drag successor (wave 5)
+- [ ] 08.3-15-PLAN.md — full battery receipt (08.2-09 shape): py_compile + full WSL sweep with attributed count arithmetic + individually receipted purity/wizard_source/wizard_core + smokes 01-24 sweep + bridge accounting + SMOKE-06/08 negative rows = the criterion-2 proof (wave 6)
+- [ ] 08.3-16-PLAN.md — record-repair rows (PROJECT TBD tick, keys-note supersession, PLAY-02 note per disposition) + [HUMAN] fresh-session GUI checkpoint (drag ritual 12 steps) + verbatim verdict close-out (wave 7)
 
 **Details:**
 Inserted 2026-10-18 per the human decision recorded verbatim in all amendment homes ("mouse to replace all keyboard direction buttons, and replace the directions in wizard panel, only keep the towards ligand in that list."). Provenance chain: 08.2-10 step-4 dispute → debug session (.planning/debug/nudge-direction-mouse-rotation.md: decode recompute + d4 scripted real-GUI repro) → USER RULING + design decision 2026-10-18 → this insertion. Requirements surface = PLAY-02 refinement only (no new IDs; the closed 45-ID set stays closed). Standing hazards for the planner: Pitfall-6 drag mechanics (Dragging-wizard replaces the active game wizard; baked world-frame coordinates only; rigid-body AA-object targeting only); no stock gesture fits (ctrl-left = torsion 'torf'; ctsh-left = move-ATOM) — custom wiring required.
@@ -354,7 +369,7 @@ Lifted from PITFALLS.md "Pitfall-to-Phase Mapping" (topic names → this roadmap
 | 8. Demo Curation & Citations | 11/11 | Complete (verified 2026-10-05 — 08-VERIFICATION.md passed 4/4; 08-11-SUMMARY criterion map closed in the combined session) | 2026-10-05 |
 | 8.1 Confirm Pass-Gate Restoration | 8/8 | Complete (verified 2026-10-05 — 08.1-VERIFICATION.md passed 40/40) | 2026-10-05 |
 | 8.2 Direction-Control Restoration (INSERTED) | 8/10 | In progress — waves 1-2 complete 2026-10-11 ([GATE] disposition recorded; 05/06 landed, 07/08 superseded); PAUSED before wave-3 battery | - |
-| 8.3 Drag-Movement Pivot (INSERTED) | 0/0 | Not planned (inserted 2026-10-18 per the movement input-model pivot decision) | - |
+| 8.3 Drag-Movement Pivot (INSERTED) | 0/16 | Planned (2026-10-19 — 16 plans in 7 waves via /gsd-plan-phase; wave 1 = [GATE] menu + SMOKE-24 Pitfall-6 shell; ready for /gsd-execute-phase 8.3) | - |
 | 9. Help, Docs & Release Audit | 0/TBD | Not started | - |
 
 ## Coverage

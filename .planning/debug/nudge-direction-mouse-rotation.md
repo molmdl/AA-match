@@ -1,5 +1,5 @@
 ---
-status: investigating
+status: closed — superseded by the 2026-10-18 human design decision (movement input-model pivot: mouse-drag replaces directional keys/buttons; panel keeps Toward only)
 trigger: "08.2-10 GUI mouse-rotation movement discrepancy — pickup of existing DEBUG HANDOFF (.planning/phases/08.2-direction-control-restoration/08.2-10-DEBUG-HANDOFF.md)"
 created: 2026-10-12T00:00:00Z
 updated: 2026-10-18T05:00:00Z
@@ -198,7 +198,7 @@ timeline: 03-02/03-01 model → 03-07 freeze → 2026-09-21 reopen (nudge-direct
 
 ## Resolution
 
-root_cause: (empty until found)
-fix: (empty until applied)
-verification: (empty until verified)
-files_changed: []
+root_cause: NO CODE DEFECT. The shipped law was exonerated twice on final receipts — machine (P1 30/30 @ 0.0000 deg; step-4 probe screen_dx=-1.000000 at every orientation) and LIVE in the real GUI in the user's environment (d4, 2026-10-18 03:34: at the user's verbatim (c2) orientation, panel AND keyboard channels, exact monitor-LEFT, all rows PASS, tmp/probe_082_gui_repro.log). The 10-12 "goes down" row was never reproduced by current code; camera state at press time was never receipted; the session-side candidates (extra rotation before the press / board-frame wording / zero-trace transient) stay UNADJUDICATED — mooted by the user's 2026-10-18 design decision before the two closing questions were answered.
+fix: none applied to movement code — the disputed input class is DELETED BY DECISION (2026-10-18, verbatim): "mouse to replace all keyboard direction buttons, and replace the directions in wizard panel, only keep the towards ligand in that list." Mouse-drag becomes THE movement input; all keyboard direction keys removed; panel movement list = Toward-ligand only. Recorded in STATE Phase 8.2 Decisions + PROJECT Key Decisions + ROADMAP 8.2 NOTE + the 08.2-10 handoff RESOLUTION section.
+verification: exonerated-by-receipt (d4 all-pass, both channels, user's exact orientation); the pivot itself gets its own dedicated phase (fresh planning, NOT --gaps, no overrides) with RED-pinned tests + a [HUMAN] GUI checkpoint under the recorded Pitfall-6 hazards (Dragging-wizard replacement of the active game wizard; coordinate baking; rigid-body AA-object targeting only).
+files_changed: none in aamatch/ (planning-doc records only; GUI-test scripts live uncommitted in git-ignored tmp/)

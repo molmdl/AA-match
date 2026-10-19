@@ -297,7 +297,7 @@ Inserted 2026-10-05 per human verbatim '4 yes'. Standing-request history: the hu
 **Plans:** 16 plans in 7 waves
 
 Plans:
-- [ ] 08.3-01-PLAN.md — [GATE] gesture-mapping + rotation-scope decision menu (options A-D + sub-decisions + [HUMAN]-lite rows, proposed defaults; 08.2-01 pattern); human disposition recorded in all four amendment homes BEFORE any implementation (wave 1)
+- [x] 08.3-01-PLAN.md — [GATE] gesture-mapping + rotation-scope decision menu (options A-D + sub-decisions + [HUMAN]-lite rows, proposed defaults; 08.2-01 pattern); human disposition recorded in all four amendment homes BEFORE any implementation (wave 1)
 - [ ] 08.3-02-PLAN.md — SMOKE-24 shell + the PERMANENT Pitfall-6 positive-control pin (stock drag displaces the game wizard; pop restores; probe B1-B6 receipts) — decision-independent, passable pre-implementation (wave 1)
 - [ ] 08.3-03-PLAN.md — production deletion per disposition: wizard.py keyboard channels + nudge chain + event-mask, wizard_text Toward-only panel (± re-homed Rotate), wizard_core orphan sweep (NUDGE_STEP; scope rows), gamestart prose iff C6 orphaned; captures the dated EXPECTED-RED roster (wave 2)
 - [ ] 08.3-04-PLAN.md — drag core production: wizard_core pure drag-scale math (a_per_px + drag_world_step, probe_083c receipts) + wizard.py _arm_drag/_dearm lifecycle (selection-form wizard=0 edit=0, re-arm LAST in do_pick, matrix_mode=0 guard, gesture wiring + button_mode snapshot-after-push/restore) (wave 3)

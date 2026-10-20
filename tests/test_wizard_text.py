@@ -47,9 +47,13 @@ _REQUIRED_LIST_2 = {'mode': 'list',
                     'items': [{'type': 'h_bond', 'count': 1},
                               {'type': 'pi_stacking', 'count': 2}]}
 
-_ALL_BUTTON_LABELS = {'Left', 'Right', 'Up', 'Down', 'In', 'Out',
-                      'Toward ligand', 'Rotate 90 deg', 'Confirm',
-                      'Reset to Grid', 'Done'}
+# 2026-10-18 pivot (recorded disposition 2026-10-19): the six
+# camera-frame direction nudge labels and the rotate label were deleted
+# per the human decision ("only keep the towards ligand in that list";
+# the rotate_button=delete override) -- the movement list is Toward-only,
+# so the whole button inventory is the four survivors below.
+_ALL_BUTTON_LABELS = {'Toward ligand', 'Confirm', 'Reset to Grid',
+                      'Done'}
 
 
 def _state(**overrides):
@@ -171,15 +175,13 @@ class TestPanelContract(unittest.TestCase):
         self.assertEqual(labels, _ALL_BUTTON_LABELS)
 
     def test_movement_button_codes(self):
+        # 2026-10-18 pivot (recorded disposition 2026-10-19): the six
+        # nudge code rows and the rotate row were deleted with their
+        # production buttons (the rotate_button=delete override leaves no
+        # rehome group) -- only the surviving movement + action codes are
+        # pinned here. The Toward-ligand row is byte-identical.
         expected = {
-            'Left': 'cmd.get_wizard().nudge_cam(-1, 0, 0)',
-            'Right': 'cmd.get_wizard().nudge_cam(1, 0, 0)',
-            'Up': 'cmd.get_wizard().nudge_cam(0, 1, 0)',
-            'Down': 'cmd.get_wizard().nudge_cam(0, -1, 0)',
-            'In': 'cmd.get_wizard().nudge_cam(0, 0, -1)',
-            'Out': 'cmd.get_wizard().nudge_cam(0, 0, 1)',
             'Toward ligand': 'cmd.get_wizard().step_to_ligand()',
-            'Rotate 90 deg': 'cmd.get_wizard().rotate_view(90)',
             'Confirm': 'cmd.get_wizard().confirm_molecule()',
             'Reset to Grid': 'cmd.get_wizard().reset_grid()',
         }
@@ -202,9 +204,15 @@ class TestPanelContract(unittest.TestCase):
                         'no panel line carries required_summary: %r'
                         % (texts,))
 
-    def test_movement_header_mentions_step_size(self):
-        self.assertTrue(any('1 A per press' in e[1] for e in self.entries),
-                        'movement header must embed NUDGE_STEP as text')
+    def test_movement_header_text_exact(self):
+        # 2026-10-18 pivot (recorded disposition 2026-10-19): the header
+        # is the disposition's m1 constant wording ('Movement:'); the
+        # former per-press step embed died with the nudge channel, so
+        # this pin asserts the exact header text (and its uniqueness).
+        headers = [e[1] for e in self.entries if e[1] == 'Movement:']
+        self.assertEqual(headers, ['Movement:'],
+                         'movement header must be the m1 wording: %r'
+                         % ([e[1] for e in self.entries],))
 
     def test_buttons_and_labels_appear_exactly_once_each(self):
         counts = {}

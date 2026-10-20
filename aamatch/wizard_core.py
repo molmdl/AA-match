@@ -26,9 +26,13 @@ The wizard-side logic that is NOT a ``cmd`` call lives here:
   names are never passed to this guard by do_select -- the object
   identity comes from pk1's model field; the guard only classifies the
   selection NAME.
-- ``view_camera_to_world`` -- convert a CAMERA-frame step (nudge intent
-  from keys/buttons) into the WORLD-frame step to hand the movement
-  layer. ``view`` mimics cmd.get_view() (>= 9 numbers; view[0:9] =
+- ``view_camera_to_world`` -- convert a CAMERA-frame step vector into
+  the WORLD-frame step to hand the movement layer. (2026-10-18 pivot,
+  recorded disposition 2026-10-19: this bullet's former parenthetical
+  cited the nudge intent "from keys/buttons" -- those channels are
+  deleted; this camera-step law SURVIVES per the disposition, whose
+  shipped drag_move path is its live consumer.) ``view`` mimics
+  cmd.get_view() (>= 9 numbers; view[0:9] =
   row-major 3x3 rotation R, world->camera per PyMOL's get_view
   convention), so the world step is R^T . step: element i =
   R[0]*step[0] + R[3]*step[1] + R[6]*step[2] etc. NOTE (pinned for
@@ -44,8 +48,13 @@ The wizard-side logic that is NOT a ``cmd`` call lives here:
   hands them to a space dict).
 """
 
-# Movement model constants (03-RESEARCH-movement-spike.md verdict):
-NUDGE_STEP = 1.0               # Angstrom per nudge press
+# Movement model constants (03-RESEARCH-movement-spike.md verdict).
+# 2026-10-18 pivot (recorded disposition 2026-10-19): the nudge-channel
+# step constant and both rotation-step constants (keyboard ','/'.' fine
+# rotation + the panel Rotate-90 button) were deleted here per the
+# human decision -- the direction/rotation input class is gone;
+# TOWARD_STEP is unchanged per the decision (2.5 A, Toward-only
+# movement).
 TOWARD_STEP = 2.5              # Angstrom per Toward-ligand press --
                                # the Phase-8.2 human disposition
                                # (STATE.md Phase 8.2 Decisions,
@@ -53,8 +62,6 @@ TOWARD_STEP = 2.5              # Angstrom per Toward-ligand press --
                                # toward_accel none); the single home
                                # read by wizard._step_to_ligand_impl and
                                # the owning smokes.
-ROTATE_STEP_DEG = 10.0         # keyboard rotate step, degrees
-ROTATE_BUTTON_STEP_DEG = 90.0  # panel rotate-button step, degrees
 
 # PLAY-01 feedback color (v1 recolor precedent, game.py:208-213).
 HIGHLIGHT_COLOR = 'green'

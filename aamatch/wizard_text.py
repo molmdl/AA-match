@@ -1,9 +1,12 @@
 """Pure wizard panel/prompt/result text builders (plan 03-02, Phase 3).
 
 Layer: PURE -- registered in tests/test_purity.py PURE_MODULES (Gate A
-scans EVERY scope, module level and function bodies). The ONLY import
-here is the movement constants from ``.wizard_core`` -- the single home
-for gameplay constants, never re-transcribed. NO pymol/Qt/numpy: these
+scans EVERY scope, module level and function bodies). (2026-10-18
+pivot, recorded disposition 2026-10-19: the movement-constant import
+from ``.wizard_core`` retired -- the panel's only movement button is
+now Toward ligand and its header is the constant 'Movement:' string,
+so this module imports NOTHING; the .wizard_core single-home law
+survives for any future constant need.) NO pymol/Qt/numpy: these
 builders are dumb functions of the plain-data state dict the cmd-tier
 GameWizard (plan 03-03) assembles -- plain data in, plain data out.
 
@@ -31,23 +34,20 @@ Binding facts this module encodes
   mirror aamatch/game_state.py:score -- 'any' is binary (records of
   any type -> 1.0, else 0.0), 'list' is formed items / items.
 
-Movement labels embed NUDGE_STEP from wizard_core (%g formatting): if
-the constant changes, the 'A per press' text follows automatically.
+Movement list (2026-10-18 pivot, disposition 2026-10-19): the six
+camera-frame direction rows and the panel Rotate-90 row were deleted
+per the human decision -- the list keeps ONLY 'Toward ligand' under
+the 'Movement:' header (wording m1); the former move-header embed of
+the nudge step constant is retired with the nudge channel.
 """
 
-from .wizard_core import NUDGE_STEP, ROTATE_BUTTON_STEP_DEG
-
-# Module-level constant, built from the single-home constants above.
+# 2026-10-18 pivot (recorded disposition 2026-10-19): the six direction
+# nudge rows (Left/Right/Up/Down/In/Out) and the panel Rotate-90 row
+# were deleted per the human decision -- the movement list keeps ONLY
+# the Toward-ligand entry ("only keep the towards ligand in that
+# list"); the .wizard_core movement-constant import retired with them.
 _MOVEMENT_BUTTONS = (
-    ('Left',  'cmd.get_wizard().nudge_cam(-1, 0, 0)'),
-    ('Right', 'cmd.get_wizard().nudge_cam(1, 0, 0)'),
-    ('Up',    'cmd.get_wizard().nudge_cam(0, 1, 0)'),
-    ('Down',  'cmd.get_wizard().nudge_cam(0, -1, 0)'),
-    ('In',    'cmd.get_wizard().nudge_cam(0, 0, -1)'),
-    ('Out',   'cmd.get_wizard().nudge_cam(0, 0, 1)'),
     ('Toward ligand', 'cmd.get_wizard().step_to_ligand()'),
-    ('Rotate %d deg' % int(ROTATE_BUTTON_STEP_DEG),
-     'cmd.get_wizard().rotate_view(%d)' % int(ROTATE_BUTTON_STEP_DEG)),
 )
 
 _ACTION_BUTTONS = (
@@ -197,10 +197,12 @@ def panel_entries(state):
     Documented build order: header (molecule id + pos/total), the
     multi-molecule notice when the level has more than one molecule,
     required summary, [result lines when state['result'] is set, an
-    'ERROR:' text line when state['error'] is set], blank, movement
-    header (embeds NUDGE_STEP), the six nudge buttons + 'Toward
-    ligand' + 'Rotate 90 deg', blank, 'Confirm', 'Reset to Grid',
-    'Done' (canonical cmd.set_wizard()).
+    'ERROR:' text line when state['error'] is set], blank, the
+    'Movement:' header (2026-10-18 pivot, disposition 2026-10-19:
+    the six direction rows + the Rotate-90 row formerly listed under
+    the old nudge-step header were deleted per the human decision --
+    the movement list is Toward-only), blank, 'Confirm', 'Reset to
+    Grid', 'Done' (canonical cmd.set_wizard()).
 
     ``state`` is plain data; this builder never imports cmd and never
     touches PyMOL state (the GameWizard assembles the dict it will hand
@@ -227,7 +229,7 @@ def panel_entries(state):
     if error:
         entries.append([1, _clip('ERROR: %s' % error), ''])
     entries.append([0, '', ''])
-    entries.append([1, _clip('Move (%g A per press):' % NUDGE_STEP), ''])
+    entries.append([1, _clip('Movement:'), ''])
     for label, code in _MOVEMENT_BUTTONS:
         entries.append([2, label, code])
     entries.append([0, '', ''])

@@ -9,13 +9,17 @@ THE BINDING CONTRACTS:
 
 1. THIN INPUT ADAPTER -- the engine is the brain
    (03-RESEARCH-wizard-interaction.md sec. 8, ARCHITECTURE Pattern 2).
-   This class routes clicks/keys/panel buttons onto engine ops
+   This class routes clicks/panel buttons onto engine ops
    (confirm / reset_to_grid / place_aa) and renders the plain-data
    result as panel/prompt text. NO detection math, NO scoring, NO spec
    knowledge here; engine ops own game state. The Confirm pass RULE
    likewise lives in the pure layer (game_state CONFIRM_PASS_RULE /
    confirm_passes, Phase 8.1) -- the wizard only branches on the
    verdict and renders the debrief (the 08.1 gate decision).
+   2026-10-18 pivot (recorded disposition 2026-10-19): the keyboard
+   channels (do_key/do_special, the former "keys" routing) were
+   deleted per the human decision -- mouse-drag becomes THE movement
+   input.
 
 2. PLAIN PICKLABLE DATA ONLY on self (RESEARCH sec. 2.3): session save
    pickles the whole wizard stack, so every GameWizard attribute is a
@@ -90,8 +94,10 @@ _IDENT_3X4 = (1.0, 0.0, 0.0, 0.0,
               0.0, 1.0, 0.0, 0.0,
               0.0, 0.0, 1.0, 0.0)
 
-_KEY_NUDGES = {'w': (0.0, 1.0, 0.0), 's': (0.0, -1.0, 0.0),
-               'q': (0.0, 0.0, -1.0), 'e': (0.0, 0.0, 1.0)}
+# 2026-10-18 pivot (recorded disposition 2026-10-19): the w/s/q/e
+# direction-key map that formerly lived here was deleted per the
+# human decision -- ALL keyboard direction keys are gone; mouse-drag
+# becomes THE movement input.
 
 
 class WizardError(ValueError):
@@ -211,13 +217,16 @@ class GameWizard(Wizard):
         return (_rebuild_game_wizard, (), self.__getstate__())
 
     def get_event_mask(self):
-        """pick(1) | select(2) | key(4) | special(8) = 15.
+        """pick(1) | select(2) = 3 -- pick/select only.
 
-        The base default is only pick+select (3); the keyboard channels
-        (nudge keys, arrow specials) need the key/special bits
-        (RESEARCH sec. 6 -- wizard-first dispatch).
+        2026-10-18 pivot (recorded disposition 2026-10-19, STATE
+        Phase 8.3 Decisions): do_key AND do_special are both fully
+        deleted per the human decision, so the disposition-derived
+        mask drops the key(4)/special(8) bits -- 15 -> 3 (pick|select
+        only, same as the Wizard base default). The drag gestures are
+        wired on the PyMOL button map, never on this mask.
         """
-        return 15
+        return 3
 
     def activate(self, replace=0):
         """The enter sequence (RESEARCH sec. 7 rows 1-3). THE ORDER IS
@@ -665,27 +674,14 @@ class GameWizard(Wizard):
         if engine.is_over():
             raise WizardError('The game is over.')
 
-    def nudge_cam(self, dx, dy, dz):
-        """Camera-frame nudge of the selected AA:
-        (dx, dy, dz) in {-1, 0, 1} is converted to the WORLD frame via
-        wizard_core.view_camera_to_world over cmd.get_view(), scaled by
-        wizard_core.NUDGE_STEP, and BAKED via
-        cmd.translate(..., state=1, camera=0) + identity assert."""
-        self._guard(self._nudge_cam_impl, float(dx), float(dy),
-                    float(dz))
-
-    def _nudge_cam_impl(self, dx, dy, dz):
-        self._require_playing()
-        obj = self._current_object()
-        if obj is None:
-            return
-        w = wizard_core.view_camera_to_world(cmd.get_view(),
-                                             (dx, dy, dz))
-        step = wizard_core.NUDGE_STEP
-        cmd.translate([step * w[0], step * w[1], step * w[2]], obj,
-                      state=1, camera=0)
-        self._assert_identity(obj)
-        cmd.refresh_wizard()
+    # 2026-10-18 pivot (recorded disposition 2026-10-19): the
+    # camera-frame keyboard-nudge chain (its public + impl methods)
+    # and the view-axis rotate UI handler that formerly lived around
+    # this primitive were deleted per the human decision -- mouse-drag
+    # becomes THE movement input, with fine rotation on the
+    # shift+right drag-rotate gesture. rotate_axis/_rotate_axis_impl
+    # SURVIVE by disposition (M4/M5: the smokes' scripted-placement
+    # primitive, NOT a UI surface).
 
     def rotate_axis(self, axis, deg, origin=None):
         """Generic WORLD-FRAME rotation of the selected AA about
@@ -708,22 +704,17 @@ class GameWizard(Wizard):
         self._assert_identity(obj)
         cmd.refresh_wizard()
 
-    def rotate_view(self, deg):
-        """View-axis rotation: the camera +z axis converted to world
-        frame (wizard_core.view_camera_to_world over cmd.get_view()),
-        then rotate_axis."""
-        axis = wizard_core.view_camera_to_world(cmd.get_view(),
-                                                (0.0, 0.0, 1.0))
-        self._guard(self._rotate_axis_impl, axis, float(deg), None)
-
     def step_to_ligand(self):
         """One TOWARD_STEP towards the ligand: unit vector from the
         selected AA's centroid towards the current molecule's ligand
         centroid, scaled by wizard_core.TOWARD_STEP (2.5 A per the
         Phase-8.2 human disposition, STATE.md Phase 8.2 Decisions
         2026-10-11: toward_step 2.5, toward_accel none -- NO press
-        acceleration), baked through the SAME path as nudge_cam
-        (cmd.translate camera=0) + identity assert."""
+        acceleration), baked through cmd.translate (state=1,
+        camera=0) + identity assert. (2026-10-18 pivot: this
+        docstring formerly cited the deleted camera-frame nudge
+        sibling as its path reference -- that channel was deleted per
+        the human decision; the bake path itself is unchanged.)"""
         self._guard(self._step_to_ligand_impl)
 
     def _step_to_ligand_impl(self):
@@ -1123,40 +1114,12 @@ class GameWizard(Wizard):
         return {'count': len(candidate_ids),
                 'slot_ids': list(candidate_ids)}
 
-    # -- Keyboard channels (RESEARCH-wizard sec. 6) ------------------------
-
-    def do_special(self, k, x, y, mod):
-        """GLUT special keys: LEFT (100) / RIGHT (102) nudge the
-        selected AA in camera x. LEFT/RIGHT are cleanly ownable
-        (wizard-first dispatch consumes them when the command line has
-        not grabbed arrows); UP/DOWN are NOT -- they co-fire
-        command-line history unconditionally (OrthoSpecial), so they
-        are NEVER used as game keys. Returning None falls through."""
-        if k == 100:
-            self.nudge_cam(-1, 0, 0)
-            return 1
-        if k == 102:
-            self.nudge_cam(1, 0, 0)
-            return 1
-        return None
-
-    def do_key(self, k, x, y, mod):
-        """ASCII keys: w/s camera-y nudges, q/e camera-z nudges ('q' =
-        In = INTO the screen; if the live build's camera z-sign proves
-        inverted in SMOKE-07 / the human checkpoint, flip here --
-        cosmetic, detector-neutral), ','/'.' view-axis rotation by
-        wizard_core.ROTATE_STEP_DEG. Owned keys return 1 (consumed --
-        wizard-first dispatch); everything else returns None so all
-        other PyMOL shortcuts keep working."""
-        ch = chr(k) if 0 <= k < 127 else ''
-        step = _KEY_NUDGES.get(ch)
-        if step is not None:
-            self.nudge_cam(*step)
-            return 1
-        if ch == ',':
-            self.rotate_view(-wizard_core.ROTATE_STEP_DEG)
-            return 1
-        if ch == '.':
-            self.rotate_view(wizard_core.ROTATE_STEP_DEG)
-            return 1
-        return None
+    # 2026-10-18 pivot (recorded disposition 2026-10-19): the keyboard
+    # channel section that formerly ended this module (do_special
+    # LEFT/RIGHT arrow branches; do_key w/s/q/e nudge branches AND
+    # ','/'.' rotation branches) was deleted ENTIRELY per the human
+    # decision -- rotate_keys AND rotate_button both = delete. K9
+    # shape: outright deletion, no stubs -- unowned keys fall through
+    # to the Wizard base defaults (the methods are absent), so every
+    # PyMOL shortcut keeps working; get_event_mask returns the
+    # derived 3 (pick|select).

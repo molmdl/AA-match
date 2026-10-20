@@ -2,9 +2,11 @@
 
 Layer: PURE -- registered in tests/test_purity.py PURE_MODULES. NEVER
 import cmd/pymol/Qt/numpy here (Gate A scans every scope, module level
-and function bodies); the cmd-tier consumer is aamatch/wizard.py
-(translated: this file may contain ZERO imports, stdlib or otherwise,
-because the helpers below need nothing beyond plain Python).
+and function bodies); the cmd-tier consumer is aamatch/wizard.py.
+Imports are stdlib-only: the drag-scale math (08.3-04) imports exactly
+``math`` (whitelisted in tests/test_purity.py ALLOWED_STDLIB; no
+PURE_MODULES change), and everything else needs nothing beyond plain
+Python.
 
 House style: % formatting only, floats in/floats out via float()
 coercion (vec3 contract), fail-closed ValueError refusals whose
@@ -39,6 +41,13 @@ The wizard-side logic that is NOT a ``cmd`` call lives here:
   03-04/SMOKE-07): the R^T convention is live-verified against a
   scripted cmd.set_view; if the live build proves the opposite
   convention, this function is the single fix site.
+- ``a_per_px`` / ``drag_world_step`` -- the pixel->world drag-scale
+  math (08.3-04, Phase 8.3): the pure half of the C-side drag path
+  (SceneMouse.cpp:1479-1507), probe-receipted against PyMOL 2.5.0
+  (probe_083c C1/C2). ``drag_world_step`` is the single home for the
+  pixel->world delta consumed by the wizard-side drag_move path (its
+  sole caller); it is expressed through ``view_camera_to_world``, the
+  surviving camera-step law above.
 - ``ensure_snapshot`` / ``color_map`` / ``snapshot_objects`` -- PLAY-01
   color-feedback bookkeeping (RESEARCH section 4): snapshot a slot's
   atom colors BEFORE its first recolor (lazy, per-slot, exactly once),
@@ -47,6 +56,9 @@ The wizard-side logic that is NOT a ``cmd`` call lives here:
   caller-owned plain picklable data ((ID, color) rows as cmd.iterate
   hands them to a space dict).
 """
+
+import math  # stdlib, whitelisted (test_purity ALLOWED_STDLIB) -- feeds
+            # the drag-scale math only (08.3-04).
 
 # Movement model constants (03-RESEARCH-movement-spike.md verdict).
 # 2026-10-18 pivot (recorded disposition 2026-10-19): the nudge-channel
@@ -175,6 +187,74 @@ def view_camera_to_world(view, step):
     return (float(r[0] * sx + r[3] * sy + r[6] * sz),
             float(r[1] * sx + r[4] * sy + r[7] * sz),
             float(r[2] * sx + r[5] * sy + r[8] * sz))
+
+
+def a_per_px(view, viewport_h, fov=20.0):
+    """Angstroms-per-pixel of the PyMOL 2.5.0 C drag scale.
+
+    The exact C formula, with receipts::
+
+        vScale [A/px] = depth * GetFovWidth / viewport_height
+        GetFovWidth   = 2 * tan(fov * pi / 360)
+        depth         = -view[11]
+
+    ``vScale`` is Scene.cpp:3550-3558; ``GetFovWidth`` Scene.cpp:5613-5617
+    with the ``field_of_view`` default 20.0 (SettingInfo.h:237); the
+    drag path evaluates ``depth`` at the view origin (v1 =
+    m_view.m_origin, SceneMouse.cpp:1481-1482) as ``SceneGetRawDepth``
+    = ``-m_pos[2]`` -- with MV = T(pos) . R . T(-origin) giving
+    MV . origin = pos, so depth = -pos[2] = -view[11]
+    (Scene.cpp:3475-3481; orthographic identical, Scene.cpp:3520-3522).
+
+    Probe receipt (probe_083c C1): at the real seed-42 start view
+    (view[11] = -97.2456, viewport 640x480, fov 20) the measured
+    A/px = 0.07145, and this pure formula reproduces it exactly.
+
+    HONESTY NOTE (recorded per the research): vScale is evaluated at
+    the VIEW ORIGIN, not at the dragged AA -- at the game's default
+    compose the AA grid sits ~9% nearer the camera than the origin, so
+    drag moves ~9% faster than the cursor (imperceptible for play).
+
+    Fail-closed (house convention): ValueError NAMING the cause on a
+    viewport height <= 0, a fov <= 0, or a ``view`` too short to carry
+    index 11 (the depth component).
+    """
+    if len(view) < 12:
+        raise ValueError(
+            'a_per_px: view must carry >= 12 numbers (view[11] is the '
+            'depth component); found %d' % len(view))
+    if float(viewport_h) <= 0.0:
+        raise ValueError(
+            'a_per_px: viewport_h must be > 0 pixels (found %r)'
+            % (viewport_h,))
+    if float(fov) <= 0.0:
+        raise ValueError(
+            'a_per_px: fov must be > 0 degrees (found %r)' % (fov,))
+    depth = -float(view[11])
+    return depth * (2.0 * math.tan(float(fov) * math.pi / 360.0)) \
+        / float(viewport_h)
+
+
+def drag_world_step(view, dx_px, dy_px, viewport_h, fov=20.0):
+    """World-frame (dx, dy, 0) step for a pixel drag delta.
+
+    The single home for the pixel->world delta consumed by the
+    wizard-side ``drag_move`` path (08.3-10 is its caller). Mirrors the
+    C drag motion math (SceneMouse.cpp:1479-1507): per motion event
+    ``v2 = ((x-LastX)*vScale, (y-LastY)*vScale, 0)`` in camera A, then
+    ``MatrixInvTransformC44fAs33f3f(m_rotMatrix, v2, v2)`` = the R^T
+    conjugation -- exactly ``view_camera_to_world``. Probe receipt
+    (probe_083c C2): the equivalences with ``view_camera_to_world`` at
+    full SO(3) hold element-for-element (dev 0.00e+00).
+
+    ``s = a_per_px(view, viewport_h, fov)``; returns
+    ``view_camera_to_world(view, (dx_px*s, dy_px*s, 0.0))`` (plain
+    float 3-tuple). Fail-closed via ``a_per_px`` / ``view_camera_to_world``
+    (bad viewport/fov/short view raise ValueError naming the cause).
+    """
+    s = a_per_px(view, viewport_h, fov)
+    return view_camera_to_world(
+        view, (float(dx_px) * s, float(dy_px) * s, 0.0))
 
 
 def ensure_snapshot(store, obj, rows):

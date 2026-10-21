@@ -300,10 +300,10 @@ Plans:
 - [x] 08.3-01-PLAN.md — [GATE] gesture-mapping + rotation-scope decision menu (options A-D + sub-decisions + [HUMAN]-lite rows, proposed defaults; 08.2-01 pattern); human disposition recorded in all four amendment homes BEFORE any implementation (wave 1)
 - [x] 08.3-02-PLAN.md — SMOKE-24 shell + the PERMANENT Pitfall-6 positive-control pin (stock drag displaces the game wizard; pop restores; probe B1-B6 receipts) — decision-independent, passable pre-implementation (wave 1)
 - [x] 08.3-03-PLAN.md — production deletion per disposition: wizard.py keyboard channels + nudge chain + event-mask, wizard_text Toward-only panel (± re-homed Rotate), wizard_core orphan sweep (NUDGE_STEP; scope rows), gamestart prose iff C6 orphaned; captures the dated EXPECTED-RED roster (wave 2)
-- [ ] 08.3-04-PLAN.md — drag core production: wizard_core pure drag-scale math (a_per_px + drag_world_step, probe_083c receipts) + wizard.py _arm_drag/_dearm lifecycle (selection-form wizard=0 edit=0, re-arm LAST in do_pick, matrix_mode=0 guard, gesture wiring + button_mode snapshot-after-push/restore) (wave 3)
-- [ ] 08.3-05-PLAN.md — tests/test_wizard_source.py evolution: keyboard-channel class out per scope; GATED_IMPLS/EXPECTED_BAKE_SITES shrink; Rule-3 exemption + negative controls preserved (dated bridges first) (wave 3)
-- [ ] 08.3-06-PLAN.md — tests/test_wizard_text.py evolution: inventory/codes/header pins per the new panel; structural contract tests untouched (dated bridges first) (wave 3)
-- [ ] 08.3-07-PLAN.md — SMOKE-07 evolution: nudge/R^T rows out; Toward chain + per-scope rotate rows kept (dated bridge) (wave 3)
+- [x] 08.3-04-PLAN.md — drag core production: wizard_core pure drag-scale math (a_per_px + drag_world_step, probe_083c receipts) + wizard.py _arm_drag/_dearm lifecycle (selection-form wizard=0 edit=0, re-arm LAST in do_pick, matrix_mode=0 guard, gesture wiring + button_mode snapshot-after-push/restore) (wave 3)
+- [x] 08.3-05-PLAN.md — tests/test_wizard_source.py evolution: keyboard-channel class out per scope; GATED_IMPLS/EXPECTED_BAKE_SITES shrink; Rule-3 exemption + negative controls preserved (dated bridges first) (wave 3)
+- [x] 08.3-06-PLAN.md — tests/test_wizard_text.py evolution: inventory/codes/header pins per the new panel; structural contract tests untouched (dated bridges first) (wave 3)
+- [x] 08.3-07-PLAN.md — SMOKE-07 evolution: nudge/R^T rows out; Toward chain + per-scope rotate rows kept (dated bridge) (wave 3)
 - [ ] 08.3-08-PLAN.md — SMOKE-14/15/16 error-vehicle re-points (nudge vehicles -> step_to_ligand; rotate per scope; invariants preserved) (wave 3)
 - [ ] 08.3-09-PLAN.md — SMOKE-23 rework into the movement battery (keyboard parts out; Toward view-invariance + harness kept; rename per disposition; roster 23 preserved) (wave 3)
 - [ ] 08.3-10-PLAN.md — wizard-side programmatic drag_move(dx,dy) + do_dirty hook (disposition-gated drag_move field; on the sanctioned seam; captures the new-bake-site RED bridge for 08.3-13) (wave 4)
@@ -370,7 +370,7 @@ Lifted from PITFALLS.md "Pitfall-to-Phase Mapping" (topic names → this roadmap
 | 8. Demo Curation & Citations | 11/11 | Complete (verified 2026-10-05 — 08-VERIFICATION.md passed 4/4; 08-11-SUMMARY criterion map closed in the combined session) | 2026-10-05 |
 | 8.1 Confirm Pass-Gate Restoration | 8/8 | Complete (verified 2026-10-05 — 08.1-VERIFICATION.md passed 40/40) | 2026-10-05 |
 | 8.2 Direction-Control Restoration (INSERTED) | 8/10 | In progress — waves 1-2 complete 2026-10-11 ([GATE] disposition recorded; 05/06 landed, 07/08 superseded); PAUSED before wave-3 battery | - |
-| 8.3 Drag-Movement Pivot (INSERTED) | 2/16 | In progress — wave 1 complete 2026-10-21 ([GATE] disposition recorded 2026-10-19 via 08.3-01; 08.3-02 SMOKE-24 Pitfall-6 pin landed pre-implementation 2026-10-21, battery = smokes 01-24; next: wave 2 = 08.3-03 production deletion) | - |
+| 8.3 Drag-Movement Pivot (INSERTED) | 7/16 | In progress — waves 1-2 + wave-3 batch A completed/merged 2026-10-21 (01 disposition gate; 02 SMOKE-24 shell; 03 production deletion; batch A parallel-worktree merge: 04 drag core + 05/06 pin evolutions + 07 SMOKE-07; next: batch B = 08.3-08/09 parallel worktrees per standing authorization) | - |
 | 9. Help, Docs & Release Audit | 0/TBD | Not started | - |
 
 ## Coverage

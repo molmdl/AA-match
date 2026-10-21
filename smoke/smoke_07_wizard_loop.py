@@ -23,17 +23,18 @@ PART A  ACTIVATION + ROUTING + RECOLOR: activate() pushes the wizard,
         the live build, Rule-1 deviation recorded in 03-04-SUMMARY.md);
         a switch restores the previous object's snapshotted colors
         first; ligand / scratch / empty-space picks are NO-OPs.
-PART B  MOVEMENT + THE IDENTITY INVARIANT: wizard_core.
-        view_camera_to_world is LIVE-VERIFIED against a scripted
-        cmd.set_view (only the 3x3 rotation block is scripted; the tail
-        is copied verbatim from the captured view -- build-dependent);
-        nudge_cam presses displace the centroid by exactly NUDGE_STEP
-        steps along the scripted world vector with the object matrix
-        identity after every press; rotate_view / rotate_axis keep the
-        centroid (rotation about the centroid) and move atoms;
-        step_to_ligand lands exactly TOWARD_STEP towards the ligand
-        centroid (the 08.2-06 2026-10-11 disposition evolution 1.0 ->
-        2.5 A, read from the wizard_core single home).
+PART B  MOVEMENT + THE IDENTITY INVARIANT: rotate_axis (the surviving
+        scripted-placement primitive) keeps the centroid (rotation about
+        the centroid) and moves atoms with the object matrix identity
+        after the press; step_to_ligand lands exactly TOWARD_STEP towards
+        the ligand centroid (the 08.2-06 2026-10-11 disposition evolution
+        1.0 -> 2.5 A, read from the wizard_core single home). 2026-10-18
+        pivot (recorded disposition 2026-10-19): the keyboard
+        direction-channel checks that lived here -- the camera->world
+        identity pass-through, the live R^T step, the three-press
+        displacement, and the panel-rotate keeps-centroid row -- were
+        DELETED with their production channels at 08.3-03; the drag-math
+        battery is SMOKE-24 (row 7).
 PART C  CONFIRM COMPOSITION (the PLAY-02 payoff, 06-05 ADVANCE
         SEMANTICS) + the RESET proof (moved in from PART D at 06-06 --
         the game-over lockdown law refuses every gameplay handler once
@@ -437,79 +438,22 @@ try:
         raise RuntimeError('part A failed')
     sel_obj = aa2_obj
 
-    # Identity view: script the rotation block, copy the tail verbatim.
-    view0 = list(cmd.get_view())
-    ident_tail = list(view0[9:])
-    ident_view = [1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0] \
-        + ident_tail
-    cmd.set_view(ident_view)
-    w_ident = wizard_core.view_camera_to_world(cmd.get_view(), (1, 0, 0))
-    check('camera->world identity pass-through',
-          _max_axis_dev(w_ident, (1.0, 0.0, 0.0)) <= 1e-9,
-          'view_camera_to_world(identity, (1,0,0))=%r' % (w_ident,))
+    # 2026-10-18 pivot (recorded disposition 2026-10-19): the keyboard
+    # direction-channel checks that lived here -- the camera->world
+    # identity pass-through, the live R^T step, the three-press
+    # displacement, and the panel-rotate keeps-centroid row -- were
+    # DELETED with their production channels at 08.3-03. The drag-math
+    # battery is SMOKE-24 (row 7); the surviving scripted-placement
+    # rotation primitive is proven below through wizard.rotate_axis.
 
-    # LIVE R^T convention check: rotation block Rz(90deg) (world->camera
-    # row-major), every remaining entry copied verbatim from the captured
-    # view's tail -- only the rotation block is scripted.
-    rz90_view = [0.0, -1.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0] \
-        + ident_tail
-    cmd.set_view(rz90_view)
-    cen_rt0 = _tofloat(geometry.centroid_of(sel_obj))
-    wiz.nudge_cam(1, 0, 0)
-    cen_rt1 = _tofloat(geometry.centroid_of(sel_obj))
-    # R^T . (1,0,0) over the scripted Rz(90deg) block = (r00, r01, r02)
-    # = (0, -1, 0); expected displacement (0, -NUDGE_STEP, 0).
-    want_rt = (cen_rt0[0], cen_rt0[1] - wizard_core.NUDGE_STEP,
-               cen_rt0[2])
-    dev_rt = _max_axis_dev(cen_rt1, want_rt)
-    tol_rt = _max_axis_tol(cen_rt1, want_rt)
-    check('LIVE R^T: nudge lands on the scripted world vector',
-          dev_rt <= tol_rt and wiz._error is None,
-          'dev=%.3g tol=%.3g (R^T.(1,0,0)=(0,-1,0) x %g A) error=%r'
-          % (dev_rt, tol_rt, wizard_core.NUDGE_STEP, wiz._error))
-    REC['rt_live_dev'] = dev_rt
-    cmd.set_view(ident_view)                     # restore the identity view
-
-    # Three nudge presses: exactly 3 x NUDGE_STEP along world X, the
-    # identity object matrix re-asserted after EVERY press.
-    cen_n0 = _tofloat(geometry.centroid_of(sel_obj))
-    ident_every_press = True
-    for _press in range(3):
-        wiz.nudge_cam(1, 0, 0)
-        ident_every_press = ident_every_press and \
-            _is_identity(_obj_matrix(sel_obj))
-    cen_n1 = _tofloat(geometry.centroid_of(sel_obj))
-    want_n = _add(cen_n0, (3.0 * wizard_core.NUDGE_STEP, 0.0, 0.0))
-    dev_n = _max_axis_dev(cen_n1, want_n)
-    tol_n = _max_axis_tol(cen_n1, want_n)
-    check('3 nudges displace exactly 3x NUDGE_STEP world-X',
-          dev_n <= tol_n and ident_every_press and wiz._error is None,
-          'dev=%.3g tol=%.3g identity-after-every-press=%s'
-          % (dev_n, tol_n, ident_every_press))
-    REC['nudge3_dev'] = dev_n
-
-    # rotate_view(90): centroid unchanged (rotation about the centroid),
-    # atoms moved, matrix identity.
+    # rotate_axis((0,1,0), 90, origin=centroid): centroid unchanged
+    # (rotation about the centroid), atoms moved, object matrix identity.
     coords_r0 = geometry.coords_of(sel_obj)
-    cen_rv0 = _tofloat(geometry.centroid_of(sel_obj))
-    wiz.rotate_view(90.0)
-    cen_rv1 = _tofloat(geometry.centroid_of(sel_obj))
-    coords_r1 = geometry.coords_of(sel_obj)
-    moved_rv = _coords_maxdisp(coords_r0, coords_r1)
-    cen_dev_rv = _max_axis_dev(cen_rv1, cen_rv0)
-    check('rotate_view keeps centroid, moves atoms, identity',
-          cen_dev_rv <= CENTROID_TOL and moved_rv > 0.5
-          and _is_identity(_obj_matrix(sel_obj)) and wiz._error is None,
-          'centroid dev=%.3g atoms moved=%.3g A'
-          % (cen_dev_rv, moved_rv))
-    REC['rotate_view_centroid_dev'] = cen_dev_rv
-
-    # rotate_axis((0,1,0), 90, origin=centroid): same contract.
     cen_ra0 = _tofloat(geometry.centroid_of(sel_obj))
     wiz.rotate_axis((0.0, 1.0, 0.0), 90.0, origin=cen_ra0)
     cen_ra1 = _tofloat(geometry.centroid_of(sel_obj))
-    coords_r2 = geometry.coords_of(sel_obj)
-    moved_ra = _coords_maxdisp(coords_r1, coords_r2)
+    coords_r1 = geometry.coords_of(sel_obj)
+    moved_ra = _coords_maxdisp(coords_r0, coords_r1)
     cen_dev_ra = _max_axis_dev(cen_ra1, cen_ra0)
     check('rotate_axis keeps centroid, moves atoms, identity',
           cen_dev_ra <= CENTROID_TOL and moved_ra > 0.5

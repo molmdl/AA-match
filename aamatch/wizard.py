@@ -94,6 +94,14 @@ _IDENT_3X4 = (1.0, 0.0, 0.0, 0.0,
               0.0, 1.0, 0.0, 0.0,
               0.0, 0.0, 1.0, 0.0)
 
+# 2026-10-18 pivot (recorded disposition 2026-10-19): drag movement.
+# The arm target MUST be a SELECTION name, never the object name -- the
+# object-name form is the matrix path (Executive.cpp:3208-3259) and
+# _assert_identity fail-closes on any matrix use. Always the selection
+# form. '_'-prefixed => wizard_core.transient_selection classifies it
+# transient-safe (the per-pick cleanup may delete it).
+_DRAG_SELE = '_aam_drag_sele'
+
 # 2026-10-18 pivot (recorded disposition 2026-10-19): the w/s/q/e
 # direction-key map that formerly lived here was deleted per the
 # human decision -- ALL keyboard direction keys are gone; mouse-drag
@@ -158,6 +166,10 @@ class GameWizard(Wizard):
     - ``_current_slot``   selected slot_id or None
     - ``_saved_msm``      mouse_selection_mode snapshot (None = not
                           taken yet; int once activate() ran)
+    - ``_saved_button_mode`` button_mode snapshot (None = not taken /
+                          never wired; int once activate() ran) -- the
+                          profile-level drag-gesture save (08.3-04);
+                          restored via cmd.set + cmd.mouse() at cleanup
     - ``_color_store``    {object_name: [(ID, color), ...]} PLAY-01
                           pre-recolor snapshots (lazy, wizard_core
                           bookkeeping)
@@ -194,6 +206,7 @@ class GameWizard(Wizard):
             registry['molecules'][self._molecule_index]['ligand'][0]
         self._current_slot = None
         self._saved_msm = None
+        self._saved_button_mode = None
         self._color_store = {}
         self._result = None
         self._error = None
@@ -243,14 +256,36 @@ class GameWizard(Wizard):
         3. Snapshot the user's mouse_selection_mode (post-push, so a
            popped GameWizard's cleanup has already restored the user's
            true value -- stock default is 1, NEVER assume 0).
-        4. Defensive set to 0 (atomic single-atom mode like every
+        4. Snapshot the user's button_mode (ALSO post-push, same
+           ordering rationale as the msm snapshot above): the drag
+           gestures are wired into the button map at step 5, so the
+           profile's pre-game value must be captured AFTER the push --
+           a popped GameWizard's cleanup restores the user's true
+           button_mode INSIDE set_wizard, exactly like msm.
+        5. Wire the disposition's drag gestures per the recorded
+           2026-10-19 disposition (STATE Phase 8.3 Decisions): shift-
+           left translate + ctrl+shift-left depth + shift-right rotate.
+           Profile-level remap (no per-slot read-back API exists).
+        6. Defensive msm set to 0 (atomic single-atom mode like every
            built-in wizard -- single-atom picks read reliably).
-        5. cmd.refresh_wizard().
+        7. cmd.refresh_wizard().
         """
         cmd.deselect()
         cmd.set_wizard(self, replace=replace)
         self._saved_msm = int(cmd.get('mouse_selection_mode'))
+        self._saved_button_mode = int(cmd.get('button_mode'))
         cmd.set('mouse_selection_mode', 0)
+        # Disposition gesture map (probe-receipted C1-C9/D1-D2/E1):
+        # shift-left-drag = view-plane translate ('dgmv'); ctrl+shift-
+        # left-drag = depth ('dgmz', depth_drag=yes); shift-right-drag
+        # = rotate ('dgrt', drag_rotate_gesture=yes). dgrt pivots at the
+        # selection bbox center (recorded divergence from the rotate
+        # laws' atom centroid). Stock shift+right slot behavior was NOT
+        # receipted in research -- pinned at 08.3-04 wiring time with a
+        # tmp/ probe (see 08.3-04-SUMMARY) and covered by SMOKE-24(row5).
+        cmd.button('left', 'shft', 'dgmv')
+        cmd.button('left', 'ctsh', 'dgmz')
+        cmd.button('right', 'shft', 'dgrt')
         cmd.refresh_wizard()
 
     def cleanup(self):
@@ -260,9 +295,11 @@ class GameWizard(Wizard):
 
         Order: guard a rebound/None self.cmd (session-restore case,
         dragging.py:72-74 pattern); restore msm to the SNAPSHOT (never
-        a hard-coded 0); unpick + delete the pk1 pick buffer if
-        present; deselect; restore EVERY recolored slot's colors, then
-        clear the store.
+        a hard-coded 0); deactivate any armed drag + delete the private
+        drag selection; restore button_mode to the SNAPSHOT via
+        cmd.set + cmd.mouse() (probe D2); unpick + delete the pk1 pick
+        buffer if present; deselect; restore EVERY recolored slot's
+        colors, then clear the store.
 
         MUST NOT: delete game objects (_aam_* outlive the wizard --
         Cleanup-button semantics are Phase 4), touch user objects, or
@@ -272,6 +309,23 @@ class GameWizard(Wizard):
             return
         if self._saved_msm is not None:
             self.cmd.set('mouse_selection_mode', self._saved_msm)
+        # Drag dearm (probe H1/083B(3)): cmd.drag() with no args
+        # deactivates any armed drag state; the private selection is
+        # then deleted if it exists (idempotent, the pk1-hygiene
+        # pattern). Both are harmless when no drag was ever armed.
+        self.cmd.drag()
+        if _DRAG_SELE in self.cmd.get_names('selections'):
+            self.cmd.delete(_DRAG_SELE)
+        # Profile-level button_mode restore (probe D2): re-applies the
+        # whole mouse profile, erasing BOTH our gesture remap and any
+        # user pre-game per-slot tweaks -- the documented stock-wizard
+        # limitation (controlling.py:821-825, dragging.py:78-80 same
+        # story). Guarded for the idempotent re-cleanup / gesture=d
+        # never-wired case (None => skip).
+        if self._saved_button_mode is not None:
+            self.cmd.set('button_mode', str(self._saved_button_mode),
+                         quiet=1)
+            self.cmd.mouse()
         self.cmd.unpick()
         if 'pk1' in self.cmd.get_names('selections'):
             self.cmd.delete('pk1')
@@ -384,6 +438,14 @@ class GameWizard(Wizard):
             return
         self._error = None
         self._select_slot(slot_id)
+        # Re-arm the C-side drag LAST (directly after _select_slot): ANY
+        # pick clears the armed drag state (probe 083B(1)(2)), so every
+        # successful pick re-arms; double-arm is idempotent (083B(4)).
+        # It MUST stay last -- the arm's cmd.drag runs EditorInactivate,
+        # which deletes pk1..pk4 (Editor.cpp:1701-1740), and the pk1
+        # read above is already consumed by then. _arm_drag is
+        # soft-wrapped: it NEVER raises into the C-layer pick dispatch.
+        self._arm_drag(rows[0][0])
 
     def _select_slot(self, slot_id):
         """Switch selection to ``slot_id`` with recolor feedback
@@ -645,6 +707,48 @@ class GameWizard(Wizard):
                     'pose; baked-transform moves keep this matrix at '
                     'identity by construction'
                     % (obj, i, m[i], _IDENT_3X4[i]))
+
+    def _arm_drag(self, obj):
+        """Arm the C-side drag target on ``obj`` (08.3-04).
+
+        Called per successful pick from do_pick (as its LAST statement;
+        ANY pick clears the armed drag state -- probe 083B(1)(2) -- and
+        double-arm is idempotent, 083B(4)). Mechanism (RQ2, probe-
+        proven): an object-scoped matrix_mode=0 guard neutralizes the
+        Editor.cpp:1824-1840 full-state coercion edge (probe E1); then a
+        SELECTION name is built for ``obj`` and cmd.drag arms it with
+        wizard=0 (no Dragging-wizard install) and edit=0 (no profile
+        switch) -- GameWizard stays top-of-stack and keeps receiving
+        picks (probes C2/C3/C8/C9). NEVER the object-name arm: that is
+        the FORBIDDEN matrix branch (Executive.cpp:3208-3259).
+
+        Refusals are SILENT returns -- arming is lifecycle, not a user
+        op (the public movement ops own _require_playing): a game-over
+        short-circuit, and anything whose object is not a registered
+        slot of the current molecule (ligand/user/other-molecule objects
+        are structurally unarmable -- H-5 precedent wizard.py:1104-1108).
+
+        SOFT-ERROR discipline: the whole body is wrapped so nothing ever
+        raises into the C-layer pick dispatch (mirrors do_pick's soft
+        game-over gate); a failure lands on the panel error line.
+        """
+        try:
+            from . import engine
+            if engine.is_over():
+                return
+            if self._slot_by_object.get(obj) is None:
+                return
+            # Idempotent per-object guard (probe E1): a full-state
+            # selection with matrix_mode >= 1 would coerce the drag into
+            # the object-MATRIX branch (Editor.cpp:1824-1840). Game
+            # objects are deleted at cleanup => no restore debt.
+            cmd.set('matrix_mode', '0', obj)
+            cmd.select(_DRAG_SELE, obj)
+            cmd.drag(_DRAG_SELE, wizard=0, edit=0)
+        except Exception as exc:
+            self._error = ('Drag could not be armed. (%s)'
+                           % type(exc).__name__)
+            cmd.refresh_wizard()
 
     def _guard(self, op, *args, **kwargs):
         """Run one wizard handler body fail-closed with a VISIBLE

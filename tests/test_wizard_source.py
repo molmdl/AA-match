@@ -210,314 +210,49 @@ def _const_int(node):
     return None
 
 
-# --- 08.2-03 keyboard-channel pins (do_special / do_key) --------------------
-# The frozen keyboard map (03-06 verdict, STATE.md:142): do_special owns
-# GLUT LEFT (100) / RIGHT (102) ONLY -- UP (101) / DOWN (103) can never be
-# wizard game keys because PyMOL's C-source OrthoSpecial co-fires
-# command-line history unconditionally
-# (03-RESEARCH-wizard-interaction.md:212-215). do_key owns w/s/q/e camera
-# nudges via the module-level _KEY_NUDGES map plus ','/'.' view-axis
-# rotates by wizard_core.ROTATE_STEP_DEG (the do_key contract,
-# wizard.py:1134-1153). Zero automated coverage existed before 08.2-03.
+# --- 08.3-05 keyboard direction channels pinned DELETED --------------------
+# 2026-10-18 pivot (recorded disposition 2026-10-19; executed 08.3-03):
+# the whole keyboard direction channel is removed from wizard.py --
+# do_special (GLUT LEFT/RIGHT nudges), do_key (w/s/q/e camera nudges plus
+# ','/'.' view-axis rotates) and the module-level _KEY_NUDGES map are all
+# deleted. rotate_keys=delete was an explicit human OVERRIDE of the menu's
+# keep default, so the ','/'.' rotate branches die together with do_key
+# (the entire channel at once).
+#
+# The 08.2-03 pins (TestKeyboardChannelMap + its three finders + the frozen
+# EXPECTED_SPECIAL_BRANCHES / EXPECTED_KEY_NUDGES maps + their three
+# negative controls) existed precisely to make key-map changes loud. The
+# pivot IS that loud, recorded change: their subject surfaces no longer
+# exist, so the positive pins and controls are removed behind a dated
+# bridge (08.3-03-SUMMARY.md roster; never a silent edit) and replaced by
+# the DELETION pin below -- wizard.py must define NO do_special and NO
+# do_key. K9 shape (08.3-03): outright deletion, no stubs -- the base
+# Wizard defaults own the fall-through, so every PyMOL shortcut keeps
+# working.
 
-# LEFT k==100 -> nudge camera -x; RIGHT k==102 -> nudge camera +x.
-EXPECTED_SPECIAL_BRANCHES = {100: (-1, 0, 0), 102: (1, 0, 0)}
-
-# The frozen w/s/y and q/e/z camera-step map (wizard.py:93-94 --
-# 'w': camera +y, 's': camera -y, 'q': camera -z (In/into the screen),
-# 'e': camera +z).
-EXPECTED_KEY_NUDGES = {'w': (0.0, 1.0, 0.0), 's': (0.0, -1.0, 0.0),
-                       'q': (0.0, 0.0, -1.0), 'e': (0.0, 0.0, 1.0)}
+# The surfaces 08.3-03 deleted from wizard.py; re-introduction fails the
+# deletion pin loudly.
+DELETED_KEYBOARD_CHANNELS = ('do_special', 'do_key')
 
 
-def find_special_key_violations(src):
-    """Every problem with do_special's pinned GLUT special-key map.
+def find_reintroduced_keyboard_channels(src):
+    """Every DELETED keyboard direction channel still defined in ``src``.
 
-    Frozen laws pinned here (03-06 keyboard verdict, STATE.md:142):
-    * the set of int constants compared against anywhere in do_special
-      is EXACTLY {100, 102} -- handling 101 (UP) or 103 (DOWN) is a
-      violation by itself (the C-layer history co-fire makes those
-      keys unusable, 03-RESEARCH-wizard-interaction.md:212-215);
-    * each branch calls ``self.nudge_cam`` with LITERAL args
-      (-1, 0, 0) for k==100 and (1, 0, 0) for k==102 (LEFT = camera
-      -x, RIGHT = camera +x -- screen-relative by design);
-    * each owned branch ``return 1`` (consumed -- wizard-first
-      dispatch); a silent fall-through would hand the key back to
-      PyMOL's built-in arrows.
-    """
-    problems = []
+    Post-pivot law (2026-10-18 pivot; recorded disposition 2026-10-19;
+    executed 08.3-03): do_special and do_key are deleted outright.
+    Re-uses the shared ``_function_def`` AST finder, so docstring prose
+    that cites the deletion can neither satisfy nor trip this pin (the
+    Gate-C-safe idiom used throughout this file)."""
     tree = ast.parse(src)
-    fn = _function_def(tree, 'do_special')
-    if fn is None:
-        return ['do_special: FunctionDef NOT FOUND -- the GLUT '
-                'special-key channel (LEFT/RIGHT nudges) is missing '
-                'entirely from wizard.py']
-    seen = set()
-    for node in ast.walk(fn):
-        if isinstance(node, ast.Compare):
-            for operand in [node.left] + list(node.comparators):
-                v = _const_int(operand)
-                if v is not None:
-                    seen.add(v)
-    if seen != set(EXPECTED_SPECIAL_BRANCHES):
-        problems.append(
-            'do_special: int constants in comparisons %s != the '
-            'frozen {100, 102} (LEFT/RIGHT) -- UP=101/DOWN=103 can '
-            'NEVER be game keys (PyMOL C-source co-fires command '
-            'history unconditionally, 03-RESEARCH-wizard-interaction'
-            '.md:212-215; 03-06 verdict STATE.md:142)'
-            % (sorted(seen),))
-    for node in ast.walk(fn):
-        if not isinstance(node, ast.If):
-            continue
-        test = node.test
-        if not (isinstance(test, ast.Compare) and len(test.ops) == 1
-                and isinstance(test.ops[0], ast.Eq)
-                and len(test.comparators) == 1):
-            continue
-        v = _const_int(test.left) if _const_int(test.left) is not None \
-            else _const_int(test.comparators[0])
-        if v is None or v not in EXPECTED_SPECIAL_BRANCHES:
-            continue
-        expected = EXPECTED_SPECIAL_BRANCHES[v]
-        nudge_ok = False
-        ret_ok = False
-        for stmt in node.body:
-            for sub in ast.walk(stmt):
-                if isinstance(sub, ast.Call) \
-                        and isinstance(sub.func, ast.Attribute) \
-                        and sub.func.attr == 'nudge_cam' \
-                        and isinstance(sub.func.value, ast.Name) \
-                        and sub.func.value.id == 'self' \
-                        and not sub.keywords \
-                        and tuple(_const_int(a)
-                                  for a in sub.args) == expected:
-                    nudge_ok = True
-                if isinstance(sub, ast.Return) and sub.value is not None \
-                        and _const_int(sub.value) == 1:
-                    ret_ok = True
-        if not nudge_ok:
-            problems.append(
-                'do_special k==%d (line %d): no self.nudge_cam%s call '
-                'in the branch -- LEFT/RIGHT must nudge camera x by '
-                'exactly that LITERAL step (03-06 keyboard law, '
-                'STATE.md:142)' % (v, node.lineno, expected))
-        if not ret_ok:
-            problems.append(
-                'do_special k==%d (line %d): branch does not '
-                '`return 1` -- an owned key must report CONSUMED in '
-                'wizard-first dispatch, else it falls through to '
-                'PyMOL shortcuts' % (v, node.lineno))
-    return problems
+    return [name for name in DELETED_KEYBOARD_CHANNELS
+            if _function_def(tree, name) is not None]
 
 
-def find_key_nudge_map_violations(src):
-    """Every problem with the do_key nudge channel.
-
-    Frozen laws pinned here (the do_key contract, wizard.py:1134-1153
-    + _KEY_NUDGES wizard.py:93-94):
-    * the module-level ``_KEY_NUDGES`` Dict literal must
-      ast.literal_eval to EXACTLY EXPECTED_KEY_NUDGES -- w/s are
-      camera-y +/-, q/e are camera-z -/+ ('q' = In = INTO the
-      screen); no extra keys ('d' is NOT a nudge key);
-    * do_key applies the map via ``_KEY_NUDGES.get(ch)`` and calls
-      ``self.nudge_cam(*step)`` -- a raw indexing or a hand-unrolled
-      per-char branch is a silent map-drift vector.
-    """
-    problems = []
-    tree = ast.parse(src)
-    value_node = None
-    for stmt in tree.body:
-        if isinstance(stmt, ast.Assign) and len(stmt.targets) == 1 \
-                and isinstance(stmt.targets[0], ast.Name) \
-                and stmt.targets[0].id == '_KEY_NUDGES':
-            value_node = stmt.value
-    if value_node is None:
-        problems.append('_KEY_NUDGES: module-level assignment NOT '
-                        'FOUND -- the w/s/q/e nudge map is missing')
-    else:
-        literal = None
-        try:
-            literal = ast.literal_eval(value_node)
-        except (ValueError, SyntaxError):
-            problems.append('_KEY_NUDGES: not a plain literal Dict -- '
-                            'the map must stay literal_eval-able so '
-                            'this pin can checksum it exactly')
-        if isinstance(literal, dict):
-            for ch, want in sorted(EXPECTED_KEY_NUDGES.items()):
-                got = literal.get(ch)
-                if got != want:
-                    problems.append(
-                        '_KEY_NUDGES[%r] = %r, must be %r (frozen '
-                        'camera-step map, wizard.py:93-94 / the 03-06 '
-                        'verdict STATE.md:142)' % (ch, got, want))
-            for ch in sorted(set(literal) - set(EXPECTED_KEY_NUDGES)):
-                problems.append(
-                    '_KEY_NUDGES: EXTRA key %r -- the game OWNS only '
-                    'w/s/q/e (everything else must fall through to '
-                    'PyMOL shortcuts; the do_key contract)'
-                    % (ch,))
-        elif literal is not None:
-            problems.append('_KEY_NUDGES: evaluates to %r, not a '
-                            'dict' % (literal,))
-    fn = _function_def(tree, 'do_key')
-    if fn is None:
-        problems.append('do_key: FunctionDef NOT FOUND -- the ASCII '
-                        'key channel (w/s/q/e nudges, ,/. rotates) is '
-                        'missing entirely from wizard.py')
-        return problems
-    get_ok = False
-    nudge_ok = False
-    for node in ast.walk(fn):
-        if not isinstance(node, ast.Call) \
-                or not isinstance(node.func, ast.Attribute):
-            continue
-        if node.func.attr == 'get' \
-                and isinstance(node.func.value, ast.Name) \
-                and node.func.value.id == '_KEY_NUDGES' \
-                and len(node.args) == 1 \
-                and isinstance(node.args[0], ast.Name) \
-                and node.args[0].id == 'ch':
-            get_ok = True
-        if node.func.attr == 'nudge_cam' \
-                and isinstance(node.func.value, ast.Name) \
-                and node.func.value.id == 'self' \
-                and len(node.args) == 1 \
-                and isinstance(node.args[0], ast.Starred) \
-                and isinstance(node.args[0].value, ast.Name) \
-                and node.args[0].value.id == 'step' \
-                and not node.keywords:
-            nudge_ok = True
-    if not get_ok:
-        problems.append('do_key: no `_KEY_NUDGES.get(ch)` call -- '
-                        'the map must be applied through the .get '
-                        'lookup (the do_key contract)')
-    if not nudge_ok:
-        problems.append('do_key: no `self.nudge_cam(*step)` call -- '
-                        'the looked-up camera step must be applied '
-                        'verbatim through the nudge channel')
-    return problems
-
-
-def find_key_rotate_violations(src):
-    """Every problem with do_key's ','/'.' view-axis rotate branches.
-
-    Frozen law pinned here (the do_key contract, wizard.py:1147-1152):
-    ',' rotates by ``-wizard_core.ROTATE_STEP_DEG`` (a UnaryOp USub
-    over the Attribute -- a flipped sign is a caught bug, not a
-    refactor), '.' by the positive Attribute; both branches
-    ``return 1`` (consumed)."""
-    problems = []
-    tree = ast.parse(src)
-    fn = _function_def(tree, 'do_key')
-    if fn is None:
-        return ['do_key: FunctionDef NOT FOUND -- the ,/. rotate '
-                'branches are missing from wizard.py']
-
-    for ch, neg in ((',', True), ('.', False)):
-        branch = None
-        for node in ast.walk(fn):
-            if isinstance(node, ast.If) \
-                    and isinstance(node.test, ast.Compare) \
-                    and len(node.test.ops) == 1 \
-                    and isinstance(node.test.ops[0], ast.Eq) \
-                    and isinstance(node.test.left, ast.Name) \
-                    and node.test.left.id == 'ch' \
-                    and len(node.test.comparators) == 1:
-                comp = node.test.comparators[0]
-                if isinstance(comp, ast.Str) and comp.s == ch:
-                    branch = node
-        if branch is None:
-            problems.append("do_key: no `ch == %r` branch -- the %s "
-                            "rotate key is unhandled (it must be "
-                            "owned, wizard-first dispatch)"
-                            % (ch, 'negative' if neg else 'positive'))
-            continue
-        rot_ok = False
-        ret_ok = False
-        for stmt in branch.body:
-            for sub in ast.walk(stmt):
-                if isinstance(sub, ast.Call) \
-                        and isinstance(sub.func, ast.Attribute) \
-                        and sub.func.attr == 'rotate_view' \
-                        and isinstance(sub.func.value, ast.Name) \
-                        and sub.func.value.id == 'self' \
-                        and len(sub.args) == 1 \
-                        and not sub.keywords:
-                    arg = sub.args[0]
-                    if neg:
-                        if isinstance(arg, ast.UnaryOp) \
-                                and isinstance(arg.op, ast.USub) \
-                                and isinstance(arg.operand, ast.Attribute) \
-                                and arg.operand.attr == 'ROTATE_STEP_DEG' \
-                                and isinstance(arg.operand.value,
-                                               ast.Name) \
-                                and arg.operand.value.id == 'wizard_core':
-                            rot_ok = True
-                    else:
-                        if isinstance(arg, ast.Attribute) \
-                                and arg.attr == 'ROTATE_STEP_DEG' \
-                                and isinstance(arg.value, ast.Name) \
-                                and arg.value.id == 'wizard_core':
-                            rot_ok = True
-                if isinstance(sub, ast.Return) and sub.value is not None \
-                        and _const_int(sub.value) == 1:
-                    ret_ok = True
-        if not rot_ok:
-            problems.append(
-                'do_key ch == %r (line %d): no '
-                'self.rotate_view(%swizard_core.ROTATE_STEP_DEG) call '
-                '-- the view-axis rotate sign is FROZEN (a flip here '
-                'is a bug, wizard.py:1147-1152)'
-                % (ch, branch.lineno, '-' if neg else ''))
-        if not ret_ok:
-            problems.append(
-                'do_key ch == %r (line %d): branch does not '
-                '`return 1` -- an owned key must report CONSUMED '
-                '(wizard-first dispatch)' % (ch, branch.lineno))
-    return problems
-
-
-# Negative-control traps for the keyboard finders (synthetic sources
-# wired with exactly one violation each -- test_purity.py's rule: a
-# gate that cannot fail proves nothing).
-SPECIAL_TRAP = '''\
+# Negative control: a synthetic source redefining do_special must trip the
+# deletion pin (test_purity.py's rule: a gate that cannot fail proves
+# nothing).
+KEY_CHANNEL_TRAP = '''\
 def do_special(self, k, x, y, mod):
-    """Synthetic: 101 (UP) must NEVER be a game key."""
-    if k == 100:
-        self.nudge_cam(-1, 0, 0)
-        return 1
-    if k == 102:
-        self.nudge_cam(1, 0, 0)
-        return 1
-    if k == 101:
-        self.nudge_cam(0, 1, 0)
-        return 1
-    return None
-'''
-
-NUDGE_MAP_TRAP = '''\
-_KEY_NUDGES = {'w': (1.0, 1.0, 0.0), 's': (0.0, -1.0, 0.0),
-               'q': (0.0, 0.0, -1.0), 'e': (0.0, 0.0, 1.0)}
-
-
-def do_key(self, k, x, y, mod):
-    ch = chr(k) if 0 <= k < 127 else ''
-    step = _KEY_NUDGES.get(ch)
-    if step is not None:
-        self.nudge_cam(*step)
-        return 1
-    return None
-'''
-
-ROTATE_TRAP = '''\
-def do_key(self, k, x, y, mod):
-    if ch == ',':
-        self.rotate_view(wizard_core.ROTATE_STEP_DEG)
-        return 1
-    if ch == '.':
-        self.rotate_view(wizard_core.ROTATE_STEP_DEG)
-        return 1
     return None
 '''
 
@@ -530,10 +265,15 @@ def do_key(self, k, x, y, mod):
 # assert after every move, and the 06-06 law (STATE.md:212):
 # _require_playing() is the FIRST line of every gameplay impl.
 
-# The five gameplay impls under the gate-order law (06-06).
-GATED_IMPLS = ('_nudge_cam_impl', '_rotate_axis_impl',
-               '_step_to_ligand_impl', '_move_to_impl',
-               '_reset_grid_impl')
+# The gameplay impls under the gate-order law (06-06). 2026-10-18 pivot
+# (recorded disposition 2026-10-19; executed 08.3-03): the camera-frame
+# nudge impl (_nudge_cam_impl) was deleted with the keyboard direction
+# channel, so this pin shrinks to the four survivors -- the rotate chain
+# follows its surviving public wrapper (M4/M5 both survive) and the
+# Toward/move_to/reset impls are untouched. No gate weakened: the four
+# survivors keep their full first-line + identity-assert teeth.
+GATED_IMPLS = ('_rotate_axis_impl', '_step_to_ligand_impl',
+               '_move_to_impl', '_reset_grid_impl')
 
 
 def _is_bake_call(node):
@@ -569,12 +309,14 @@ def find_bake_call_sites(src):
     return sorted(sites)
 
 
-# The pinned enumeration (RESEARCH-code.md sec. 2, M1/M2: translate in
-# _nudge_cam_impl wizard.py:685 + _step_to_ligand_impl wizard.py:740;
-# rotate in _rotate_axis_impl wizard.py:706). A NEW bake site fails
-# this pin loudly -- it must be enumerated and gated, never sneaked in.
-EXPECTED_BAKE_SITES = sorted([('translate', '_nudge_cam_impl'),
-                              ('translate', '_step_to_ligand_impl'),
+# The pinned enumeration (RESEARCH-code.md sec. 2; 2026-10-18 pivot --
+# recorded disposition 2026-10-19, executed 08.3-03): the nudge translate
+# site died with _nudge_cam_impl, so the survivors are the translate in
+# _step_to_ligand_impl plus the rotate in _rotate_axis_impl (M4/M5
+# survive). A NEW bake site (e.g. the drag-move impl landing later in
+# this phase) fails this pin loudly -- it must be enumerated and gated,
+# never sneaked in.
+EXPECTED_BAKE_SITES = sorted([('translate', '_step_to_ligand_impl'),
                               ('rotate', '_rotate_axis_impl')])
 
 
@@ -694,9 +436,12 @@ def find_gate_discipline_violations(src):
     return problems
 
 
-# Negative-control traps for the discipline finders.
+# Negative-control traps for the discipline finders. 2026-10-18 pivot
+# (executed 08.3-03): the trap owner names were re-pointed off the deleted
+# nudge impl onto surviving impls -- the trap BODIES are otherwise
+# unchanged, so the four controls keep their full mutation-proof teeth.
 BAKE_TRAP_CAMERA = '''\
-def _nudge_cam_impl(self):
+def _step_to_ligand_impl(self):
     cmd.translate([0.0, 0.0, 0.0], 'obj', state=1, camera=1)
 '''
 
@@ -705,16 +450,11 @@ def _rotate_axis_impl(self, axis, deg, origin):
     cmd.rotate([1.0, 0.0, 0.0], 90.0, camera=0, object='aa1')
 '''
 
-# Only the five gated impls matter to the gate finder; the trap wires
-# ONE impl with a non-gate first statement (a different call).
+# Only the gated impls matter to the gate finder; the trap wires ONE
+# surviving impl with a non-gate first statement (a different call).
 GATE_TRAP_FIRST = '''\
-def _nudge_cam_impl(self, dx, dy, dz):
-    self._current_object()
-    self._assert_identity('obj')
-
 def _rotate_axis_impl(self, axis, deg, origin):
-    from . import engine
-    self._require_playing()
+    self._current_object()
     self._assert_identity('obj')
 
 def _step_to_ligand_impl(self):
@@ -733,10 +473,6 @@ def _reset_grid_impl(self):
 
 # Same shape but _reset_grid_impl drops the identity assert.
 GATE_TRAP_ASSERT = '''\
-def _nudge_cam_impl(self, dx, dy, dz):
-    self._require_playing()
-    self._assert_identity('obj')
-
 def _rotate_axis_impl(self, axis, deg, origin):
     self._require_playing()
     self._assert_identity('obj')
@@ -860,81 +596,41 @@ class TestCmdTierRegistration(unittest.TestCase):
             % overlap)
 
 
-class TestKeyboardChannelMap(unittest.TestCase):
-    """08.2-03: the wizard keyboard channels are AST-pinned (ROADMAP
-    8.2 criterion-3 teeth).
+class TestKeyboardChannelDeleted(unittest.TestCase):
+    """08.3-05: the deleted keyboard direction channels are AST-pinned
+    ABSENT (the post-pivot evolution of the 08.2-03 TestKeyboardChannelMap
+    pins; ROADMAP 8.2 criterion-3 teeth re-pointed, not dropped).
 
-    Until this class there was ZERO automated coverage of
-    do_special/do_key -- any key-map change would have been invisible
-    to the WSL battery (RESEARCH-code.md sec. 1.1). Pinned laws:
-    do_special owns LEFT(100)/RIGHT(102) ONLY -- UP(101)/DOWN(103) can
-    never be game keys because PyMOL's C-source co-fires command-line
-    history unconditionally (03-RESEARCH-wizard-interaction.md:212-215;
-    the 03-06 verdict STATE.md:142); do_key owns w/s/q/e via the frozen
-    _KEY_NUDGES camera-step map plus ','/'.' view-axis rotates by
-    wizard_core.ROTATE_STEP_DEG, every owned key returning 1 (the
-    do_key contract, wizard.py:1134-1153). wizard.py is SCANNED, never
-    imported -- these are pure AST pins over the source text.
+    2026-10-18 pivot (recorded disposition 2026-10-19; executed 08.3-03):
+    do_special (GLUT LEFT/RIGHT nudges) and do_key (w/s/q/e camera nudges
+    plus ','/'.' view-axis rotates) are DELETED outright from wizard.py
+    (rotate_keys=delete was an explicit human override of the keep
+    default, so the whole channel dies at once). The positive 08.2-03
+    key-map pins, finders and controls were removed behind a dated bridge
+    (their subject surfaces no longer exist); this negative pin takes
+    their place -- the base Wizard defaults own the fall-through (K9
+    shape: deletion, no stubs, 08.3-03), so every PyMOL shortcut keeps
+    working and the direction channel cannot silently return. wizard.py
+    is SCANNED, never imported -- a pure AST pin over the source text.
     """
 
-    def _problems(self, finder):
-        return finder(_read_source(os.path.join(PKG_DIR, 'wizard.py')))
-
-    def test_special_key_map_exact(self):
-        problems = self._problems(find_special_key_violations)
+    def test_deleted_keyboard_channels_absent(self):
+        offenders = find_reintroduced_keyboard_channels(
+            _read_source(os.path.join(PKG_DIR, 'wizard.py')))
         self.assertEqual(
-            problems, [],
-            'do_special must own LEFT/RIGHT only, nudging camera x '
-            'with literal steps and consuming the keys:\n  '
-            + '\n  '.join(problems))
+            offenders, [],
+            'the keyboard direction channels are DELETED (2026-10-18 '
+            'pivot; rotate_keys=delete): wizard.py must define NO '
+            'do_special and NO do_key -- the base Wizard defaults own '
+            'the fall-through. Re-introduced: %r' % (offenders,))
 
-    def test_key_nudge_map_and_apply_exact(self):
-        problems = self._problems(find_key_nudge_map_violations)
-        self.assertEqual(
-            problems, [],
-            '_KEY_NUDGES must be the frozen w/s/q/e camera-step map '
-            'applied via .get(ch) + nudge_cam(*step):\n  '
-            + '\n  '.join(problems))
-
-    def test_key_rotate_branches_exact(self):
-        problems = self._problems(find_key_rotate_violations)
-        self.assertEqual(
-            problems, [],
-            "the ','/'.' branches must call rotate_view with the "
-            "pinned-sign wizard_core.ROTATE_STEP_DEG and consume the "
-            'keys:\n  ' + '\n  '.join(problems))
-
-    def test_negative_control_do_special_handles_up(self):
-        problems = find_special_key_violations(SPECIAL_TRAP)
-        self.assertTrue(
-            problems,
-            'a do_special that owns 101 (UP) MUST trip the pin -- '
-            'UP/DOWN are dead by design (C-layer history co-fire)')
-        self.assertTrue(any('101' in p or '{100, 102}' in p
-                            for p in problems),
-                        'the trip must name the {100, 102} law, got %r'
-                        % (problems,))
-
-    def test_negative_control_wrong_w_vector(self):
-        problems = find_key_nudge_map_violations(NUDGE_MAP_TRAP)
-        self.assertTrue(
-            problems,
-            "a _KEY_NUDGES map with a wrong 'w' vector MUST trip the "
-            'pin -- the camera-step map is frozen')
-        self.assertTrue(any("'w'" in p for p in problems),
-                        "the trip must name the 'w' entry, got %r"
-                        % (problems,))
-
-    def test_negative_control_flipped_rotate_sign(self):
-        problems = find_key_rotate_violations(ROTATE_TRAP)
-        self.assertTrue(
-            problems,
-            "a ',' branch without the NEGATIVE ROTATE_STEP_DEG MUST "
-            'trip the pin -- a sign flip is a caught bug, not a '
-            'refactor')
-        self.assertTrue(any('-' in p for p in problems),
-                        'the trip must name the negative-step law, '
-                        'got %r' % (problems,))
+    def test_negative_control_reintroduced_channel_fires(self):
+        offenders = find_reintroduced_keyboard_channels(KEY_CHANNEL_TRAP)
+        self.assertIn(
+            'do_special', offenders,
+            'a redefined do_special MUST trip the deletion pin -- the '
+            'direction channel was removed outright, not stubbed. '
+            'Got %r' % (offenders,))
 
 
 class TestMovementDisciplineSource(unittest.TestCase):
@@ -957,16 +653,17 @@ class TestMovementDisciplineSource(unittest.TestCase):
 
     def test_bake_call_site_enumeration_exact(self):
         # Self-audit of ALL cmd.translate / cmd.rotate call sites:
-        # exactly two translate sites + one rotate site today (the
-        # RESEARCH-code.md sec. 2 map); a NEW bake site must be
-        # enumerated here and gated, never sneaked in.
+        # one translate site + one rotate site post-pivot (the nudge
+        # translate site died with _nudge_cam_impl, 08.3-03); a NEW
+        # bake site (e.g. the drag-move impl) must be enumerated here
+        # and gated, never sneaked in.
         sites = find_bake_call_sites(
             _read_source(os.path.join(PKG_DIR, 'wizard.py')))
         self.assertEqual(
             sites, EXPECTED_BAKE_SITES,
             'the bake-call enumeration drifted from the frozen map '
-            '(translate: _nudge_cam_impl + _step_to_ligand_impl; '
-            'rotate: _rotate_axis_impl), got %r' % (sites,))
+            '(translate: _step_to_ligand_impl; rotate: '
+            '_rotate_axis_impl), got %r' % (sites,))
 
     def test_bake_forms_exact(self):
         problems = find_bake_form_violations(
@@ -1014,7 +711,7 @@ class TestMovementDisciplineSource(unittest.TestCase):
             '_require_playing() MUST trip the pin (the 06-06 '
             'first-line law, STATE.md:212)')
         self.assertTrue(
-            any('_nudge_cam_impl' in p and '_require_playing' in p
+            any('_rotate_axis_impl' in p and '_require_playing' in p
                 for p in problems),
             'the trip must name the offending impl, got %r'
             % (problems,))

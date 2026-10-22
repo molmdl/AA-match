@@ -418,16 +418,40 @@ class TestColorSnapshotBookkeeping(unittest.TestCase):
 class TestMovementAndFeedbackConstants(unittest.TestCase):
     """Exact pinned constants (v1 recolor precedent game.py:208-213;
     movement model from 03-RESEARCH-movement-spike.md; hint color from
-    05-RESEARCH-hint.md standard_stack/Q3)."""
+    05-RESEARCH-hint.md standard_stack/Q3).
+
+    Dated EXPECTED-RED bridge -- 2026-10-21 (06-05 convention; the
+    2026-10-18 pivot, recorded human disposition 2026-10-19: STATE.md
+    "Phase 8.3 Decisions & Laws", ledger rows C1 / C3 / C4, consequence
+    map in 08.3-DECISION-MENU.md section 8). 08.3-03 SWEPT three
+    movement constants out of aamatch/wizard_core.py: the nudge-channel
+    step (C1, unconditional -- the nudge channel is gone), the keyboard
+    fine-rotation step (C3, per rotate_keys=delete) and the panel
+    Rotate-90 step (C4, per rotate_button=delete). Dead symbols are not
+    re-named here on purpose (the pin file must not cite removed homes);
+    the verbatim pre-edit failure receipt lives in 08.3-11-SUMMARY.md.
+
+    Pre-edit receipt (BEFORE any edit, 2026-10-21,
+    ``python3.6 -m unittest tests.test_wizard_core -v``): 26 tests ran,
+    exactly 2 ERRORs, both the expected pins -- ``test_constants_exact``
+    and ``test_constants_are_float_steps`` raised AttributeError on the
+    first (nudge-step) assert line of each. Both TestViewCameraToWorld*
+    classes were GREEN in the same run (the C6-survivor row:
+    view_camera_to_world keeps its drag_move consumer). The deleted
+    constants' assert LINES are REMOVED, not weakened -- TOWARD_STEP 2.5
+    and both color pins stay byte-identical below, and the 08.3-04
+    drag-scale helpers get their own battery (TestDragScaleMath) in this
+    file.
+    """
 
     def test_constants_exact(self):
-        self.assertEqual(wizard_core.NUDGE_STEP, 1.0)
         # Toward-ligand step: 2.5 A per the Phase-8.2 human disposition
         # (STATE.md Phase 8.2 Decisions, 2026-10-11: toward_step 2.5,
         # toward_accel none -- NO acceleration constants exist to pin).
+        # 2026-10-18 pivot: the nudge-step / keyboard-rotation-step /
+        # panel-Rotate-step pins left with their constants (deletion
+        # research T5 row); TOWARD + colors keep.
         self.assertEqual(wizard_core.TOWARD_STEP, 2.5)
-        self.assertEqual(wizard_core.ROTATE_STEP_DEG, 10.0)
-        self.assertEqual(wizard_core.ROTATE_BUTTON_STEP_DEG, 90.0)
         self.assertEqual(wizard_core.HIGHLIGHT_COLOR, 'green')
         self.assertEqual(wizard_core.HINT_COLOR, 'orange')
 
@@ -440,10 +464,10 @@ class TestMovementAndFeedbackConstants(unittest.TestCase):
                             wizard_core.HIGHLIGHT_COLOR)
 
     def test_constants_are_float_steps(self):
-        self.assertIsInstance(wizard_core.NUDGE_STEP, float)
+        # 2026-10-18 pivot: the three deleted constants' isinstance rows
+        # removed with the constants (same dated bridge as the class
+        # docstring); TOWARD_STEP keeps.
         self.assertIsInstance(wizard_core.TOWARD_STEP, float)
-        self.assertIsInstance(wizard_core.ROTATE_STEP_DEG, float)
-        self.assertIsInstance(wizard_core.ROTATE_BUTTON_STEP_DEG, float)
 
 
 if __name__ == '__main__':

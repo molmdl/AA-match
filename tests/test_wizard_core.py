@@ -470,5 +470,140 @@ class TestMovementAndFeedbackConstants(unittest.TestCase):
         self.assertIsInstance(wizard_core.TOWARD_STEP, float)
 
 
+class TestDragScaleMath(unittest.TestCase):
+    """Unit battery for the 08.3-04 pure drag-scale math (Phase 8.3).
+
+    ``aamatch/wizard_core.py`` carries the pure half of the C-side drag
+    path (SceneMouse.cpp:1479-1507) -- ``a_per_px`` (vScale) and
+    ``drag_world_step`` (the pixel delta -> world delta). Both are
+    probe-receipted against PyMOL 2.5.0 (probe_083c C1/C2, transcribed
+    in 08.3-RESEARCH-drag.md RQ3); this class makes those receipts
+    permanent, machine-checked unit pins so SMOKE-24 row 7 (08.3-14)
+    drives an already-unit-proven seam end-to-end.
+
+    Import floor: stdlib ``math`` (module-level, for the norm check)
+    plus ``aamatch.wizard_core`` ONLY -- this file stays pure (no
+    pymol/Qt/numpy); tests/test_purity.py gates the production module.
+
+    Formula receipt (probe C1)::
+
+        vScale [A/px] = depth * 2 * tan(fov * pi / 360) / viewport_h
+        depth         = -view[11]
+
+    Probe G (the real seed-42 start view): viewport 640x480, fov 20,
+    depth = 97.2456 -> A/px = 0.07145 (exact double 0.071445929...).
+    Probe 083c C2: the ``drag_world_step`` -> ``view_camera_to_world``
+    R^T equivalence at full SO(3) holds element-for-element, dev
+    0.00e+00.
+    """
+
+    # Probe G / probe_083c C1 case: the real seed-42 start view's depth
+    # component (view[11] = -97.2456; origin row from the P1-POSTSTART
+    # view receipt). Identity rotation so the expected world step is a
+    # hand-readable (dx*s, 0, 0); the SO(3) cases below swap only the
+    # rotation block.
+    PROBE_G_VIEW = (1.0, 0.0, 0.0,
+                    0.0, 1.0, 0.0,
+                    0.0, 0.0, 1.0,
+                    0.0, 0.0, -97.2456,     # origin: view[11] = -97.2456
+                    0.158331, 0.149332, 9.2822,
+                    76.6692, 117.822, -20.0)
+
+    # The probe-G depth tail (origin + slabs), appended to each rotation
+    # block reused from TestViewCameraToWorldFullSO3's 08.2-02 fixtures.
+    PROBE_G_TAIL = (0.0, 0.0, -97.2456,
+                    0.158331, 0.149332, 9.2822,
+                    76.6692, 117.822, -20.0)
+
+    def _so3_views(self):
+        """[(name, view)]: >= 3 orthogonal blocks + identity, each with
+        the probe-G depth tail so ``a_per_px`` is a realistic positive
+        scale. Rotation blocks are the 08.2-02 fixture literals already
+        in this file (anti-tautology: literals, not runtime products)."""
+        fixture = TestViewCameraToWorldFullSO3
+        return (
+            ('identity', self.PROBE_G_VIEW),
+            ('S2-actual-poststart', fixture.S2_VIEW[0:9] + self.PROBE_G_TAIL),
+            ('S3-Rx30-Ry50-Rz20', fixture.S3_VIEW[0:9] + self.PROBE_G_TAIL),
+            ('S4-Rz200-Rx25', fixture.S4_VIEW[0:9] + self.PROBE_G_TAIL),
+        )
+
+    def test_a_per_px_probe_g_exact(self):
+        # Probe G measured 0.07145 A/px at the real seed-42 start view
+        # (drag research RQ3 / probe_083c C1 "calc=0.07145"). The probe
+        # printed 5 decimals, hence places=5 against the measurement;
+        # the deterministic pure-double value is pinned at 1e-12.
+        s = wizard_core.a_per_px(self.PROBE_G_VIEW, 480.0, 20.0)
+        self.assertAlmostEqual(s, 0.07145, places=5)
+        self.assertAlmostEqual(s, 0.07144592931326292, delta=1e-12)
+        # Gameplay sanity (RQ3): one TOWARD-like 2.5 A is ~35 px at this
+        # view, and the identity rotation maps the drag straight to
+        # world +x.
+        step = wizard_core.drag_world_step(self.PROBE_G_VIEW, 35, 0, 480.0)
+        self.assertAlmostEqual(step[0], 35.0 * s, delta=1e-12)
+        self.assertEqual(step[1], 0.0)
+        self.assertEqual(step[2], 0.0)
+
+    def test_drag_world_step_rt_equivalence_full_so3(self):
+        # Probe 083c C2: per motion event the C path conjugates the
+        # camera A/px vector by R^T (SceneMouse.cpp:1492-1502) -- the
+        # EXACT convention view_camera_to_world implements. Both call
+        # paths share the same code, so the equality is exact up to
+        # float() coercion (delta 1e-12); the hand-derived row sum below
+        # keeps the pin non-tautological.
+        for name, view in self._so3_views():
+            s = wizard_core.a_per_px(view, 480.0)
+            for dx, dy in ((5.0, 0.0), (0.0, -7.0), (13.0, 21.0)):
+                with self.subTest(view=name, dx=dx, dy=dy):
+                    actual = wizard_core.drag_world_step(view, dx, dy, 480.0)
+                    composite = wizard_core.view_camera_to_world(
+                        view, (dx * s, dy * s, 0.0))
+                    for got, want in zip(actual, composite):
+                        self.assertAlmostEqual(got, want, delta=1e-12)
+                    # R^T . (dx*s, dy*s, 0) = dx*s * ROW0 + dy*s * ROW1
+                    # (rows of the row-major view[0:9] block).
+                    expected = (dx * s * view[0] + dy * s * view[3],
+                                dx * s * view[1] + dy * s * view[4],
+                                dx * s * view[2] + dy * s * view[5])
+                    for got, want in zip(actual, expected):
+                        self.assertAlmostEqual(got, want, delta=1e-12)
+                    # House vec3 contract: plain float 3-tuple out.
+                    self.assertIsInstance(actual, tuple)
+                    self.assertEqual(len(actual), 3)
+                    self.assertTrue(all(isinstance(v, float)
+                                        for v in actual))
+
+    def test_a_per_px_refusals(self):
+        # Fail-closed house convention (ValueError naming the cause).
+        view = self.PROBE_G_VIEW
+        for bad_h in (0, -1, -480.0):
+            with self.subTest(viewport_h=bad_h):
+                with self.assertRaises(ValueError) as cm:
+                    wizard_core.a_per_px(view, bad_h)
+                self.assertIn('viewport_h', str(cm.exception))
+        for bad_fov in (0.0, -20.0):
+            with self.subTest(fov=bad_fov):
+                with self.assertRaises(ValueError) as cm:
+                    wizard_core.a_per_px(view, 480, bad_fov)
+                self.assertIn('fov', str(cm.exception))
+        # A view too short to carry view[11] (the depth component).
+        with self.assertRaises(ValueError) as cm:
+            wizard_core.a_per_px(view[:11], 480)
+        self.assertIn('12', str(cm.exception))
+        # drag_world_step inherits both refusals (fail-closed by
+        # construction -- it delegates to a_per_px).
+        with self.assertRaises(ValueError):
+            wizard_core.drag_world_step(view, 1.0, 1.0, 0)
+        with self.assertRaises(ValueError):
+            wizard_core.drag_world_step(view, 1.0, 1.0, 480, fov=-1.0)
+        # NOT refused: depth <= 0. A camera origin at/behind the scene
+        # maps to a non-positive scale; the formula stays honest (returns
+        # <= 0) rather than crashing -- recorded semantics for this pin.
+        zero_depth = view[:11] + (0.0,) + view[12:]
+        self.assertEqual(wizard_core.a_per_px(zero_depth, 480), 0.0)
+        behind = view[:11] + (5.0,) + view[12:]   # view[11] = +5 -> depth -5
+        self.assertLess(wizard_core.a_per_px(behind, 480), 0.0)
+
+
 if __name__ == '__main__':
     unittest.main()

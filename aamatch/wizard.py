@@ -847,6 +847,53 @@ class GameWizard(Wizard):
         self._assert_identity(obj)
         cmd.refresh_wizard()
 
+    def drag_move(self, dx_px, dy_px):
+        """Programmatic drag: move the selected AA by a synthetic PIXEL
+        delta (08.3-10, RQ6/RQ4).
+
+        This is NOT a UI input -- mouse-drag remains THE movement
+        input per the 2026-10-18 pivot; this surface exists for (a)
+        the headless drag-math battery (RQ6 row 7: the C drag event
+        loop cannot be pumped under -cq, so the programmatic path is
+        the only SMOKE-provable form) and (b) the accessibility path.
+
+        Coordinates are PIXEL deltas (dx_px, dy_px). The impl bakes a
+        world-frame step IDENTICAL in form to what the C drag applies
+        (SceneMouse.cpp:1479-1507: R^T conjugation at view-origin
+        depth): the pure wizard_core.drag_world_step converts the
+        pixel delta through the LIVE view + viewport height, then
+        cmd.translate(state=1, camera=0) bakes stored coordinates and
+        the identity invariant is re-asserted. NO step quantization --
+        discrete steps were a press-UX choice, not a law (RQ4).
+
+        Floats are coerced (plain float contract); the return value is
+        the _guard result (None -- the op has no plain-data payload).
+        """
+        self._guard(self._drag_move_impl, float(dx_px), float(dy_px))
+
+    def _drag_move_impl(self, dx_px, dy_px):
+        # Comment (not a docstring): the 06-06 gate law requires
+        # self._require_playing() to be the FIRST statement here, and
+        # the 08.2-03 AST discipline pin family will enumerate this
+        # impl once 08.3-13 lands the pin rows. 2026-10-18 pivot:
+        # drag programmatic surface; enumerate + gate in
+        # tests/test_wizard_source.py lands 08.3-13.
+        self._require_playing()
+        obj = self._current_object()
+        if obj is None:
+            return
+        view = cmd.get_view()
+        # PyMOL's cmd.get_viewport() returns [width, height, ...]
+        # (headless 2026-10-23 receipt: viewport(640,480) ->
+        # [640, 480]; viewport(800,1200) -> [800, 1200]).
+        vw, vh = cmd.get_viewport()
+        delta = wizard_core.drag_world_step(view, dx_px, dy_px, vh)
+        # The ONE new bake site of this plan: exactly the sanctioned
+        # seam (_step_to_ligand_impl's pattern) with an analog step.
+        cmd.translate(list(delta), obj, state=1, camera=0)
+        self._assert_identity(obj)
+        cmd.refresh_wizard()
+
     def move_to(self, position):
         """DETERMINISTIC scripted placement: engine.place_aa (the
         Phase-2 op -- count- and pose-asserted, baked world-frame) +

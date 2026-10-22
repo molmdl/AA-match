@@ -420,7 +420,7 @@ class TestMovementAndFeedbackConstants(unittest.TestCase):
     movement model from 03-RESEARCH-movement-spike.md; hint color from
     05-RESEARCH-hint.md standard_stack/Q3).
 
-    Dated EXPECTED-RED bridge -- 2026-10-21 (06-05 convention; the
+    Dated EXPECTED-RED bridge -- 2026-10-23 (06-05 convention; the
     2026-10-18 pivot, recorded human disposition 2026-10-19: STATE.md
     "Phase 8.3 Decisions & Laws", ledger rows C1 / C3 / C4, consequence
     map in 08.3-DECISION-MENU.md section 8). 08.3-03 SWEPT three
@@ -431,7 +431,7 @@ class TestMovementAndFeedbackConstants(unittest.TestCase):
     re-named here on purpose (the pin file must not cite removed homes);
     the verbatim pre-edit failure receipt lives in 08.3-11-SUMMARY.md.
 
-    Pre-edit receipt (BEFORE any edit, 2026-10-21,
+    Pre-edit receipt (BEFORE any edit, 2026-10-23,
     ``python3.6 -m unittest tests.test_wizard_core -v``): 26 tests ran,
     exactly 2 ERRORs, both the expected pins -- ``test_constants_exact``
     and ``test_constants_are_float_steps`` raised AttributeError on the

@@ -64,10 +64,14 @@ PART 4  the surface drive:
         none (same-slot dedupe).
         4.7 error event + sticky dedupe: pop the game; fresh default
         game + fresh tab -> first _refresh_status silent with the
-        label set + baseline seeded; a no-selection nudge_cam (the
-        public movement handler -- _current_object sets _error) ->
-        exactly ONE 'ERROR:' line; the SAME error again -> no new
-        line (sticky dedupe, pitfall 3).
+        label set + baseline seeded; a no-selection Toward step (the
+        surviving public movement handler -- _current_object sets
+        _error) -> exactly ONE 'ERROR:' line; the SAME error again ->
+        no new line (sticky dedupe, pitfall 3). 2026-10-18 pivot
+        (recorded disposition 2026-10-19; wave-3 re-point bridge
+        2026-10-23): the invariant is input-agnostic -- only the
+        vehicle changed (the deleted camera-frame handler -> the
+        surviving goal-directed op).
         4.8 both required modes from LIVE deferred-start games:
         EXCLUSIVE setup -> 'Required: any 1 interaction'; UNSET setup
         (DEFAULTS) -> the list-mode 'Required: N interaction...'
@@ -363,14 +367,19 @@ try:
           and label47 != 'Required: -'
           and isinstance(tab2._last_status, dict),
           'lines=%d label=%r' % (n47, label47))
-    wiz2.nudge_cam(1, 0, 0)       # public movement, no selection -> error
+    # 2026-10-18 pivot (recorded disposition 2026-10-19; wave-3 re-point
+    # bridge 2026-10-23): the error-surface invariant is input-agnostic;
+    # the deleted camera-frame nudge vehicle became the surviving
+    # goal-directed movement op (no selection -> the same fail-closed
+    # 'Select an amino acid first.' path via _current_object).
+    wiz2.step_to_ligand()         # public movement, no selection -> error
     tab2._refresh_status()
     lines47 = tab2._info_log.toPlainText().splitlines()
     new47 = lines47[n47:]
-    check("part 4.7: no-selection nudge -> exactly ONE 'ERROR:' line",
+    check("part 4.7: no-selection Toward -> exactly ONE 'ERROR:' line",
           len(new47) == 1 and new47[0].startswith('ERROR: '),
           'new=%r' % (new47,))
-    wiz2.nudge_cam(1, 0, 0)       # the SAME error string again
+    wiz2.step_to_ligand()         # the SAME error string again
     tab2._refresh_status()
     check('part 4.7: unchanged error string is NOT re-logged (sticky '
           'dedupe, pitfall 3)',

@@ -134,12 +134,18 @@ PART C  the 06-06 wizard skip/give-up half (SCORE-05/06 wizard ops,
              game -- every molecule has a record); skip_count 5
              (C1's one + C2's four).
         C3   full game-over LOCKDOWN: fresh game, select a slot, then
-             give_up -> nudge_cam / rotate_view refused with the
-             pinned 'The game is over.' AND the pose unchanged; hint /
-             reset_grid / skip_molecule / confirm_molecule all refuse
-             (None through _guard); a scripted pick on a DIFFERENT
-             slot is a SOFT no-op (selection unchanged -- never raise
-             into the C-layer pick dispatch).
+             give_up -> a Toward step / a rotate_axis turn refused with
+             the pinned 'The game is over.' AND the pose unchanged;
+             hint / reset_grid / skip_molecule / confirm_molecule all
+             refuse (None through _guard); a scripted pick on a
+             DIFFERENT slot is a SOFT no-op (selection unchanged --
+             never raise into the C-layer pick dispatch). 2026-10-18
+             pivot (recorded disposition 2026-10-19; wave-3 re-point
+             bridge 2026-10-23): the LOCKDOWN law is input-agnostic --
+             the deleted camera-frame nudge + view-axis rotate vehicles
+             became the surviving goal-directed step + the surviving
+             world-frame rotate primitive (both still gated by
+             _require_playing as their FIRST statement).
         C4   give_up data: the return carries game_over True + the
              exact 06-01 summary keys; the wizard marker is gave_up
              (level/molecule position of the end); game_status shows
@@ -1157,15 +1163,23 @@ try:
           % (gs.get('giveup_count'), gs.get('end_state'),
              gs.get('final_time')))
 
-    wiz_c2.nudge_cam(1, 0, 0)
+    # 2026-10-18 pivot (recorded disposition 2026-10-19; wave-3 re-point
+    # bridge 2026-10-23): the game-over LOCKDOWN invariant is
+    # input-agnostic. The deleted camera-frame nudge + view-axis rotate
+    # UI vehicles are re-pointed to the surviving ops -- step_to_ligand
+    # (the Toward path, M6 KEEP) and rotate_axis (M4: the world-frame
+    # scripted primitive, NOT a UI surface). Both open with
+    # _require_playing, so both still refuse with the pinned wording.
+    wiz_c2.step_to_ligand()
     st = wiz_c2.get_status()
     centroid_post = geometry.centroid_of(obj_c0)
-    dev_nudge = max(abs(centroid_post[i] - centroid_pre[i])
-                    for i in range(3))
-    check('C3 nudge refused with the pinned wording, pose UNCHANGED',
-          st.get('error') == 'The game is over.' and dev_nudge < 1e-9,
-          'error=%r dev=%g' % (st.get('error'), dev_nudge))
-    wiz_c2.rotate_view(10.0)
+    dev_step = max(abs(centroid_post[i] - centroid_pre[i])
+                   for i in range(3))
+    check('C3 Toward step refused with the pinned wording, pose '
+          'UNCHANGED',
+          st.get('error') == 'The game is over.' and dev_step < 1e-9,
+          'error=%r dev=%g' % (st.get('error'), dev_step))
+    wiz_c2.rotate_axis((0.0, 0.0, 1.0), 10.0)
     st = wiz_c2.get_status()
     centroid_post2 = geometry.centroid_of(obj_c0)
     dev_rot = max(abs(centroid_post2[i] - centroid_pre[i])

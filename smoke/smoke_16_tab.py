@@ -269,8 +269,12 @@ PART F  (2026-09-27 diag fix): the PANEL-Confirm natural end with a
         F3 the pre-tick symptom state pinned (the mechanism, not a
            bug in itself): the 1 Hz timer is STILL ACTIVE and the
            wizard STILL on the stack straight after the panel op --
-           the panel op alone never runs any endgame trio; a motion
-           nudge in this window is gated 'The game is over.'
+           the panel op alone never runs any endgame trio; a Toward
+           step in this window is gated 'The game is over.'
+           (2026-10-18 pivot, recorded disposition 2026-10-19; wave-3
+           re-point bridge 2026-10-23: the gate law is input-agnostic
+           -- the deleted camera-frame nudge vehicle became the
+           surviving goal-directed movement op).
         F4 ONE _on_tick -> the transition completes the trio: timer
            STOPPED, _timer_label == format_mss(summary['final_time'])
            EXACT, wizard POPPED, the endgame block logged EXACTLY
@@ -1775,7 +1779,11 @@ try:
           and summ_f.get('end_state') == 'completed', '')
 
     # ---- F3: the pre-tick symptom state (the mechanism, honestly) ---
-    wiz_f.nudge_cam(1, 0, 0)
+    # 2026-10-18 pivot (recorded disposition 2026-10-19; wave-3 re-point
+    # bridge 2026-10-23): the game-over gate law is input-agnostic --
+    # the deleted camera-frame nudge vehicle became the surviving
+    # goal-directed movement op (same _require_playing-first gate).
+    wiz_f.step_to_ligand()
     check('F3: straight after the panel op the timer is STILL active, '
           "the wizard STILL on the stack, motion gated 'The game is "
           "over.' (the panel op alone runs no endgame trio)",

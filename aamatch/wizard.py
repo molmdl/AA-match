@@ -230,7 +230,7 @@ class GameWizard(Wizard):
         return (_rebuild_game_wizard, (), self.__getstate__())
 
     def get_event_mask(self):
-        """pick(1) | select(2) = 3 -- pick/select only.
+        """pick(1) | select(2) | dirty(128) = 131.
 
         2026-10-18 pivot (recorded disposition 2026-10-19, STATE
         Phase 8.3 Decisions): do_key AND do_special are both fully
@@ -238,8 +238,57 @@ class GameWizard(Wizard):
         mask drops the key(4)/special(8) bits -- 15 -> 3 (pick|select
         only, same as the Wizard base default). The drag gestures are
         wired on the PyMOL button map, never on this mask.
+
+        08.3-10 adds the DIRTY subscription (2026-10-18 pivot design,
+        RQ2 item 6): event_mask_dirty=128
+        (modules/pymol/wizard/__init__.py:6-15) makes the GUI render
+        loop dispatch do_dirty() when the scene/view/center changed
+        (Wizard.cpp:343-393), which is exactly the post-drag window
+        (the C drag bakes coordinates without calling wizard code).
+        Headless -cq has NO draw loop (probe F1/F2), so this bit is
+        GUI-only behavior -- see do_dirty's caveat.
         """
-        return 3
+        # Derived mask 3 (pick|select) OR the base's dirty bit
+        # (event_mask_dirty = 128, modules/pymol/wizard/__init__.py).
+        return 3 | 128
+
+    def do_dirty(self):
+        """Post-drag render-loop hook (08.3-10; RQ2 item 6 design).
+
+        The Wizard base dispatches this from the GUI render loop when
+        the scene/view/center changed -- enabled by the dirty bit in
+        get_event_mask (event_mask_dirty=128,
+        modules/pymol/wizard/__init__.py:6-15; dispatch
+        Wizard.cpp:343-393). That is the post-drag window: the C drag
+        bakes stored coordinates directly and never calls wizard code,
+        so the fail-closed identity invariant must be re-asserted
+        post-hoc (RQ4 item a).
+
+        Contract: CHEAP and IDEMPOTENT. Re-asserts the CURRENT slot
+        object's identity matrix (only when a slot is selected -- the
+        arm/transform discipline is object-scoped) and refreshes the
+        panel for the next render. NO scene mutation here -- the base
+        class carries the "BEWARE FEEDBACK!" warning (a mutating
+        do_dirty would re-trigger the dirty dispatch). NEVER raises
+        from the render loop: a failure lands on the panel error line
+        via self._error instead (the do_pick soft-gate precedent).
+
+        HEADLESS CAVEAT (documented, not testable): the hook does NOT
+        fire under -cq command mode -- probes F1/F2 counted zero
+        calls (no event/draw loop). Hook firing cadence and panel
+        redraw timing are the 08.3-16 [HUMAN] GUI-checkpoint items;
+        the assert itself is idempotent and covered by SMOKE-24 row 7
+        through the programmatic drag_move surface.
+        """
+        if self._current_slot is None:
+            return
+        try:
+            self._assert_identity(
+                self._objects_by_slot[self._current_slot])
+        except Exception as exc:
+            # Soft-error discipline: NEVER raise into the render loop.
+            self._error = str(exc)
+        cmd.refresh_wizard()
 
     def activate(self, replace=0):
         """The enter sequence (RESEARCH sec. 7 rows 1-3). THE ORDER IS

@@ -304,8 +304,8 @@ Plans:
 - [x] 08.3-05-PLAN.md — tests/test_wizard_source.py evolution: keyboard-channel class out per scope; GATED_IMPLS/EXPECTED_BAKE_SITES shrink; Rule-3 exemption + negative controls preserved (dated bridges first) (wave 3)
 - [x] 08.3-06-PLAN.md — tests/test_wizard_text.py evolution: inventory/codes/header pins per the new panel; structural contract tests untouched (dated bridges first) (wave 3)
 - [x] 08.3-07-PLAN.md — SMOKE-07 evolution: nudge/R^T rows out; Toward chain + per-scope rotate rows kept (dated bridge) (wave 3)
-- [ ] 08.3-08-PLAN.md — SMOKE-14/15/16 error-vehicle re-points (nudge vehicles -> step_to_ligand; rotate per scope; invariants preserved) (wave 3)
-- [ ] 08.3-09-PLAN.md — SMOKE-23 rework into the movement battery (keyboard parts out; Toward view-invariance + harness kept; rename per disposition; roster 23 preserved) (wave 3)
+- [x] 08.3-08-PLAN.md — SMOKE-14/15/16 error-vehicle re-points (nudge vehicles -> step_to_ligand; rotate per scope; invariants preserved) (wave 3)
+- [x] 08.3-09-PLAN.md — SMOKE-23 rework into the movement battery (keyboard parts out; Toward view-invariance + harness kept; rename per disposition; roster 23 preserved) (wave 3)
 - [ ] 08.3-10-PLAN.md — wizard-side programmatic drag_move(dx,dy) + do_dirty hook (disposition-gated drag_move field; on the sanctioned seam; captures the new-bake-site RED bridge for 08.3-13) (wave 4)
 - [ ] 08.3-11-PLAN.md — tests/test_wizard_core.py evolution: constants pins per scope (T3/T4 per C6 fate) + NEW TestDragScaleMath battery (probe-G exact 0.07145 + R^T equivalence + fail-closed) (wave 4)
 - [ ] 08.3-12-PLAN.md — SMOKE-24 authoring rows 1-6 + 8-9: arm contract, re-arm law, deactivation/hygiene, gesture wiring, matrix_mode guard, non-AA + game-over refusals (RQ6 receipts) (wave 4)
@@ -370,7 +370,7 @@ Lifted from PITFALLS.md "Pitfall-to-Phase Mapping" (topic names → this roadmap
 | 8. Demo Curation & Citations | 11/11 | Complete (verified 2026-10-05 — 08-VERIFICATION.md passed 4/4; 08-11-SUMMARY criterion map closed in the combined session) | 2026-10-05 |
 | 8.1 Confirm Pass-Gate Restoration | 8/8 | Complete (verified 2026-10-05 — 08.1-VERIFICATION.md passed 40/40) | 2026-10-05 |
 | 8.2 Direction-Control Restoration (INSERTED) | 8/10 | In progress — waves 1-2 complete 2026-10-11 ([GATE] disposition recorded; 05/06 landed, 07/08 superseded); PAUSED before wave-3 battery | - |
-| 8.3 Drag-Movement Pivot (INSERTED) | 7/16 | In progress — waves 1-2 + wave-3 batch A completed/merged 2026-10-21 (01 disposition gate; 02 SMOKE-24 shell; 03 production deletion; batch A parallel-worktree merge: 04 drag core + 05/06 pin evolutions + 07 SMOKE-07; next: batch B = 08.3-08/09 parallel worktrees per standing authorization) | - |
+| 8.3 Drag-Movement Pivot (INSERTED) | 9/16 | In progress — waves 1-3 complete/merged 2026-10-23 (batches run per standing ≤4-parallel worktree authorization; smokes 01-24 green-proven per member; remaining WSL RED by design = wizard_core ×2 → 08.3-11) | - |
 | 9. Help, Docs & Release Audit | 0/TBD | Not started | - |
 
 ## Coverage

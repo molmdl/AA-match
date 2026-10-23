@@ -309,8 +309,8 @@ Plans:
 - [x] 08.3-10-PLAN.md — wizard-side programmatic drag_move(dx,dy) + do_dirty hook (disposition-gated drag_move field; on the sanctioned seam; captures the new-bake-site RED bridge for 08.3-13) (wave 4)
 - [x] 08.3-11-PLAN.md — tests/test_wizard_core.py evolution: constants pins per scope (T3/T4 per C6 fate) + NEW TestDragScaleMath battery (probe-G exact 0.07145 + R^T equivalence + fail-closed) (wave 4)
 - [x] 08.3-12-PLAN.md — SMOKE-24 authoring rows 1-6 + 8-9: arm contract, re-arm law, deactivation/hygiene, gesture wiring, matrix_mode guard, non-AA + game-over refusals (RQ6 receipts) (wave 4)
-- [ ] 08.3-13-PLAN.md — drag-discipline source pins: _drag_move_impl enumerated+gated (bridge pair GREEN) + arm selection-form / arm-last-in-do_pick / snapshot-order / cleanup-restore AST pins + trap negative controls (wave 5)
-- [ ] 08.3-14-PLAN.md — SMOKE-24 row 7: drag math battery (float32-budget world deltas + rigidity + S2/S3 view-invariance) — the retired full-SO(3) proof's drag successor (wave 5)
+- [x] 08.3-13-PLAN.md — drag-discipline source pins: _drag_move_impl enumerated+gated (bridge pair GREEN) + arm selection-form / arm-last-in-do_pick / snapshot-order / cleanup-restore AST pins + trap negative controls (wave 5)
+- [x] 08.3-14-PLAN.md — SMOKE-24 row 7: drag math battery (float32-budget world deltas + rigidity + S2/S3 view-invariance) — the retired full-SO(3) proof's drag successor (wave 5)
 - [ ] 08.3-15-PLAN.md — full battery receipt (08.2-09 shape): py_compile + full WSL sweep with attributed count arithmetic + individually receipted purity/wizard_source/wizard_core + smokes 01-24 sweep + bridge accounting + SMOKE-06/08 negative rows = the criterion-2 proof (wave 6)
 - [ ] 08.3-16-PLAN.md — record-repair rows (PROJECT TBD tick, keys-note supersession, PLAY-02 note per disposition) + [HUMAN] fresh-session GUI checkpoint (drag ritual 12 steps) + verbatim verdict close-out (wave 7)
 
@@ -370,7 +370,7 @@ Lifted from PITFALLS.md "Pitfall-to-Phase Mapping" (topic names → this roadmap
 | 8. Demo Curation & Citations | 11/11 | Complete (verified 2026-10-05 — 08-VERIFICATION.md passed 4/4; 08-11-SUMMARY criterion map closed in the combined session) | 2026-10-05 |
 | 8.1 Confirm Pass-Gate Restoration | 8/8 | Complete (verified 2026-10-05 — 08.1-VERIFICATION.md passed 40/40) | 2026-10-05 |
 | 8.2 Direction-Control Restoration (INSERTED) | 8/10 | In progress — waves 1-2 complete 2026-10-11 ([GATE] disposition recorded; 05/06 landed, 07/08 superseded); PAUSED before wave-3 battery | - |
-| 8.3 Drag-Movement Pivot (INSERTED) | 12/16 | In progress — waves 1-4 complete/merged 2026-10-23 (merged-main WSL 959 with exactly 1 designed-RED = the _drag_move_impl bake-site bridge → consumed by 08.3-13, wave 5; smokes 01-24 green: SMOKE-24 29/29) | - |
+| 8.3 Drag-Movement Pivot (INSERTED) | 14/16 | In progress — waves 1-5 complete/merged 2026-10-23; merged-main WSL 969/969 OK (all designed-REDs consumed); SMOKE-24 42/42; next: wave 6 = 08.3-15 full battery receipt (solo main) | - |
 | 9. Help, Docs & Release Audit | 0/TBD | Not started | - |
 
 ## Coverage

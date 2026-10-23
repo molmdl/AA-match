@@ -311,7 +311,7 @@ Plans:
 - [x] 08.3-12-PLAN.md — SMOKE-24 authoring rows 1-6 + 8-9: arm contract, re-arm law, deactivation/hygiene, gesture wiring, matrix_mode guard, non-AA + game-over refusals (RQ6 receipts) (wave 4)
 - [x] 08.3-13-PLAN.md — drag-discipline source pins: _drag_move_impl enumerated+gated (bridge pair GREEN) + arm selection-form / arm-last-in-do_pick / snapshot-order / cleanup-restore AST pins + trap negative controls (wave 5)
 - [x] 08.3-14-PLAN.md — SMOKE-24 row 7: drag math battery (float32-budget world deltas + rigidity + S2/S3 view-invariance) — the retired full-SO(3) proof's drag successor (wave 5)
-- [ ] 08.3-15-PLAN.md — full battery receipt (08.2-09 shape): py_compile + full WSL sweep with attributed count arithmetic + individually receipted purity/wizard_source/wizard_core + smokes 01-24 sweep + bridge accounting + SMOKE-06/08 negative rows = the criterion-2 proof (wave 6)
+- [x] 08.3-15-PLAN.md — full battery receipt (08.2-09 shape): py_compile + full WSL sweep with attributed count arithmetic + individually receipted purity/wizard_source/wizard_core + smokes 01-24 sweep + bridge accounting + SMOKE-06/08 negative rows = the criterion-2 proof (wave 6) — **RECEIPT 2026-10-23** (criterion 2 [WSL/HEADLESS] PROVEN: WSL 969/969 + smokes 01–24 ALL PASS, 26 invocations; proof artifact = 08.3-15-SUMMARY.md)
 - [ ] 08.3-16-PLAN.md — record-repair rows (PROJECT TBD tick, keys-note supersession, PLAY-02 note per disposition) + [HUMAN] fresh-session GUI checkpoint (drag ritual 12 steps) + verbatim verdict close-out (wave 7)
 
 **Details:**

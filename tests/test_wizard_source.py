@@ -272,8 +272,14 @@ def do_special(self, k, x, y, mod):
 # follows its surviving public wrapper (M4/M5 both survive) and the
 # Toward/move_to/reset impls are untouched. No gate weakened: the four
 # survivors keep their full first-line + identity-assert teeth.
+#
+# 2026-10-18 pivot / 08.3-10 surface (2026-10-23, 08.3-13): the drag-move
+# impl enumerated + gated per the loud-pin rule -- appended at the end so
+# the post-08.3-05 tuple order survives byte-for-byte. Its subject landed
+# in 08.3-10 (drag_move(dx_px, dy_px) via wizard_core.drag_world_step);
+# the bridge RED that 08.3-10 captured verbatim is consumed by this plan.
 GATED_IMPLS = ('_rotate_axis_impl', '_step_to_ligand_impl',
-               '_move_to_impl', '_reset_grid_impl')
+               '_move_to_impl', '_reset_grid_impl', '_drag_move_impl')
 
 
 def _is_bake_call(node):
@@ -293,7 +299,8 @@ def find_bake_call_sites(src):
     FunctionDef name (or '<module>'). Docstring/comment mentions of
     the bake forms cannot appear here -- strings are not Call nodes.
     The self-audit list this returns is pinned against the RESEARCH-
-    code map (exactly two translate sites + one rotate site)."""
+    code map (post-pivot + 08.3-10: two translate sites -- the Toward
+    step and the drag-move bake -- plus one rotate site)."""
     sites = []
 
     def visit(node, owner):
@@ -316,8 +323,16 @@ def find_bake_call_sites(src):
 # survive). A NEW bake site (e.g. the drag-move impl landing later in
 # this phase) fails this pin loudly -- it must be enumerated and gated,
 # never sneaked in.
+#
+# 2026-10-18 pivot / 08.3-10 surface (2026-10-23, 08.3-13): the predicted
+# "drag-move impl landing later" DID land -- 08.3-10 added the
+# cmd.translate(state=1, camera=0) bake in _drag_move_impl and captured the
+# loud enumeration RED verbatim in 08.3-10-SUMMARY.md (dated 2026-10-22).
+# This plan consumes that bridge: the site is enumerated here (sorted(...)
+# construction kept) and gated via GATED_IMPLS above.
 EXPECTED_BAKE_SITES = sorted([('translate', '_step_to_ligand_impl'),
-                              ('rotate', '_rotate_axis_impl')])
+                              ('rotate', '_rotate_axis_impl'),
+                              ('translate', '_drag_move_impl')])
 
 
 def _keyword_const(node, name):
@@ -452,6 +467,10 @@ def _rotate_axis_impl(self, axis, deg, origin):
 
 # Only the gated impls matter to the gate finder; the trap wires ONE
 # surviving impl with a non-gate first statement (a different call).
+# 2026-10-23 (08.3-13): the traps gain a CONFORMANT _drag_move_impl stub
+# so each control still isolates exactly the one violation it names (an
+# absent impl would also report "impl NOT FOUND" noise); the traps'
+# mutation-proof teeth are unchanged.
 GATE_TRAP_FIRST = '''\
 def _rotate_axis_impl(self, axis, deg, origin):
     self._current_object()
@@ -467,6 +486,10 @@ def _move_to_impl(self, position):
 
 def _reset_grid_impl(self):
     from . import engine
+    self._require_playing()
+    self._assert_identity('obj')
+
+def _drag_move_impl(self, dx_px, dy_px):
     self._require_playing()
     self._assert_identity('obj')
 '''
@@ -488,6 +511,10 @@ def _move_to_impl(self, position):
 def _reset_grid_impl(self):
     from . import engine
     self._require_playing()
+
+def _drag_move_impl(self, dx_px, dy_px):
+    self._require_playing()
+    self._assert_identity('obj')
 '''
 
 
@@ -653,17 +680,18 @@ class TestMovementDisciplineSource(unittest.TestCase):
 
     def test_bake_call_site_enumeration_exact(self):
         # Self-audit of ALL cmd.translate / cmd.rotate call sites:
-        # one translate site + one rotate site post-pivot (the nudge
-        # translate site died with _nudge_cam_impl, 08.3-03); a NEW
-        # bake site (e.g. the drag-move impl) must be enumerated here
-        # and gated, never sneaked in.
+        # two translate sites + one rotate site (the nudge translate
+        # died with _nudge_cam_impl, 08.3-03; the drag-move translate
+        # landed 08.3-10 and is enumerated by 08.3-13 behind its
+        # captured RED); a NEW bake site must be enumerated here and
+        # gated, never sneaked in.
         sites = find_bake_call_sites(
             _read_source(os.path.join(PKG_DIR, 'wizard.py')))
         self.assertEqual(
             sites, EXPECTED_BAKE_SITES,
             'the bake-call enumeration drifted from the frozen map '
-            '(translate: _step_to_ligand_impl; rotate: '
-            '_rotate_axis_impl), got %r' % (sites,))
+            '(translate: _step_to_ligand_impl + _drag_move_impl; '
+            'rotate: _rotate_axis_impl), got %r' % (sites,))
 
     def test_bake_forms_exact(self):
         problems = find_bake_form_violations(

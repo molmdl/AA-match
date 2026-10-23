@@ -1,4 +1,4 @@
-"""SMOKE-24: drag-movement battery (Phase 8.3 pivot) -- plans 08.3-02/-12.
+"""SMOKE-24: drag-movement battery (Phase 8.3 pivot) -- plans 08.3-02/-12/-14.
 
 Run (from WSL, repo root):
     bash smoke/run_smoke.sh smoke/smoke_24_drag_battery.py 240
@@ -20,9 +20,15 @@ PERMANENTLY as smoke rows before any drag code lands. 08.3-12
 against the landed drag core (08.3-04) WITHOUT touching PART 0 / PART P
 (dated evolution: PART 0b + PART 0c added, PRE-READ block extended with
 the editor-scheme baseline, teardown sweep extended with the private
-_aam_drag_sele name). Later drag plans extend this file WITHOUT
-re-deriving the battery design (the roster number 24 is derived from
-this basename by run_smoke.sh's sed rule -- no runner edit was needed).
+_aam_drag_sele name). 08.3-14 (2026-10-23) appended row 7 -- the
+programmatic drag-math battery (PART 0d + PART M) against the landed
+drag_move surface (08.3-10), again WITHOUT touching PART 0 / PART P or
+rows 1-2 / 4-6 / 8-9. This row is the DRAG SUCCESSOR of the retired
+full-SO(3) live keyboard bake proof (deletion research S8: "the drag
+half needs its own equivalent bake proof"). Later drag plans extend this
+file WITHOUT re-deriving the battery design (the roster number 24 is
+derived from this basename by run_smoke.sh's sed rule -- no runner edit
+was needed).
 
 THE PLANNED ROW MAP -- transcribed from the drag research RQ6 table
 (08.3-RESEARCH-drag.md sec.2 RQ6; this is the battery's FINAL shape --
@@ -67,8 +73,11 @@ against the landed drag core (08.3-04)):
      viewport_h; identity clean after every step; per-axis 02-15
      float32 tolerances; view-invariance under the fixed S2/S3 blocks;
      all-atoms-identical displacement (rigidity) (probe 083C + the
-     SMOKE-23 PART C/D pattern) — lands 08.3-14 (needs 08.3-10's
-     drag_move surface; NOT authored here).
+     SMOKE-23 PART C/D pattern) — LANDED 08.3-14 (2026-10-23; PART 0d +
+     PART M: M1a-M1c world-delta equality per axis inside the 1.12e-06
+     budget, M2a-M2b rigidity, M3a-M3c S2 rolled-view invariance +
+     non-vacuous guard, M4a-M4b S3 full-SO(3) spot-proof, M5a-M5b
+     post-churn arm/guard spot state + Toward coexistence).
   8. Non-AA targets never drag: the arm guard refuses ligand/board/user
      objects — wizard-side _objects_by_slot membership before arming
      (design test) — LANDED 08.3-12 (row 8).
@@ -110,6 +119,12 @@ PART 0c ROWS 5-9 (landed 08.3-12): row 4's Done-path pop ENDS game #1
         the live session for gesture wiring (row 5), the matrix_mode
         guard (row 6), the non-AA refusal (row 8), and the game-over
         refusal (row 9).
+PART 0d ROW 7 (landed 08.3-14, 2026-10-23): row 9's give_up leaves
+        game #2 OVER (drag_move's _require_playing gate would refuse),
+        so a third real start supplies the live picking game for the
+        drag-math battery. PART 0d + PART M are the row-7 append the
+        RQ6 table always planned; rows 1-6 + 8-9 + PART 0/P are
+        byte-stable.
 PART P  THE PITFALL-6 POSITIVE CONTROL — every row is a TRANSCRIPTION
         of a probe_083 B receipt (the verbatim probe lines below are
         the authority; tmp/ is git-ignored — 08.3-RESEARCH-drag.md
@@ -162,10 +177,12 @@ every PART P assertion is about PyMOL's own Dragging-wizard machinery.
 PART 0b / PART 0c (landed 08.3-12) pin the AAMATCH drag core (the
 08.3-04 surface): the selection-form arm, the per-pick re-arm, the
 Done-path deactivation/hygiene, the disposition gesture wiring, the
-matrix_mode=0 guard, and the non-AA + game-over refusals. What remains
-unproven is exactly the [HUMAN]-only list above (real-mouse feel, GUI
-hook cadence, Alt delivery, dgrt pivot feel) plus row 7's drag-move
-MATH battery (08.3-14, needs 08.3-10's drag_move surface).
+matrix_mode=0 guard, and the non-AA + game-over refusals. PART 0d /
+PART M (landed 08.3-14) pin the programmatic drag MATH end-to-end
+against a real game -- the C event loop itself still cannot be pumped
+under -cq (probe 083C basis). What remains unproven is exactly the
+[HUMAN]-only list above (real-mouse feel, GUI hook cadence, Alt
+delivery, dgrt pivot feel).
 
 RECORDED RESIDUAL (2026-10-23, row 4b receipt): PyMOL's own INTERNAL
 '_drag' selection (created by the C-side EditorActivate when our arm
@@ -235,13 +252,25 @@ if _ROOT not in sys.path:
 from pymol import cmd  # noqa: E402
 
 from aamatch import engine  # noqa: E402
-from aamatch import gamestart, placement  # noqa: E402
+from aamatch import gamestart, geometry, placement, wizard_core  # noqa: E402
 from aamatch import wizard as wizard_mod  # noqa: E402
 
 print('SMOKE-ENV pymol: %s' % (cmd.get_version()[0],), flush=True)
 print('SMOKE-ENV python: %s' % (sys.version.split()[0],), flush=True)
 
 IDENT_F32 = 1e-6          # identity after float32-touching matrix ops
+
+# --- Row 7 float32 budgets (the 02-14/02-15 two-tier law) --------------
+# STRUCTURAL identity is asserted EXACTLY (atom-ID sets); NUMERIC drift is
+# asserted inside a DOCUMENTED float32 budget, never a fixed 1e-6 at large
+# coordinate magnitudes (the 02-15 raise-fire receipt).
+DRAG_TOL = 1.12e-06       # per-axis world-delta budget (02-15 contract;
+                          # 1e-6 floor + one float32 ulp at unit scale --
+                          # the 08.2-04 direction-convention class)
+RIGID_TOL = 5e-6          # 02-14 metric-drift budget for DISTANCES
+                          # (rigidity dispersion + atom-pair preservation)
+POSE_TOL = 1e-6           # 02-15 absolute floor (absolute-pose rows)
+ULP_REL = 1.1920929e-7    # one float32 ulp relative (02-15)
 
 
 def _obj_matrix(name):
@@ -287,6 +316,69 @@ def _atom_ids(sel):
     rows = []
     cmd.iterate(sel, 'stored.append((model, ID))', space={'stored': rows})
     return sorted(rows)
+
+
+def _coords(obj):
+    """[(ID, x, y, z), ...] state-1 coordinates (explicit space dict,
+    sorted by atom ID; the geometry.coords_of shape -- the row-7
+    per-atom rigidity receipt; no round())."""
+    rows = []
+    cmd.iterate_state(1, obj, 'stored.append((ID, x, y, z))',
+                      space={'stored': rows})
+    return sorted((int(atom_id), float(x), float(y), float(z))
+                  for (atom_id, x, y, z) in rows)
+
+
+def _centroid(rows):
+    """Atom-count mean of a _coords() list -> (cx, cy, cz)."""
+    n = len(rows)
+    return (sum(r[1] for r in rows) / n,
+            sum(r[2] for r in rows) / n,
+            sum(r[3] for r in rows) / n)
+
+
+def _diff(a, b):
+    """b - a (3-tuple math, smoke-local)."""
+    return (b[0] - a[0], b[1] - a[1], b[2] - a[2])
+
+
+def _max_axis_dev(actual, expected):
+    return max(abs(actual[i] - expected[i]) for i in range(3))
+
+
+def _max_axis_tol(actual, expected):
+    """Per-axis float32-realizable tolerance (the 02-15 contract)."""
+    return max(POSE_TOL + ULP_REL * max(abs(actual[i]), abs(expected[i]))
+               for i in range(3))
+
+
+def _rigidity(before, after):
+    """(max per-axis dispersion vs the centroid delta, max atom-pair
+    distance drift) for two same-ID _coords() snapshots.
+
+    The rigid-body law for the baked path: cmd.translate moves EVERY
+    atom by the SAME world vector, so (a) each atom's displacement
+    equals the centroid displacement and (b) intra-object atom-pair
+    distances are preserved -- both inside the float32 storage budget.
+    """
+    cen_before = _centroid(before)
+    cen_after = _centroid(after)
+    cen_delta = _diff(cen_before, cen_after)
+    disp = 0.0
+    for b, a in zip(before, after):
+        atom_delta = (a[1] - b[1], a[2] - b[2], a[3] - b[3])
+        disp = max(disp, _max_axis_dev(atom_delta, cen_delta))
+    pair = 0.0
+    for i in range(len(before)):
+        for j in range(i + 1, len(before)):
+            b0, b1 = before[i], before[j]
+            a0, a1 = after[i], after[j]
+            db = ((b1[1] - b0[1]) ** 2 + (b1[2] - b0[2]) ** 2
+                  + (b1[3] - b0[3]) ** 2) ** 0.5
+            da = ((a1[1] - a0[1]) ** 2 + (a1[2] - a0[2]) ** 2
+                  + (a1[3] - a0[3]) ** 2) ** 0.5
+            pair = max(pair, abs(da - db))
+    return disp, pair
 
 
 pre_names = list(cmd.get_names('objects'))
@@ -765,6 +857,261 @@ try:
           'finally pop)' % (rT_strays, cmd.get_drag_object_name(),
                             len(rT_stack), rT_types))
 
+    # ============================================================
+    # PART 0d: game #3 -- the ROW 7 drag-math harness (landed 08.3-14)
+    # ============================================================
+    # Row 9's give_up ENDED game #2 by design (engine.is_over()), so
+    # drag_move's _require_playing gate would refuse every step. A third
+    # real start (the same one-call recipe) supplies a live picking game;
+    # start_game's conditional replace pops game #2's wizard.
+    # DATED EVOLUTION (2026-10-23, 08.3-14): rows 1-6 + 8-9 + PART 0/P
+    # stay byte-stable; this PART 0d harness + PART M below are the
+    # row-7 append the drag research's RQ6 table always planned.
+    wiz3 = gamestart.start_game()
+    r7_stack0 = cmd.get_wizard_stack()
+    r7_types0 = [type(w).__name__ for w in r7_stack0]
+    mol0c = wiz3._registry['molecules'][0]
+    slot_ids_c = sorted(mol0c['slots'])
+    r7_obj = mol0c['slots'][slot_ids_c[0]][0]
+    cmd.select('sele', '%s and name CA' % r7_obj)
+    wiz3.do_select('sele')
+    check('P0d third real game started; row-7 harness picked slot %s'
+          % slot_ids_c[0], wiz3 is not None and cmd.get_wizard() is wiz3
+          and wizard_mod.is_game_wizard_any_identity(cmd.get_wizard())
+          and len(r7_stack0) == 1 and r7_types0 == ['GameWizard']
+          and wiz3._current_slot == slot_ids_c[0]
+          and cmd.get_drag_object_name() == r7_obj
+          and wiz3._error is None,
+          'type=%s depth=%d fresh_instance=%s drag=%r want %r slot=%r '
+          'error=%r (row-7 harness; rows 1-9 unchanged)'
+          % (type(cmd.get_wizard()).__name__, len(r7_stack0),
+             wiz3 is not wiz2, cmd.get_drag_object_name(), r7_obj,
+             wiz3._current_slot, wiz3._error))
+
+    # ------------------------------------------------------------
+    # Row 7 -- PROGRAMMATIC DRAG MATH (RQ6 row 7; probe 083C + the
+    # SMOKE-23 PART C/D pattern; the retired full-SO(3) keyboard bake
+    # proof's DRAG SUCCESSOR -- deletion research S8: 'the drag half
+    # needs its own equivalent bake proof').
+    #
+    # The C drag event loop cannot be pumped under -cq, so the
+    # programmatic wizard-side surface (08.3-10, disposition
+    # drag_move=ship) is the smoke-provable form. Per step the
+    # expectation is wizard_core.drag_world_step(CURRENT live view,
+    # dx, dy, viewport_h) -- the same R^T conjugation the C path
+    # applies (SceneMouse.cpp:1479-1507), with the view RE-READ per
+    # step exactly as the C per-motion handler re-reads it.
+    #
+    # Receipts: probe_083c C1 (A/px formula at the seed-42 view),
+    # probe_083c C2 (drag_world_step == view_camera_to_world at full
+    # SO(3), dev 0.00e+00); 08.3-11's TestDragScaleMath pins the pure
+    # half. This row pins the BAKED half end-to-end.
+    # ------------------------------------------------------------
+    r7_live_view = list(cmd.get_view())      # the game's own view
+    r7_vw, r7_vh = cmd.get_viewport()
+    r7_tail = list(r7_live_view[9:])         # origin/dolly/clip tail
+    # The identity-view reference for the vacuous-pass guard: identity
+    # ROTATION block + the LIVE tail (the smoke_23 ident_view shape).
+    r7_ident_view = [1.0, 0.0, 0.0,
+                     0.0, 1.0, 0.0,
+                     0.0, 0.0, 1.0] + r7_tail
+    print('SMOKE-ENV row7 pre view[11]=%r viewport=%r,%r (%d atoms)'
+          % (r7_live_view[11], r7_vw, r7_vh, len(_coords(r7_obj))),
+          flush=True)
+
+    # --- M1: identity-view per-axis world-delta equality ----------
+    # (The title says 'identity-view' = the REAL live start view; the
+    # rotation block is the game's own compose, captured above.)
+    r7_m1_steps = (('M1a', 40.0, 0.0),
+                   ('M1b', 0.0, -40.0),
+                   ('M1c', 24.0, 12.0))
+    r7_rigid_disp = 0.0
+    r7_rigid_pair = 0.0
+    r7_m1_worst = 0.0
+    for r7_label, r7_dx, r7_dy in r7_m1_steps:
+        r7_before = _coords(r7_obj)
+        r7_cen0 = _centroid(r7_before)
+        r7_view_pre = list(cmd.get_view())   # CURRENT view per step
+        r7_expect = wizard_core.drag_world_step(r7_view_pre, r7_dx, r7_dy,
+                                                r7_vh)
+        wiz3.drag_move(r7_dx, r7_dy)
+        r7_after = _coords(r7_obj)
+        r7_cen1 = _centroid(r7_after)
+        r7_obs = _diff(r7_cen0, r7_cen1)
+        r7_dev = _max_axis_dev(r7_obs, r7_expect)
+        r7_disp, r7_pair = _rigidity(r7_before, r7_after)
+        r7_rigid_disp = max(r7_rigid_disp, r7_disp)
+        r7_rigid_pair = max(r7_rigid_pair, r7_pair)
+        r7_m1_worst = max(r7_m1_worst, r7_dev)
+        r7_m = _obj_matrix(r7_obj)
+        check('Row 7 %s world-delta EQUALITY: pixel (%+g, %+g) -> '
+              'drag_world_step' % (r7_label, r7_dx, r7_dy),
+              r7_dev <= DRAG_TOL and _is_identity(r7_m)
+              and wiz3._error is None,
+              'dev=%.3g tol=%.2g obs=(%.6f, %.6f, %.6f) exp=(%.6f, '
+              '%.6f, %.6f) identity=%s error=%r (probe 083C C1/C2)'
+              % (r7_dev, DRAG_TOL, r7_obs[0], r7_obs[1], r7_obs[2],
+                 r7_expect[0], r7_expect[1], r7_expect[2],
+                 _is_identity(r7_m), wiz3._error))
+
+    # --- M2: rigidity (the rigid-body law for the baked path) ------
+    # (a) EVERY atom's displacement == the centroid displacement;
+    # (b) intra-object atom-pair distances preserved. Both inside the
+    # documented 02-14 metric budget (5e-6 A, the SMOKE-04 class) --
+    # coordinates are float32 storage, so an exact-equality assert
+    # would be non-realizable (02-15).
+    check('Row 7 M2a RIGIDITY: every atom moved the SAME displacement '
+          'through all 3 steps', r7_rigid_disp <= RIGID_TOL,
+          'max per-axis dispersion=%.3g tol=%.2g (centroid-of-per-atom-'
+          'deltas receipt; 02-14/02-15 float32 budget)'
+          % (r7_rigid_disp, RIGID_TOL))
+    check('Row 7 M2b RIGIDITY: intra-object atom-pair distances '
+          'preserved', r7_rigid_pair <= RIGID_TOL,
+          'max pair-distance drift=%.3g tol=%.2g (all C(n,2) pairs, '
+          'before vs after the 3-step drag)'
+          % (r7_rigid_pair, RIGID_TOL))
+
+    # --- M3: rolled-view (S2) view-invariance of the WORLD delta ---
+    # S2 = the FIXED historical rotation block captured in the 08.2 P1
+    # log (P1-POSTSTART-VIEW: '-0.447214 0.894427 0 -0.894427 -0.447214
+    # -0 0 0 1'), transcribed from the smoke_23 heritage -- NEVER
+    # re-derived from the running session. Only the 9-number tail is
+    # copied from the live view (the smoke_07 PART B pattern).
+    s2_block = (-0.447214, 0.894427, 0.0,
+                -0.894427, -0.447214, 0.0,
+                0.0, 0.0, 1.0)
+    cmd.set_view(list(s2_block) + r7_tail)
+    r7_s2_view = list(cmd.get_view())        # PyMOL float32 read-back
+    r7_s2_expect = wizard_core.drag_world_step(r7_s2_view, 40.0, 0.0, r7_vh)
+    r7_ident_expect = wizard_core.drag_world_step(r7_ident_view, 40.0, 0.0,
+                                                  r7_vh)
+    r7_before = _coords(r7_obj)
+    r7_cen0 = _centroid(r7_before)
+    wiz3.drag_move(40.0, 0.0)
+    r7_after = _coords(r7_obj)
+    r7_obs = _diff(r7_cen0, _centroid(r7_after))
+    r7_dev = _max_axis_dev(r7_obs, r7_s2_expect)
+    r7_s2_dev = r7_dev
+    r7_disp, r7_pair = _rigidity(r7_before, r7_after)
+    r7_m = _obj_matrix(r7_obj)
+    r7_sep = _max_axis_dev(r7_s2_expect, r7_ident_expect)
+    check('Row 7 M3a S2 rolled view: same pixel pair -> view-CONJUGATED '
+          'world delta', r7_dev <= DRAG_TOL and _is_identity(r7_m)
+          and wiz3._error is None,
+          'dev=%.3g tol=%.2g obs=(%.6f, %.6f, %.6f) exp=(%.6f, %.6f, '
+          '%.6f) identity=%s error=%r (S2 heritage; probe 083C C2)'
+          % (r7_dev, DRAG_TOL, r7_obs[0], r7_obs[1], r7_obs[2],
+             r7_s2_expect[0], r7_s2_expect[1], r7_s2_expect[2],
+             _is_identity(r7_m), wiz3._error))
+    # VACUOUS-PASS GUARD: the S2 expectation MUST differ from the
+    # identity-view expectation for the same pixels -- otherwise this
+    # row could pass while ignoring the view entirely.
+    check('Row 7 M3b S2 expectation differs from the identity-view '
+          'expectation (non-vacuous)', r7_sep > 1e-3,
+          'max-axis separation=%.6f A (must be >> tol %.2g; S2=(%.6f, '
+          '%.6f, %.6f) vs ident=(%.6f, %.6f, %.6f))'
+          % (r7_sep, DRAG_TOL, r7_s2_expect[0], r7_s2_expect[1],
+             r7_s2_expect[2], r7_ident_expect[0], r7_ident_expect[1],
+             r7_ident_expect[2]))
+    check('Row 7 M3c S2 rolled view: rigidity + identity re-asserted',
+          r7_disp <= RIGID_TOL and r7_pair <= RIGID_TOL
+          and _is_identity(r7_m),
+          'dispersion=%.3g pair_drift=%.3g tol=%.2g identity=%s'
+          % (r7_disp, r7_pair, RIGID_TOL, _is_identity(r7_m)))
+
+    # --- M4: full-SO(3) spot-proof (S3) ---------------------------
+    # S3 = the FIXED synthetic Rx(30)*Ry(50)*Rz(20) block -- the
+    # 08.2-02 unit-fixture heritage literals (hand-derived once there,
+    # copied here, NEVER recomputed at runtime). This is the retired
+    # PART D full-SO(3) proof's DRAG SUCCESSOR (deletion research S8).
+    s3_block = (0.6040227735550537, -0.2198463103929542,
+                0.766044443118978,
+                0.6561212879225009, 0.6827963662346814,
+                -0.3213938048432696,
+                -0.4523951199579622, 0.6967472440299423,
+                0.5566703992264195)
+    cmd.set_view(list(s3_block) + r7_tail)
+    r7_s3_view = list(cmd.get_view())
+    r7_m4_worst = 0.0
+    r7_m4_disp = 0.0
+    r7_m4_pair = 0.0
+    r7_m4_ok = True
+    for r7_dx, r7_dy in ((24.0, -12.0), (-24.0, 12.0)):
+        r7_before = _coords(r7_obj)
+        r7_cen0 = _centroid(r7_before)
+        r7_expect = wizard_core.drag_world_step(r7_s3_view, r7_dx, r7_dy,
+                                                r7_vh)
+        wiz3.drag_move(r7_dx, r7_dy)
+        r7_after = _coords(r7_obj)
+        r7_obs = _diff(r7_cen0, _centroid(r7_after))
+        r7_dev = _max_axis_dev(r7_obs, r7_expect)
+        r7_disp, r7_pair = _rigidity(r7_before, r7_after)
+        r7_m4_worst = max(r7_m4_worst, r7_dev)
+        r7_m4_disp = max(r7_m4_disp, r7_disp)
+        r7_m4_pair = max(r7_m4_pair, r7_pair)
+        r7_m4_ok = (r7_m4_ok and r7_dev <= DRAG_TOL
+                    and _is_identity(_obj_matrix(r7_obj))
+                    and wiz3._error is None)
+    check('Row 7 M4a S3 full-SO(3): a (+/-) pixel pair lands the '
+          'conjugated world delta', r7_m4_ok,
+          'worst_dev=%.3g tol=%.2g S3=(%.6f, %.6f, %.6f) at (+24,-12) '
+          'and (-24,+12) (Rx30Ry50Rz20 heritage; the retired PART D '
+          'successor)' % (r7_m4_worst, DRAG_TOL, r7_s3_view[0],
+                          r7_s3_view[1], r7_s3_view[2]))
+    check('Row 7 M4b S3 full-SO(3): rigidity + identity re-asserted',
+          r7_m4_disp <= RIGID_TOL and r7_m4_pair <= RIGID_TOL,
+          'dispersion=%.3g pair_drift=%.3g tol=%.2g'
+          % (r7_m4_disp, r7_m4_pair, RIGID_TOL))
+
+    # --- M5: post-churn stability (the criterion-1 coexistence) ----
+    # Restore the game's OWN view, then spot-re-verify rows 1/6 state
+    # (arm survives view churn -- probe 083B receipt basis) and drive
+    # the SURVIVING Toward op from the dragged position.
+    cmd.set_view(r7_live_view)
+    r7_drag = cmd.get_drag_object_name()
+    r7_ids_sel = _atom_ids(wizard_mod._DRAG_SELE)
+    r7_ids_obj = _atom_ids(r7_obj)
+    r7_stack = cmd.get_wizard_stack()
+    r7_mm = cmd.get('matrix_mode', r7_obj)
+    r7_m = _obj_matrix(r7_obj)
+    check('Row 7 M5a view churn does NOT clear the armed drag; rows 1/6 '
+          'spot state intact', r7_drag == r7_obj
+          and r7_ids_sel == r7_ids_obj and r7_mm == '0'
+          and _is_identity(r7_m) and len(r7_stack) == 1
+          and cmd.get_wizard() is wiz3,
+          'drag=%r want %r selection_matches=%s matrix_mode=%r stack=%d '
+          'identity=%s (probe 083B; view changes are camera-only)'
+          % (r7_drag, r7_obj, r7_ids_sel == r7_ids_obj, r7_mm,
+             len(r7_stack), _is_identity(r7_m)))
+    # Toward remains the surviving goal-directed op: from the dragged
+    # position it must land EXACTLY TOWARD_STEP toward the LIVE ligand
+    # centroid (the smoke_23 PART M first-press law).
+    r7_toward = wizard_core.TOWARD_STEP
+    r7_before = _coords(r7_obj)
+    r7_cen0 = _centroid(r7_before)
+    r7_lig = geometry.centroid_of(wiz3._ligand_object)
+    r7_d = _diff(r7_cen0, r7_lig)
+    r7_dlen = math.sqrt(r7_d[0] ** 2 + r7_d[1] ** 2 + r7_d[2] ** 2)
+    r7_want = (r7_cen0[0] + r7_toward * r7_d[0] / r7_dlen,
+               r7_cen0[1] + r7_toward * r7_d[1] / r7_dlen,
+               r7_cen0[2] + r7_toward * r7_d[2] / r7_dlen)
+    wiz3.step_to_ligand()
+    r7_cen1 = _centroid(_coords(r7_obj))
+    r7_tdev = _max_axis_dev(r7_cen1, r7_want)
+    r7_ttol = _max_axis_tol(r7_cen1, r7_want)
+    r7_m = _obj_matrix(r7_obj)
+    check('Row 7 M5b Toward still lands EXACTLY TOWARD_STEP from the '
+          'dragged position', r7_tdev <= r7_ttol and _is_identity(r7_m)
+          and wiz3._error is None,
+          'dev=%.3g tol=%.3g step=%.3f A AA->ligand distance=%.3f A '
+          'identity=%s error=%r (criterion-1 coexistence)'
+          % (r7_tdev, r7_ttol, r7_toward, r7_dlen,
+             _is_identity(r7_m), wiz3._error))
+    print('SMOKE-ENV row7 worst drifts: m1=%.3g rigid_disp=%.3g '
+          'rigid_pair=%.3g s2=%.3g s3=%.3g'
+          % (r7_m1_worst, r7_rigid_disp, r7_rigid_pair, r7_s2_dev,
+             r7_m4_worst), flush=True)
+
 except Exception:
     traceback.print_exc()
     check('PART 0/P driver', False, 'raised (see traceback above)')
@@ -803,12 +1150,14 @@ check('TT teardown: zero object leakage (scene == pre-game names)',
       not leftover, 'leftover=%s' % (leftover,))
 
 # --- Check-count assert: every planned row must have run ----------------
-# (29 planned checks precede this one: P0 a-d, P1-P6, P5b, PT x2 (=14,
+# (42 planned checks precede this one: P0 a-d, P1-P6, P5b, PT x2 (=14,
 # the 08.3-02 shell) + Rows 1a-1d, 2a-2c, 4a-4b (=9), P0c + Rows 5/6/8/9
-# (=5), RT (=1) -- 15 appended by 08.3-12. An exception path inserts the
+# (=5), RT (=1) -- 15 appended by 08.3-12 = 29 -- plus row 7's PART 0d
+# (=1), M1a-M1c (=3), M2a-M2b (=2), M3a-M3c (=3), M4a-M4b (=2),
+# M5a-M5b (=2) -- 13 appended by 08.3-14. An exception path inserts the
 # unplanned 'driver' row and the count fails loudly -- no planned row
 # may be skipped silently.)
-PLANNED_CHECKS = 29
+PLANNED_CHECKS = 42
 check('planned check count (all battery rows ran)',
       len(CHECKS) == PLANNED_CHECKS,
       'ran=%d want=%d (+ this count row)' % (len(CHECKS), PLANNED_CHECKS))

@@ -518,6 +518,342 @@ def _drag_move_impl(self, dx_px, dy_px):
 '''
 
 
+# --- 08.3-13 drag-mechanism ORDERING pins -----------------------------------
+# ROADMAP 8.3 criterion 2's "pinned changes are loud" rule, drag half. The
+# ordering laws are probe-proven in 08.3-RESEARCH-drag.md RQ2 (items 1/5/7)
+# and get AST teeth here equal to the 08.2-03 keyboard pins: the phase's own
+# NEW surfaces can no longer be silently broken any more than the old ones
+# could. The laws, and why each one is load-bearing:
+#
+#   (a) ARM SELECTION-FORM -- _arm_drag arms cmd.drag(_DRAG_SELE, wizard=0,
+#       edit=0). wizard=0 avoids the Dragging-wizard install, edit=0 skips
+#       the button-profile switch (editing.py:1061-1074; probes C2/C3/C8/C9
+#       -- GameWizard stays top-of-stack and keeps receiving picks). The
+#       target MUST be the private SELECTION name: an OBJECT-name arm takes
+#       ExecutiveSetDrag's object branch -> ObjectCombineTTT (object MATRIX,
+#       detector-blind, identity-breaking -- Executive.cpp:3208-3259,
+#       Pitfall-6c). Recorded disposition (2026-10-19) is gesture=a, so the
+#       wizard=0/edit=0 form is the pin; a future gesture=c disposition
+#       evolves EXPECTED_ARM_KWARGS loudly (never a silent edit).
+#   (b) ARM LAST IN do_pick -- ANY pick clears the armed drag state (probe
+#       083B(1)(2)), so every successful pick re-arms as its LAST statement.
+#       It MUST stay last: the arm's cmd.drag runs EditorInactivate, which
+#       deletes pk1..pk4 (Editor.cpp:1701-1740) -- arming before the pk1
+#       read swallows the pick (RQ2 item 5).
+#   (c) SNAPSHOT AFTER PUSH -- activate() runs cmd.set_wizard FIRST, then
+#       snapshots msm, then button_mode, then wires cmd.button. The push
+#       can pop a prior GameWizard whose cleanup restores the user's TRUE
+#       values inside set_wizard; snapshotting first would record a stale
+#       value (the msm-order-law analog, wizard.py contract 4; the stock
+#       Dragging wizard's own dragging.py:78-80 precedent, RQ2 item 7).
+#   (d) CLEANUP RESTORES THE DRAG STATE -- cleanup deactivates the C drag,
+#       deletes the private selection, then restores the recorded
+#       button_mode profile via cmd.set + cmd.mouse() (probes H1/083B(3),
+#       D2). Without the dearm the C-side drag stays armed past the wizard.
+
+# The recorded 2026-10-19 disposition is gesture=a (Option A shift-left
+# 'dgmv'): the arm is the custom-wiring form. wizard=1 is ONLY the
+# gesture=c (stock sandwich) record -- evolving this map is a loud change.
+EXPECTED_ARM_KWARGS = {'wizard': 0, 'edit': 0}
+
+# The private drag-selection constant's NAME as it appears in wizard.py's
+# AST (module-level ``_DRAG_SELE = '_aam_drag_sele'``).
+DRAG_SELECTION_AST_NAME = '_DRAG_SELE'
+
+
+def _const_str(node):
+    """The python str of a LITERAL string constant node, else None."""
+    if isinstance(node, ast.Str):
+        return node.s
+    return None
+
+
+def _method_call(node, method):
+    """True for an ast.Call spelled ``cmd.<method>(...)`` OR
+    ``self.cmd.<method>(...)`` -- wizard.py uses both spellings
+    (module-level cmd in the helpers, self.cmd in cleanup's
+    rebound-session guard)."""
+    if not isinstance(node, ast.Call) \
+            or not isinstance(node.func, ast.Attribute) \
+            or node.func.attr != method:
+        return False
+    base = node.func.value
+    if isinstance(base, ast.Name) and base.id == 'cmd':
+        return True
+    return (isinstance(base, ast.Attribute) and base.attr == 'cmd'
+            and isinstance(base.value, ast.Name)
+            and base.value.id == 'self')
+
+
+def _calls_of(fn, method):
+    """Every ast.Call in ``fn`` matching ``_method_call(method)``,
+    source order."""
+    return sorted((n for n in ast.walk(fn)
+                   if _method_call(n, method)),
+                  key=lambda n: n.lineno)
+
+
+def _self_attr_assignments(fn, attr):
+    """Sorted linenos of every assignment to ``self.<attr> = ...``
+    anywhere in ``fn`` (the snapshot writes)."""
+    out = []
+    for sub in ast.walk(fn):
+        targets = []
+        if isinstance(sub, ast.Assign):
+            targets = sub.targets
+        elif isinstance(sub, ast.AnnAssign) and sub.value is not None:
+            targets = [sub.target]
+        for tgt in targets:
+            if isinstance(tgt, ast.Attribute) and tgt.attr == attr \
+                    and isinstance(tgt.value, ast.Name) \
+                    and tgt.value.id == 'self':
+                out.append(sub.lineno)
+    return sorted(out)
+
+
+def find_arm_selection_form_violations(src):
+    """Every _arm_drag arm call that breaks law (a).
+
+    The cmd.drag call inside ``_arm_drag`` MUST carry the literal
+    keywords wizard=0 and edit=0 (EXPECTED_ARM_KWARGS -- the recorded
+    gesture=a disposition) and its FIRST positional MUST reference the
+    private selection constant (``_DRAG_SELE``); the object-name arm is
+    the FORBIDDEN object-MATRIX path. Prose cannot satisfy or trip this
+    pin (strings are not Call nodes -- Gate-C-safe)."""
+    problems = []
+    fn = _function_def(ast.parse(src), '_arm_drag')
+    if fn is None:
+        return ['_arm_drag: NOT FOUND -- the drag arm helper is missing '
+                'from wizard.py; nothing can carry the selection-form '
+                'arm law']
+    drags = _calls_of(fn, 'drag')
+    if not drags:
+        return ['_arm_drag: no cmd.drag(...) call -- the selection-form '
+                'arm IS the mechanism this pin guards (RQ2 item 1)']
+    for call in drags:
+        for kwarg in sorted(EXPECTED_ARM_KWARGS):
+            expected = EXPECTED_ARM_KWARGS[kwarg]
+            if _keyword_const(call, kwarg) != expected:
+                problems.append(
+                    'line %d: cmd.drag without %s=%d -- the recorded '
+                    'gesture=a disposition arms via the custom-wiring '
+                    'form (RQ2 item 1, probes C2/C3/C8/C9); %s=1 '
+                    'installs the Dragging wizard over GameWizard / '
+                    'switches the button profile'
+                    % (call.lineno, kwarg, expected, kwarg))
+        if not call.args:
+            problems.append(
+                'line %d: cmd.drag has NO positional arm target -- the '
+                'private selection %s is the only legal target'
+                % (call.lineno, DRAG_SELECTION_AST_NAME))
+            continue
+        first = call.args[0]
+        names = set(sub.id for sub in ast.walk(first)
+                    if isinstance(sub, ast.Name))
+        if DRAG_SELECTION_AST_NAME not in names:
+            problems.append(
+                'line %d: the arm target is not %s -- an OBJECT-name '
+                'arm takes the FORBIDDEN object-MATRIX path '
+                '(ExecutiveSetDrag -> ObjectCombineTTT, '
+                'Executive.cpp:3208-3259, Pitfall-6c); only the '
+                'SELECTION form bakes coordinates'
+                % (call.lineno, DRAG_SELECTION_AST_NAME))
+    return problems
+
+
+def find_arm_last_violations(src):
+    """Every do_pick re-arm that breaks law (b).
+
+    do_pick's LAST top-level statement must be ``self._arm_drag(...)``,
+    and NO earlier statement may arm: any pick clears the armed drag
+    state (probe 083B(1)(2)), while the arm itself runs EditorInactivate
+    -- which deletes pk1..pk4 (Editor.cpp:1701-1740) -- so arming before
+    the pk1 read eats the pick (RQ2 item 5). Being last also places the
+    arm after the ``_select_slot`` call."""
+    problems = []
+    fn = _function_def(ast.parse(src), 'do_pick')
+    if fn is None:
+        return ['do_pick: NOT FOUND -- the pick handler owning the re-arm '
+                'tail is missing']
+    body = list(fn.body)
+    if not body:
+        return ['do_pick: empty body -- the re-arm tail is missing']
+
+    def _arm_calls(stmt):
+        return [sub for sub in ast.walk(stmt)
+                if isinstance(sub, ast.Call)
+                and isinstance(sub.func, ast.Attribute)
+                and sub.func.attr == '_arm_drag'
+                and isinstance(sub.func.value, ast.Name)
+                and sub.func.value.id == 'self']
+
+    last = body[-1]
+    last_is_arm = (isinstance(last, ast.Expr)
+                   and isinstance(last.value, ast.Call)
+                   and isinstance(last.value.func, ast.Attribute)
+                   and last.value.func.attr == '_arm_drag'
+                   and isinstance(last.value.func.value, ast.Name)
+                   and last.value.func.value.id == 'self')
+    if not last_is_arm:
+        problems.append(
+            'do_pick: self._arm_drag(...) is NOT the LAST statement -- '
+            'ANY pick clears the armed drag state (probe 083B(1)(2)) '
+            'and the arm runs EditorInactivate, which deletes '
+            'pk1..pk4 (Editor.cpp:1701-1740): arming before the pk1 '
+            'read swallows the pick (RQ2 item 5)')
+    for stmt in body[:-1]:
+        for call in _arm_calls(stmt):
+            problems.append(
+                'line %d: self._arm_drag is called BEFORE the tail -- '
+                'the re-arm MUST stay last in do_pick (EditorInactivate '
+                'deletes the pk1 pick buffer)' % (call.lineno,))
+    return problems
+
+
+def find_snapshot_order_violations(src):
+    """Every activate() enter sequence that breaks law (c).
+
+    Binding order: the ``cmd.set_wizard`` push FIRST, then the
+    ``self._saved_msm`` snapshot, then the ``self._saved_button_mode``
+    snapshot, then the ``cmd.button`` gesture wiring. The push can pop a
+    prior GameWizard whose cleanup restores the user's TRUE values
+    INSIDE set_wizard; snapshotting before the push records a stale
+    value (the msm-order-law analog -- wizard.py contract 4; stock
+    Dragging precedent dragging.py:78-80, RQ2 item 7)."""
+    problems = []
+    fn = _function_def(ast.parse(src), 'activate')
+    if fn is None:
+        return ['activate: NOT FOUND -- the enter sequence is missing']
+    push = [call.lineno for call in _calls_of(fn, 'set_wizard')]
+    msm = _self_attr_assignments(fn, '_saved_msm')
+    bmode = _self_attr_assignments(fn, '_saved_button_mode')
+    wires = [call.lineno for call in _calls_of(fn, 'button')]
+    for label, rows in (
+            ('cmd.set_wizard(...) push', push),
+            ('self._saved_msm snapshot', msm),
+            ('self._saved_button_mode snapshot', bmode),
+            ('cmd.button(...) gesture wiring', wires)):
+        if not rows:
+            problems.append(
+                'activate: missing %s -- the binding enter sequence is '
+                'push -> msm snapshot -> button_mode snapshot -> gesture '
+                'wiring' % (label,))
+    if problems:
+        return problems
+    if not push[0] < msm[0] < bmode[0]:
+        problems.append(
+            'activate: snapshot order broken (push line %d, msm line %d, '
+            'button_mode line %d) -- push BEFORE snapshot (wizard.py '
+            'contract 4): a popped GameWizard restores the user\'s true '
+            'button_mode INSIDE set_wizard, so snapshotting first records '
+            'a stale value (the msm-order-law analog, dragging.py:78-80)'
+            % (push[0], msm[0], bmode[0]))
+    early_wiring = [ln for ln in wires if ln < bmode[0]]
+    if early_wiring:
+        problems.append(
+            'activate line %d: cmd.button gesture wiring runs BEFORE the '
+            'button_mode snapshot -- the pre-game profile would be '
+            'overwritten before it is recorded' % (early_wiring[0],))
+    return problems
+
+
+def find_cleanup_restore_violations(src):
+    """Every cleanup() restore set that breaks law (d).
+
+    cleanup MUST contain, in order: a BARE ``cmd.drag()`` deactivation
+    (no args -- that is what disarms the C-side drag, probe H1/083B(3)),
+    the private selection's delete (``cmd.delete(_DRAG_SELE)``), and the
+    profile-level button_mode restore (``cmd.set('button_mode', ...)``
+    followed by ``cmd.mouse()``, probe D2)."""
+    problems = []
+    fn = _function_def(ast.parse(src), 'cleanup')
+    if fn is None:
+        return ['cleanup: NOT FOUND -- the PLAY-04 restore set is missing']
+    dearm = [call.lineno for call in _calls_of(fn, 'drag')
+             if not call.args and not call.keywords]
+    drag_delete = [
+        call.lineno for call in _calls_of(fn, 'delete')
+        if call.args
+        and DRAG_SELECTION_AST_NAME in set(
+            sub.id for sub in ast.walk(call.args[0])
+            if isinstance(sub, ast.Name))]
+    mode_set = [
+        call.lineno for call in _calls_of(fn, 'set')
+        if call.args and _const_str(call.args[0]) == 'button_mode']
+    mouse = [call.lineno for call in _calls_of(fn, 'mouse')]
+    for label, rows in (
+            ('bare cmd.drag() deactivation', dearm),
+            ('cmd.delete(%s) private-selection cleanup'
+             % DRAG_SELECTION_AST_NAME, drag_delete),
+            ("cmd.set('button_mode', ...) restore", mode_set),
+            ('cmd.mouse() profile re-apply', mouse)):
+        if not rows:
+            problems.append(
+                'cleanup: missing %s -- the PLAY-04 restore set must '
+                'deactivate the drag, delete the private selection, and '
+                'restore button_mode (probes H1/083B(3), D2)' % (label,))
+    if problems:
+        return problems
+    if not dearm[0] < drag_delete[0]:
+        problems.append(
+            'cleanup: the drag deactivation (line %d) must precede the '
+            'selection delete (line %d) -- disarm first, then remove '
+            'the target' % (dearm[0], drag_delete[0]))
+    if not dearm[0] < mode_set[0] < mouse[0]:
+        problems.append(
+            'cleanup: button_mode restore order broken (dearm %d, set %d, '
+            'mouse %d) -- deactivate the drag, then cmd.set('
+            "'button_mode', saved) + cmd.mouse() (probe D2)"
+            % (dearm[0], mode_set[0], mouse[0]))
+    return problems
+
+
+# Negative-control traps for the four ordering finders (08.2-03 house
+# pattern: each trap is a module-level source string; each test asserts
+# the finder FIRES and names its law -- a gate that cannot fail proves
+# nothing).
+ARM_TRAP_OBJECT_NAME = '''\
+def _arm_drag(self, obj):
+    cmd.select(_DRAG_SELE, obj)
+    cmd.drag(obj, wizard=0, edit=0)
+'''
+
+ARM_TRAP_WIZARD_ONE = '''\
+def _arm_drag(self, obj):
+    cmd.select(_DRAG_SELE, obj)
+    cmd.drag(_DRAG_SELE, wizard=1, edit=0)
+'''
+
+ARM_LAST_TRAP = '''\
+def do_pick(self, bondFlag):
+    self._arm_drag('aa1')
+    rows = []
+    cmd.iterate('pk1', 'stored.append((model, ID, alt, resv))',
+                space={'stored': rows})
+'''
+
+SNAPSHOT_TRAP = '''\
+def activate(self, replace=0):
+    self._saved_button_mode = int(cmd.get('button_mode'))
+    cmd.deselect()
+    cmd.set_wizard(self, replace=replace)
+    self._saved_msm = int(cmd.get('mouse_selection_mode'))
+    cmd.set('mouse_selection_mode', 0)
+    cmd.button('left', 'shft', 'dgmv')
+'''
+
+CLEANUP_TRAP = '''\
+def cleanup(self):
+    if self._saved_msm is not None:
+        self.cmd.set('mouse_selection_mode', self._saved_msm)
+    if _DRAG_SELE in self.cmd.get_names('selections'):
+        self.cmd.delete(_DRAG_SELE)
+    if self._saved_button_mode is not None:
+        self.cmd.set('button_mode', str(self._saved_button_mode), quiet=1)
+        self.cmd.mouse()
+'''
+
+
 class TestConfirmPassGatePresent(unittest.TestCase):
     """Phase 8.1: the pass gate sits in the ONE confirm impl."""
 
@@ -755,6 +1091,134 @@ class TestMovementDisciplineSource(unittest.TestCase):
                 for p in problems),
             'the trip must name the impl missing M3, got %r'
             % (problems,))
+
+
+class TestDragMechanismSource(unittest.TestCase):
+    """08.3-13: the drag mechanism's ORDERING laws are AST-enforced.
+
+    The 08.2-03 keyboard pins made the movement-MODEL changes loud; this
+    class gives the phase's NEW drag surfaces the same teeth (ROADMAP 8.3
+    criterion 2: the standing-gate clause is bidirectional -- the phase
+    deleted pins AND grew new ones, both on the record). Four laws, each
+    probe-proven in 08.3-RESEARCH-drag.md RQ2 and each with a trap source
+    that MUST trip its finder (test_purity.py's negative-control rule):
+
+    (a) arm selection-form -- ``_arm_drag`` arms
+        ``cmd.drag(_DRAG_SELE, wizard=0, edit=0)``: no Dragging-wizard
+        install, no profile switch, SELECTION form (never the
+        object-MATRIX path); the recorded disposition is gesture=a.
+    (b) arm LAST in do_pick -- the re-arm tail stays after all other
+        do_pick work (any pick clears the arm; EditorInactivate deletes
+        pk1..pk4, so arming before the read would eat the pick).
+    (c) snapshot order in activate -- push, then msm snapshot, then
+        button_mode snapshot, then the cmd.button wiring (the
+        msm-order-law analog; dragging.py:78-80 precedent).
+    (d) cleanup restores the drag state -- bare ``cmd.drag()`` dearm,
+        private-selection delete, then the button_mode restore via
+        ``cmd.set`` + ``cmd.mouse()``.
+    """
+
+    def _wizard_src(self):
+        return _read_source(os.path.join(PKG_DIR, 'wizard.py'))
+
+    def test_arm_selection_form_exact(self):
+        problems = find_arm_selection_form_violations(self._wizard_src())
+        self.assertEqual(
+            problems, [],
+            'the arm must stay the SELECTION form with wizard=0/edit=0 '
+            '(gesture=a disposition; RQ2 item 1):\n  '
+            + '\n  '.join(problems))
+
+    def test_negative_control_arm_object_name_fires(self):
+        problems = find_arm_selection_form_violations(
+            ARM_TRAP_OBJECT_NAME)
+        self.assertTrue(
+            problems,
+            'an OBJECT-name arm MUST trip the pin -- it takes the '
+            'FORBIDDEN object-MATRIX path (Pitfall-6c)')
+        self.assertTrue(
+            any('object-MATRIX' in p for p in problems),
+            'the trip must name the FORBIDDEN object-MATRIX path, got %r'
+            % (problems,))
+
+    def test_negative_control_arm_wizard_one_fires(self):
+        problems = find_arm_selection_form_violations(
+            ARM_TRAP_WIZARD_ONE)
+        self.assertTrue(
+            problems,
+            'wizard=1 MUST trip the pin -- it installs the Dragging '
+            'wizard over GameWizard (probe B1/B2)')
+        self.assertTrue(
+            any('wizard=0' in p for p in problems),
+            'the trip must name the wizard=0 law, got %r' % (problems,))
+
+    def test_arm_last_in_do_pick_exact(self):
+        problems = find_arm_last_violations(self._wizard_src())
+        self.assertEqual(
+            problems, [],
+            'every successful pick MUST re-arm as do_pick\'s LAST '
+            'statement (RQ2 item 5):\n  ' + '\n  '.join(problems))
+
+    def test_negative_control_arm_before_pk1_read_fires(self):
+        problems = find_arm_last_violations(ARM_LAST_TRAP)
+        self.assertTrue(
+            problems,
+            'an _arm_drag call BEFORE the pk1 iterate MUST trip the pin '
+            '-- the arm deletes pk1..pk4 (Editor.cpp:1701-1740)')
+        self.assertTrue(
+            any('NOT the LAST statement' in p for p in problems),
+            'the trip must name the arm-last law, got %r' % (problems,))
+
+    def test_snapshot_after_push_exact(self):
+        problems = find_snapshot_order_violations(self._wizard_src())
+        self.assertEqual(
+            problems, [],
+            'activate must push BEFORE snapshotting button_mode and '
+            'wire cmd.button LAST (wizard.py contract 4):\n  '
+            + '\n  '.join(problems))
+
+    def test_negative_control_snapshot_before_push_fires(self):
+        problems = find_snapshot_order_violations(SNAPSHOT_TRAP)
+        self.assertTrue(
+            problems,
+            'a button_mode snapshot BEFORE the set_wizard push MUST trip '
+            'the pin -- it records a stale value (msm-order-law analog)')
+        self.assertTrue(
+            any('push BEFORE snapshot' in p for p in problems),
+            'the trip must name the push-before-snapshot law, got %r'
+            % (problems,))
+
+    def test_cleanup_restores_drag_state_exact(self):
+        problems = find_cleanup_restore_violations(self._wizard_src())
+        self.assertEqual(
+            problems, [],
+            'cleanup must dearm the drag, delete the private selection, '
+            'and restore button_mode via cmd.set + cmd.mouse() '
+            '(probes H1/083B(3), D2):\n  ' + '\n  '.join(problems))
+
+    def test_negative_control_cleanup_missing_dearm_fires(self):
+        problems = find_cleanup_restore_violations(CLEANUP_TRAP)
+        self.assertTrue(
+            problems,
+            'a cleanup missing the bare cmd.drag() deactivation MUST '
+            'trip the pin -- the C-side drag would stay armed')
+        self.assertTrue(
+            any('cmd.drag() deactivation' in p for p in problems),
+            'the trip must name the missing dearm, got %r' % (problems,))
+
+    def test_live_wizard_passes_all_four_finders(self):
+        # ONE aggregate positive: the LIVE wizard.py satisfies every
+        # drag-mechanism law clean (the per-law tests above localize a
+        # future failure; this one proves the envelope as a whole).
+        src = self._wizard_src()
+        problems = (find_arm_selection_form_violations(src)
+                    + find_arm_last_violations(src)
+                    + find_snapshot_order_violations(src)
+                    + find_cleanup_restore_violations(src))
+        self.assertEqual(
+            problems, [],
+            'the live wizard.py breaks one or more drag-mechanism '
+            'ordering laws:\n  ' + '\n  '.join(problems))
 
 
 if __name__ == '__main__':

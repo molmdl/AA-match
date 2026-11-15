@@ -327,10 +327,23 @@ Inserted 2026-10-18 per the human decision recorded verbatim in all amendment ho
   3. [GATE] Final audit: every user-facing document (README, in-game help, tooltips, DATA_SOURCES.md) is verified against actual code behavior; discrepancies fixed before release. (DOCS-02)
   4. [HEADLESS + HUMAN] Perf budgets confirmed on the largest curated demo: Generate < 30 s; pick/drag feedback < 200 ms (headless timing + human feel). (PROJECT.md code standards)
 **Research notes**: PITFALLS topic *polish*. Lands last so behavior is stable when docs are written — no doc churn.
-**Plans**: TBD
+**Plans:** 14 plans in 8 waves
 
 Plans:
-- [ ] 09-01: (TBD)
+- [ ] 09-01-PLAN.md — checkpoint:decision — Cleanup destructive-action confirm + README "Under Development" banner verdicts (records-only; the answers steer 09-04/09-05/09-06) (wave 1)
+- [ ] 09-02-PLAN.md — SMOKE-25 perf-budget battery: Generate < 30 s (NAD via largest_entry + max-LEGAL workload 4/10/all-candidates) + 20-rep pick/drag min/avg/max < 200 ms on the 82-object level-9 scene (wave 1)
+- [ ] 09-03-PLAN.md — README Install drift fixes (point at __init__.py, neutral label, plugin-path verified route, double-install warning) + Usage section filled from the shipped-reality flow (wave 1)
+- [ ] 09-04-PLAN.md — NEW pure aamatch/help_text.py canonical help module (labels/tips/mode re-home, drag-gesture hint, 7 sections, help_html) + PURE_MODULES registration (atomic) + tests/test_help_text.py verbatim pins (wave 2)
+- [ ] 09-05-PLAN.md — apply 09-01 Decision A: Cleanup Yes/No guard (wrapper-only, constants pinned) OR record acceptance + sharpened tooltip; SMOKE-11-PART-E impl boundary proven (wave 2)
+- [ ] 09-06-PLAN.md — README demo-set table (10 sets incl. dev fixture + thin-refusal footnotes) + DATA_SOURCES link fix + Acknowledgements + banner-verdict apply (wave 2)
+- [ ] 09-07-PLAN.md — Setup-window Help button + modal child help dialog (bioCHEMeleon-v1 pattern, smoke-99 split build/exec) + single-home widget repoint + SMOKE-11 additive part (wave 3)
+- [ ] 09-08-PLAN.md — wizard prompt-tail reworded to the drag model via help_text.SELECTED_GESTURE_HINT (all 4 stale 'Move/rotate' sites) + pin supersession + clip/ASCII continuity (wave 3)
+- [ ] 09-09-PLAN.md — README Project Structure filled from the live tree (tiers + gates + trees; last TBD gone) (wave 3)
+- [ ] 09-10-PLAN.md — NEW tests/test_docs_audit.py: coverage/presence checks over README placeholders/vibe-warning/set table, DATA_SOURCES 18/18 + licenses, versions, load-bearing tooltips (wave 4)
+- [ ] 09-11-PLAN.md — [HUMAN] ONE combined fresh-session ritual: 9-step learnability (HELP-01) + perf feel on NAD (criterion 4) + README read-through + text-only amendment application (wave 5)
+- [ ] 09-12-PLAN.md — 09-AUDIT.md claim→code audit artifact (README/help/tooltip census/DATA_SOURCES rows, build_demos --report-only reproduction) + text-only discrepancy fixes (wave 6)
+- [ ] 09-13-PLAN.md — final full-battery receipt: py_compile + full WSL suite with attributed count + smokes 01–25 sweep + raw SMOKE-25 final-build numbers (wave 7)
+- [ ] 09-14-PLAN.md — [GATE] DOCS-02 close-out: packet verification + human audit sign-off + dated verdict record (wave 8)
 
 ## Pitfall Coverage
 

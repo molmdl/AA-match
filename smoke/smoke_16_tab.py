@@ -287,6 +287,37 @@ PART F  (2026-09-27 diag fix): the PANEL-Confirm natural end with a
            C10/C11 law).
         F7 restore -> the baseline scene EXACTLY.
 
+PART G  (2026-11-16, quick-004 / D1): the DONE-path abandon battery --
+        the panel Done pop (canonical cmd.set_wizard()) mid-game must
+        STOP the clock, freeze the display at the abandon instant,
+        mark the engine honestly ('abandoned', NO summary/modal/record)
+        and log exactly one 'Game abandoned.' line; rows A-F stay
+        byte-untouched:
+        G1 live mid-game (the Design B countdown drive) -- wizard on
+           the stack, 1 Hz running, game_over False.
+        G2 the DEFECT row: the Done pop alone leaves the timer active
+           (the honest pre-fix symptom, now one tick); ONE _on_tick ->
+           the timer STOPPED, the engine game_over/'abandoned' with
+           final_time frozen, the label pinned to it, exactly ONE
+           'Game abandoned.', NO endgame block, the wizard gone, the
+           _aam_* objects SURVIVING, the required label fallen through
+           to 'Required: -'.
+        G3 poll inertness: a second _refresh_status adds no line,
+           leaves the timer stopped and the label unchanged.
+        G4 post-abandon locks (Confirm/Skip/Give-Up/Hint/Reset impls
+           all None behind the no-wizard gates, scene/log untouched) +
+           the Restart composition arms a fresh countdown.
+        G5 the missed-transition convergence: a PASSING panel Confirm
+           completes the game, Done pops it BEFORE any tick -> ONE
+           _on_tick converges on the endgame tail (win headline once,
+           NO 'Game abandoned.', timer stopped, exact final M:SS) --
+           a completed game is never re-branded.
+        G6 the buried-wizard negative control: a stock cmd.drag installs
+           Dragging OVER the live GameWizard -> a tick does NOT abandon
+           (timer still active, game still live); popping Dragging
+           auto-resumes the GameWizard and the tab keeps working.
+        Teardown per PART F -> the baseline scene EXACTLY.
+
 Conventions (frozen Phase 1, kept): anchor repo root via sys.argv
 first / cwd fallback (never __file__); import aamatch directly (module
 identity 'aamatch'); every print on ONE line and flushed; check details
@@ -1869,6 +1900,263 @@ except Exception:
     except Exception:
         traceback.print_exc()
 
+# ============================================================
+# PART G (2026-11-16, quick-004 / D1): the DONE-path abandon battery
+# -- the panel Done pop mid-game must stop the clock, freeze the
+# display, mark the engine honestly ('abandoned', no summary/modal)
+# and log exactly one 'Game abandoned.'; the raced completion case
+# converges on the endgame tail; a stacked user wizard never abandons.
+# Rows A-F stay byte-untouched.
+# ============================================================
+part_f_checks = REC['checks']
+
+try:
+    from aamatch import wizard
+
+    # ---- G1-G4: live game -> Done pop -> abandon ---------------
+    dlg7 = setup_window.SetupWindow()
+    tab7 = dlg7.game_tab
+    baseline_g = cmd.get_names('objects')
+
+    # ---- G1: live mid-game -------------------------------------
+    wiz_g = gamestart.start_game(setup=SETUP_D, seed=42,
+                                 candidates=[BENZ, SECOND],
+                                 activate=False)
+    tab7.start_countdown(wiz_g)
+    for _ in range(4):
+        tab7._countdown_tick()
+    names_g1 = sorted(_game_objects_b())
+    check('G1: live mid-game -- Design B wizard on the stack, 1 Hz '
+          'running, game_over False',
+          cmd.get_wizard() is wiz_g
+          and tab7._timer.isActive()
+          and engine.game_status()['game_over'] is False,
+          'top=%r active=%r over=%r'
+          % (cmd.get_wizard() is wiz_g, tab7._timer.isActive(),
+             engine.game_status()['game_over']))
+
+    # ---- G2: the Done pop + ONE tick (the defect row) -----------
+    cmd.set_wizard()             # the canonical panel Done pop
+    check('G2: Done alone leaves the honest pre-tick symptom -- '
+          'timer STILL active, no abandon line yet',
+          tab7._timer.isActive()
+          and 'Game abandoned.' not in tab7._info_log.toPlainText(),
+          'active=%r' % (tab7._timer.isActive(),))
+    tab7._on_tick()
+    st_g2 = engine.game_status()
+    text_g2 = tab7._info_log.toPlainText()
+    check('G2: ONE tick STOPS the 1 Hz timer',
+          not tab7._timer.isActive(), '')
+    check('G2: the engine is honestly ended -- game_over True + '
+          "end_state 'abandoned' + frozen final_time",
+          st_g2['game_over'] is True
+          and st_g2['end_state'] == 'abandoned'
+          and isinstance(st_g2['final_time'], float), '')
+    check('G2: _timer_label pinned to the abandon instant '
+          '(format_mss(final_time))',
+          tab7._timer_label.text()
+          == status_text.format_mss(st_g2['final_time']),
+          'label=%r want %r'
+          % (tab7._timer_label.text(),
+             status_text.format_mss(st_g2['final_time'])))
+    check("G2: EXACTLY one 'Game abandoned.' line",
+          text_g2.count('Game abandoned.') == 1,
+          'count=%d' % (text_g2.count('Game abandoned.'),))
+    check('G2: NO endgame block / gave-up block for an abandon '
+          '(Done != Give-Up)',
+          'You win!' not in text_g2
+          and 'Game over -- gave up' not in text_g2, '')
+    check('G2: the wizard is gone and the _aam_* objects SURVIVE the '
+          'Done pop',
+          cmd.get_wizard() is None
+          and sorted(_game_objects_b()) == names_g1,
+          'top=%r objects=%d want %d'
+          % (cmd.get_wizard(), len(_game_objects_b()), len(names_g1)))
+    check("G2: the required label fell through to 'Required: -'",
+          tab7._required_label.text() == 'Required: -',
+          'label=%r' % (tab7._required_label.text(),))
+
+    # ---- G3: poll inertness ------------------------------------
+    label_g3 = tab7._timer_label.text()
+    tab7._refresh_status()
+    check('G3: a second poll is inert -- no second line, still '
+          'stopped, label unchanged',
+          tab7._info_log.toPlainText().count('Game abandoned.') == 1
+          and not tab7._timer.isActive()
+          and tab7._timer_label.text() == label_g3, '')
+
+    # ---- G4: post-abandon locks + the Restart composition -------
+    log_pre_g4 = tab7._info_log.toPlainText()
+    names_pre_g4 = cmd.get_names('objects')
+    inert_g = (tab7._confirm_now() is None
+               and tab7._skip_now() is None
+               and tab7._giveup_now() is None
+               and tab7._hint_now() is None
+               and tab7._reset_grid_now() is None)
+    check('G4: post-abandon inertness -- every impl None behind the '
+          'no-wizard gates; scene/log untouched',
+          inert_g
+          and tab7._info_log.toPlainText() == log_pre_g4
+          and cmd.get_names('objects') == names_pre_g4, '')
+    r_restart_g = tab7._restart_now()
+    check('G4: Restart stays available -- a fresh countdown arms '
+          '(the F6 composition)',
+          r_restart_g is True
+          and isinstance(tab7._pending_wizard, wizard.GameWizard)
+          and tab7._info_log.toPlainText().splitlines()[-2:]
+          == ['Get ready...', 'Game restarted.'], '')
+
+    # ---- G1-G4 restore -----------------------------------------
+    tab7.cancel_pending_start()
+    tab7._timer.stop()
+    cmd.set_wizard()
+    placement.cleanup_game_objects()
+    gamestart._last_start = None
+    check('G1-G4 teardown returns the baseline scene EXACTLY',
+          list(cmd.get_names('objects')) == list(baseline_g)
+          and cmd.get_wizard() is None,
+          'post=%r baseline=%r'
+          % (cmd.get_names('objects'), baseline_g))
+    app.processEvents()
+    dlg7.close()
+
+    # ---- G5: the missed-transition convergence (fresh tab) ------
+    dlg8 = setup_window.SetupWindow()
+    tab8 = dlg8.game_tab
+    baseline_g5 = cmd.get_names('objects')
+    try:
+        wiz8 = gamestart.start_game(setup=SETUP_D, seed=42,
+                                    candidates=[BENZ, SECOND],
+                                    activate=False)
+        tab8.start_countdown(wiz8)
+        for _ in range(4):
+            tab8._countdown_tick()
+        for _i in range(5):
+            wiz8.skip_molecule()
+        place_required_pi(wiz8)
+        last8 = wiz8.confirm_molecule()
+        summ8 = (last8.get('summary')
+                 if isinstance(last8, dict) else None)
+        check('G5: the placed PASSING panel confirm completed the game '
+              'before any tick',
+              isinstance(last8, dict)
+              and last8.get('game_over') is True
+              and isinstance(summ8, dict)
+              and summ8.get('end_state') == 'completed', '')
+        cmd.set_wizard()         # Done races the poll
+        check('G5: Done popped the wizard while the transition was '
+              'still unobserved (timer active)',
+              engine.game_status()['game_over'] is True
+              and tab8._timer.isActive()
+              and cmd.get_wizard() is None, '')
+        tab8._on_tick()
+        text_g5 = tab8._info_log.toPlainText()
+        check('G5: ONE tick converges on the LEGITIMATE end -- win '
+              'headline once, never re-branded abandoned',
+              text_g5.count(
+                  'You win! All 3 level(s) finished in') == 1
+              and 'Game abandoned.' not in text_g5, '')
+        check('G5: the converged tick stops the timer and pins the '
+              'EXACT final M:SS',
+              not tab8._timer.isActive()
+              and tab8._timer_label.text()
+              == status_text.format_mss(summ8['final_time']), '')
+        app.processEvents()
+        check('G5: processEvents runs clean (the armed modal shot '
+              'lands on the offscreen gate)',
+              True, '')
+    finally:
+        tab8.cancel_pending_start()
+        tab8._timer.stop()
+        cmd.set_wizard()
+        placement.cleanup_game_objects()
+        gamestart._last_start = None
+        check('G5 teardown returns the baseline scene EXACTLY',
+              list(cmd.get_names('objects')) == list(baseline_g5)
+              and cmd.get_wizard() is None,
+              'post=%r baseline=%r'
+              % (cmd.get_names('objects'), baseline_g5))
+        app.processEvents()
+        dlg8.close()
+
+    # ---- G6: the buried-wizard negative control -----------------
+    dlg9 = setup_window.SetupWindow()
+    tab9 = dlg9.game_tab
+    baseline_g6 = cmd.get_names('objects')
+    try:
+        wiz9 = gamestart.start_game(setup=SETUP_D, seed=42,
+                                    candidates=[BENZ, SECOND],
+                                    activate=False)
+        tab9.start_countdown(wiz9)
+        for _ in range(4):
+            tab9._countdown_tick()
+        obj9 = sorted(_game_objects_b())[0]
+        # Smoke-namespace hygiene (2026-11-16, probe-receipted): PyMOL
+        # -cq scripts exec with globals() == pymol.__dict__, so PART A's
+        # module-level `from aamatch import wizard` binding SHADOWS
+        # pymol.wizard. cmd.drag resolves pymol.wizard.dragging
+        # internally, so restore the REAL package for the stock-recipe
+        # call (production code untouched; every G-row assert above/
+        # below is unaffected -- no later `wizard.` global use).
+        import sys as _sys_g
+        import pymol as _pymol_g
+        import pymol.wizard.dragging  # noqa: F401
+        _pymol_g.wizard = _sys_g.modules['pymol.wizard']
+        cmd.drag(obj9)           # the SMOKE-24 P1 stock recipe
+        stack9 = cmd.get_wizard_stack()
+        check('G6: stock cmd.drag stacks Dragging OVER the live '
+              'GameWizard',
+              type(cmd.get_wizard()).__name__ == 'Dragging'
+              and 'GameWizard' in [type(w).__name__ for w in stack9],
+              'top=%s stack=%s'
+              % (type(cmd.get_wizard()).__name__,
+                 [type(w).__name__ for w in stack9]))
+        tab9._on_tick()
+        check('G6: a tick under a user wizard NEVER abandons -- timer '
+              'still active, game still live, no line',
+              tab9._timer.isActive()
+              and 'Game abandoned.' not in tab9._info_log.toPlainText()
+              and engine.game_status()['game_over'] is False, '')
+        cmd.set_wizard()         # Dragging pops -> GameWizard resumes
+        check('G6: popping the user wizard auto-resumes the GameWizard',
+              cmd.get_wizard() is wiz9,
+              'top=%r want=%r' % (cmd.get_wizard(), wiz9))
+        tab9._on_tick()
+        check('G6: after the resume the tab keeps working (required '
+              'label reseeded from the live wizard)',
+              tab9._required_label.text()
+              == status_text.required_display(
+                  wiz9.get_status()['required']),
+              'label=%r' % (tab9._required_label.text(),))
+    finally:
+        tab9.cancel_pending_start()
+        tab9._timer.stop()
+        cmd.set_wizard()
+        placement.cleanup_game_objects()
+        gamestart._last_start = None
+        check('G6 teardown returns the baseline scene EXACTLY',
+              list(cmd.get_names('objects')) == list(baseline_g6)
+              and cmd.get_wizard() is None,
+              'post=%r baseline=%r'
+              % (cmd.get_names('objects'), baseline_g6))
+        app.processEvents()
+        dlg9.close()
+except Exception:
+    traceback.print_exc()
+    check('part G Done-path abandon drive', False,
+          'raised (see traceback above)')
+    try:
+        for _dlg_g in (locals().get('dlg7'), locals().get('dlg8'),
+                       locals().get('dlg9')):
+            if _dlg_g is not None:
+                _dlg_g.game_tab.cancel_pending_start()
+                _dlg_g.game_tab._timer.stop()
+        cmd.set_wizard()
+        placement.cleanup_game_objects()
+        gamestart._last_start = None
+    except Exception:
+        traceback.print_exc()
+
 # --- Phase regression record (the 06-09 contract): one 'SMOKE-0N:
 # PASS/NOT-RUN' line per smoke of the six-smoke battery for the
 # orchestrator to grep; a standalone run only knows its own verdict --
@@ -1880,12 +2168,13 @@ print('SMOKE-16: %s' % ('PASS' if not failures else 'FAIL'), flush=True)
 # --- Verdict marker (the SOLE verdict carrier) ------------------------
 print('SMOKE-16 PART A: %d checks; PART B: %d checks; PART C: %d '
       'checks; PART D: %d checks; PART E: %d checks; PART F: %d '
-      'checks; total %d, %d failure(s)'
+      'checks; PART G: %d checks; total %d, %d failure(s)'
       % (part_a_checks, part_b_checks - part_a_checks,
          part_c_checks - part_b_checks,
          part_d_checks - part_c_checks,
          part_e_checks - part_d_checks,
-         REC['checks'] - part_e_checks, REC['checks'], len(failures)),
+         part_f_checks - part_e_checks,
+         REC['checks'] - part_f_checks, REC['checks'], len(failures)),
       flush=True)
 print('=== SMOKE-16 %s ==='
       % ('FAIL: ' + ', '.join(failures) if failures else 'PASS'),

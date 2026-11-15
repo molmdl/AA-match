@@ -152,6 +152,22 @@ Q5/Q6 recommendation).
 House rules: python-3.6 syntax floor, %-formatting only, no f-strings;
 lazy relative sibling imports INSIDE methods (the module-identity law,
 setup_window.py's contract 4).
+
+2026-11-16 (quick-004, D1): panel Done mid-game = ABANDON-STOP. The
+Done button's canonical ``cmd.set_wizard()`` pop is not an end path,
+so no signal used to reach the tab and the 1 Hz clock kept advancing
+over a game whose panel was gone. ``_abandon_check`` (called at the
+head of ``_refresh_status``'s no-live-GameWizard branch) now detects
+the pop, STOPS the timer first, freezes the display at the abandon
+instant via ``engine.abandon_game`` (op 18) and logs ONE
+``status_text.game_abandoned_line()``; the engine is honestly marked
+game_over/'abandoned' with NO summary/modal/record (Done != Give-Up --
+Give-Up stays the scored, confirmation-guarded exit). Done that RACES
+the poll (panel Confirm completed the game, Done popped before the
+tick observed it) converges on the endgame tail instead -- a completed
+game is never re-branded. A user wizard merely STACKED over the game
+wizard never triggers it (the ``cmd.get_wizard_stack()`` membership
+guard). [HUMAN]-lite applied default, amendable at the next GUI touch.
 """
 
 import time
@@ -509,6 +525,7 @@ class GameTab(QtWidgets.QWidget):
         from . import status_text, wizard
         w = cmd.get_wizard()
         if not isinstance(w, wizard.GameWizard):
+            self._abandon_check()
             self._required_label.setText('Required: -')
             self._last_status = None
             return
@@ -585,6 +602,84 @@ class GameTab(QtWidgets.QWidget):
             QtCore.QTimer.singleShot(
                 100, lambda: self._show_endgame_modal(summary))
         self._last_status = state
+
+    def _abandon_check(self):
+        """quick-004 (2026-11-16, D1): close the Done-path lifecycle gap.
+
+        Called ONLY from _refresh_status's no-live-GameWizard branch.
+        Guards: 1 Hz timer active (else pre-GO/post-endgame/never-
+        started -- nothing to abandon); NO pending countdown (a
+        Restart/Import owns its pop->arm window, P-1/P-2 -- the
+        pending countdown's GO re-seeds the baseline); a held
+        _last_status (else nothing was ever observed); the held
+        state not game_over (the game_over transition + _endgame_
+        sequence own the endgame tail, idempotently); and NO
+        GameWizard ANYWHERE in cmd.get_wizard_stack() (a user wizard
+        merely stacked over the game wizard -- cmd.drag of a stock
+        editor being the receipted case -- leaves top-of-stack
+        non-GameWizard while the game stays live; only a genuine
+        Done-pop empties the stack of GameWizards).
+
+        STOP ORDER (the phase-7 timer law): self._timer.stop() runs
+        BEFORE any engine/modal work, and detection runs inside the
+        one tick being serviced -- no further tick can fire, so the
+        poll cannot race the final tick. Then:
+        - engine.is_over() True -> the Done CLICK RACED THE POLL (a
+          panel Confirm completed the game and Done popped it before
+          this tick observed the game_over transition): converge on
+          the 08.1-08 parity tail -- log status_text.endgame_lines
+          (the sanctioned engine.endgame_summary() accessor), pin
+          the EXACT final M:SS, cmd.refresh() + the 100 ms
+          singleShot modal arm (offscreen gate + once-latch inside
+          _show_endgame_modal keep smokes hang-proof and the box
+          once-per-game). Never re-brand a completed game as an
+          abandon.
+        - else -> ABANDON-STOP (the applied-default Done semantics):
+          engine.abandon_game() (returns the frozen final_time),
+          pin the label to it via status_text.format_mss, log ONE
+          'Game abandoned.' line. NO endgame block, NO modal, NO
+          record (Done != Give-Up). The fall-through wizard-free
+          reset (the caller's 'Required: -' + baseline clear) still
+          runs -- the required label reads no-game, the frozen
+          timer label survives it.
+        The ValueError family mid-poll soft-returns with the clock
+        already stopped (the render-loop soft-error discipline;
+        practically unreachable given the guards). The 1 Hz freeze
+        granularity is <= 1 s after the pop (the documented
+        modal-pause granularity law).
+        """
+        if not self._timer.isActive():
+            return
+        if self._countdown_timer.isActive():
+            return
+        if self._last_status is None:
+            return
+        if self._last_status.get('game_over'):
+            return
+        from pymol import cmd
+        from . import wizard as wizard_mod
+        for entry in cmd.get_wizard_stack():
+            if isinstance(entry, wizard_mod.GameWizard):
+                return
+        self._timer.stop()
+        try:
+            from . import engine, status_text
+            if engine.is_over():
+                summary = engine.endgame_summary()
+                for line in status_text.endgame_lines(summary):
+                    self._log(line)
+                self._timer_label.setText(
+                    status_text.format_mss(summary['final_time']))
+                cmd.refresh()
+                QtCore.QTimer.singleShot(
+                    100, lambda: self._show_endgame_modal(summary))
+                return
+            elapsed = engine.abandon_game()
+            self._timer_label.setText(
+                status_text.format_mss(elapsed))
+            self._log(status_text.game_abandoned_line())
+        except ValueError:
+            return
 
     # ---- the Hint handler (05-08 PLAY-05) ----
 

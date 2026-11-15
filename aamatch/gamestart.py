@@ -648,7 +648,11 @@ def load_checkpoint(path):
        ``activate(...)`` -- the session only carried the save-time
        defensive 0, and activate() snapshots the CURRENT msm into
        ``_saved_msm`` after the push, so the repaired value is what the
-       rebuilt wizard's cleanup will restore) + ``activate(replace=0)``
+       rebuilt wizard's cleanup will restore) + the SAME repair for
+       ``button_mode`` (``books['saved_button_mode']``, quick-004's
+       deferred-(b) fold: the probe-D2 pair ``cmd.set('button_mode',
+       str(int(v)), quiet=1)`` + ``cmd.mouse()``, skipped when the
+       legacy sidecar lacks the key) + ``activate(replace=0)``
        -- a plain push (a user wizard underneath is preserved,
        stack-native), NEVER ``activate_game`` (RECORDED DECISION 3: NO
        countdown on resume and no from-zero timer re-anchor; the
@@ -728,6 +732,21 @@ def load_checkpoint(path):
             saved_msm = books.get('saved_msm')
             if saved_msm is not None:
                 cmd.set('mouse_selection_mode', int(saved_msm))
+            # quick-004 (deferred-(b) fold): the button_mode mirror of
+            # the msm REPAIR above. A REBUILT wizard's activate()
+            # snapshots the CURRENT button_mode after the push (the
+            # same ORDER LAW as msm: the session restored the SAVE-TIME
+            # game profile), so without this repair the rebuilt
+            # wizard's eventual cleanup would restore the game profile
+            # instead of the user's pre-arm one. The probe-D2 restore
+            # pair (cmd.set quiet + cmd.mouse) is the wizard cleanup's
+            # own shape. Legacy sidecars without the key -> None ->
+            # skipped -> byte-identical today-behavior (additive-only
+            # persistence law).
+            saved_bm = books.get('saved_button_mode')
+            if saved_bm is not None:
+                cmd.set('button_mode', str(int(saved_bm)), quiet=1)
+                cmd.mouse()
             wiz.activate(replace=0)
         # -- step 8: _last_start rebuild (payload-direct Restart) -------
         global _last_start

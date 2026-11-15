@@ -578,6 +578,9 @@ class GameWizard(Wizard):
         lists -- the sidecar round-trips them back as lists; resume in
         07-08 re-normalizes). ``_result`` is deliberately OMITTED
         (always None in the advance flow -- 07-RESEARCH-state.md s1.4).
+        The books roster (7 keys): current_slot, color_store, event_seq,
+        last_event, error, saved_msm, and ``saved_button_mode`` (the
+        08.3-04 pre-arm profile attribute, carried quick-004).
         """
         import copy
         return {
@@ -589,6 +592,7 @@ class GameWizard(Wizard):
             'last_event': copy.deepcopy(self._last_event),
             'error': self._error,
             'saved_msm': self._saved_msm,
+            'saved_button_mode': self._saved_button_mode,
         }
 
     def resume_from(self, books):
@@ -601,7 +605,10 @@ class GameWizard(Wizard):
         already shows the saved colors (per-atom colors round-trip
         bit-exactly, SMOKE-17), so no recolor/rebuild is performed here
         -- the books only restore the ORIGINAL-color snapshot consumed
-        by a later cleanup()."""
+        by a later cleanup(). ``saved_button_mode`` rides the
+        ``saved_msm`` pattern (``.get`` -> None legacy default; the
+        quick-004 deferred-(b) carry -- old checkpoints load exactly as
+        before)."""
         self._current_slot = books.get('current_slot')
         store = books.get('color_store') or {}
         self._color_store = dict(
@@ -612,6 +619,15 @@ class GameWizard(Wizard):
         self._error = books.get('error')
         saved_msm = books.get('saved_msm')
         self._saved_msm = None if saved_msm is None else int(saved_msm)
+        # quick-004 (deferred-(b) fold): `saved_button_mode` rides the
+        # `saved_msm` pattern (`.get` -> None legacy default) -- the
+        # rebuild path repairs the live profile so activate() snapshots
+        # the true pre-arm value (gamestart.load_checkpoint); an older
+        # checkpoint without the key reads None and skips, byte-
+        # identical legacy behavior (additive-only persistence law).
+        saved_button_mode = books.get('saved_button_mode')
+        self._saved_button_mode = (None if saved_button_mode is None
+                                   else int(saved_button_mode))
 
     # -- Lifecycle event machinery (06-05) --------------------------------
 

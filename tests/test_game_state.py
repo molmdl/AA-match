@@ -697,6 +697,20 @@ class TestEndgameSummary(unittest.TestCase):
         else:
             self.fail('unknown end_state must raise ValueError')
 
+    def test_abandoned_end_state_refused_by_summary(self):
+        # quick-004 (D1): 'abandoned' is a real lifecycle end state set
+        # by engine.abandon_game, but it is NOT a scored exit -- the
+        # summary must keep refusing it fail-closed (no record can ever
+        # build for an abandoned game).
+        gs = self._completed_game()
+        gs.end_state = 'abandoned'
+        try:
+            gs.endgame_summary([2, 2])
+        except ValueError as e:
+            self.assertIn('end_state', str(e))
+        else:
+            self.fail('abandoned end_state must raise ValueError')
+
     def test_fail_closed_completed_requires_every_molecule_recorded(self):
         gs = self._completed_game()
         # A 'completed' game missing ANY molecule record is inconsistent —

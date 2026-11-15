@@ -208,9 +208,13 @@ class GameState:
       ``has_record``).
     - ``game_over`` / ``end_state`` / ``final_time`` — the lifecycle
       end state (06-01): ``game_over`` set by ``stop_timer``; the
-      reason ``end_state`` (``None | 'completed' | 'gave_up'``) is set
-      by the caller (the lifecycle op owns the cause); ``final_time``
-      is the frozen final elapsed float from ``stop_timer``.
+      reason ``end_state`` (``None | 'completed' | 'gave_up'
+      | 'abandoned'``) is set by the caller (the lifecycle op owns the
+      cause); ``final_time`` is the frozen final elapsed float from
+      ``stop_timer``. 'abandoned' (quick-004, Done-pop) is set only by
+      the engine lifecycle op; ``endgame_summary`` keeps refusing it
+      fail-closed -- an abandoned game never builds a summary (Done is
+      not a scored exit).
 
     ``to_dict``/``from_dict`` round-trip ALL fields losslessly as a plain
     JSON-able dict (engine/debug surface; the formal sidecar container
@@ -286,8 +290,8 @@ class GameState:
 
         The timer ANCHOR itself is NEVER touched: it is the pause
         mechanism's home (rebase_timer's live derivation). The end
-        REASON (``end_state``, 'completed' | 'gave_up') is likewise NOT
-        set here — the caller owns the cause.
+        REASON (``end_state``, 'completed' | 'gave_up' | 'abandoned')
+        is likewise NOT set here — the caller owns the cause.
 
         ``now`` defaults to the wall clock (start_timer's contract) and
         is float-coerced, so ``final_time`` is always a real float.

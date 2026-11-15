@@ -567,6 +567,28 @@ class TestGameRestartedLine(unittest.TestCase):
         self.assertNotIn('game_restarted', status_text._EVENT_BUILDERS)
 
 
+class TestGameAbandonedLine(unittest.TestCase):
+    """The abandon line (quick-004, D1) -- handler-logged by the Game
+    tab's Done-pop abandon detector in the game_restarted_line pattern:
+    it NEVER poll-emits (EXCLUDED from the builder table, no
+    EVENT_KINDS drift) and takes no event argument."""
+
+    def test_basic(self):
+        self.assertEqual(status_text.game_abandoned_line(),
+                         'Game abandoned.')
+
+    def test_not_in_poll_builder_table(self):
+        self.assertNotIn('game_abandoned', status_text._EVENT_BUILDERS)
+        self.assertNotIn(status_text.game_abandoned_line,
+                         status_text._EVENT_BUILDERS.values())
+        self.assertNotIn('game_abandoned', status_text.EVENT_KINDS)
+
+    def test_takes_no_event_argument(self):
+        params = list(inspect.signature(
+            status_text.game_abandoned_line).parameters.values())
+        self.assertEqual(len(params), 0)
+
+
 class TestStatusEventsLastEvent(unittest.TestCase):
     """The poll-diff's last_event fingerprint (D2 event channel): one new
     whole-dict fingerprint key; event lines prepend BEFORE the position

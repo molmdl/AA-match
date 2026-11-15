@@ -110,6 +110,11 @@ OPS (each count-asserted; plain-data in/out):
     twin (end_state 'completed'; same freeze + summary).
 17. ``endgame_summary() -> dict`` -- the SCORE-07 READ op: the 06-01
     contract dict from the live game, no mutation.
+18. ``abandon_game(now=None) -> final_time`` -- quick-004 (2026-11-16):
+    the Done-pop abandon, end_state 'abandoned' + stop_timer freeze
+    with NO summary built (the no-record law -- Done != Give-Up);
+    returns the frozen final_time float. Refuses an already-ended game
+    with the give_up message family.
 
 Python floor: PyMOL's Windows Python 3.9 at runtime, written 3.6-safe
 (Gate D compiles every aamatch/*.py under python3.6).
@@ -729,6 +734,28 @@ def complete_game(now=None):
     game.end_state = 'completed'
     game.stop_timer(now)
     return endgame_summary()
+
+
+def abandon_game(now=None):
+    """Op 18 (quick-004, 2026-11-16): Done-pop abandon -- end the
+    game WITHOUT a record. The panel Done button's canonical
+    cmd.set_wizard() pop is not an end path; the Game tab's poll
+    observer (aamatch/game_window.py _abandon_check) reaches HERE
+    on detecting the popped wizard. Sets ``end_state`` 'abandoned'
+    + ``stop_timer`` capture/freeze, then returns the frozen
+    ``final_time`` float -- NO endgame_summary is built (Done !=
+    Give-Up: 'abandoned' fail-closes in GameState.endgame_summary,
+    so no endgame block, no modal payload, no giveup_count -- the
+    scored exit stays give_up's alone). Refuses an already-ended
+    game with the give_up message family. [HUMAN]-lite applied
+    default (2026-11-16): amendable at the next GUI touch."""
+    game = current_game()
+    if game.game_over:
+        raise EngineError(
+            'engine.abandon_game: the game is already over')
+    game.end_state = 'abandoned'
+    game.stop_timer(now)
+    return game.final_time
 
 
 def endgame_summary():

@@ -306,6 +306,17 @@ def game_restarted_line():
     return 'Game restarted.'
 
 
+def game_abandoned_line():
+    """The abandon line (quick-004, D1). Handler-logged by the Game
+    tab's Done-pop abandon detector in the game_restarted_line pattern
+    (no event argument), so it is EXCLUDED from _EVENT_BUILDERS; the
+    handler-logged pattern needs no EVENT_KINDS entry (the 07-03 law --
+    the vocabulary stays exactly 16). Wording 'Game abandoned.' is the
+    dated [HUMAN]-lite applied default 2026-11-16, amendable at the
+    next GUI touch."""
+    return 'Game abandoned.'
+
+
 def game_saved_line(path):
     """The save line (Phase 7, SCORE-08). Handler-logged by the Game
     tab's Save wrapper AFTER a successful checkpoint write; takes no

@@ -26,7 +26,7 @@ AA-match ships as a standard PyMOL 2.5.0 plugin implementing an educational smal
 - [x] **Phase 7: Checkpoint & Game-File Persistence** — save/restore round-trip, Import of exported games
 - [x] **Phase 8: Demo Curation & Citations** — ~9 curated tier slots under propose → approve → fetch/commit; DATA_SOURCES.md
 - [ ] **Phase 8.2: Direction-Control Restoration (INSERTED)** — playable direction control: arrow-key/camera-step probe + ligand-relative control candidates within the frozen movement MODEL; [HUMAN] GUI checkpoint
-- [ ] **Phase 8.3: Drag-Movement Pivot (INSERTED)** — mouse-drag becomes THE movement input; all keyboard direction keys removed; wizard-panel movement list keeps ONLY Toward-ligand (2026-10-18 decision)
+- [x] **Phase 8.3: Drag-Movement Pivot (INSERTED)** — mouse-drag becomes THE movement input; all keyboard direction keys removed; wizard-panel movement list keeps ONLY Toward-ligand (2026-10-18 decision)
 - [ ] **Phase 9: Help, Docs & Release Audit** — in-game help, README, final docs audit, perf budgets
 
 ## Phase Details
@@ -370,7 +370,7 @@ Lifted from PITFALLS.md "Pitfall-to-Phase Mapping" (topic names → this roadmap
 | 8. Demo Curation & Citations | 11/11 | Complete (verified 2026-10-05 — 08-VERIFICATION.md passed 4/4; 08-11-SUMMARY criterion map closed in the combined session) | 2026-10-05 |
 | 8.1 Confirm Pass-Gate Restoration | 8/8 | Complete (verified 2026-10-05 — 08.1-VERIFICATION.md passed 40/40) | 2026-10-05 |
 | 8.2 Direction-Control Restoration (INSERTED) | 8/10 | In progress — waves 1-2 complete 2026-10-11 ([GATE] disposition recorded; 05/06 landed, 07/08 superseded); PAUSED before wave-3 battery | - |
-| 8.3 Drag-Movement Pivot (INSERTED) | 16/16 | Execution complete 2026-11-15 — [HUMAN] fresh-session drag ritual recorded (DRAG CORE APPROVED; criteria 1/3 human-checkpoint receipts); criterion 2 proven by 08.3-15 (WSL 969/969 + smokes 01–24, 26 invocations); D1 (Done-path Qt timer) + O1 (salt-bridge/H-bond) docketed for follow-up; carried (a)/(b) DEFERRED; **verification PENDING** | - |
+| 8.3 Drag-Movement Pivot (INSERTED) | 16/16 | Complete (verified 2026-11-15 — 08.3-VERIFICATION.md passed 3/3; D1 Done-path timer + O1 salt-bridge/H-bond docketed as out-of-phase follow-ups) | 2026-11-15 |
 | 9. Help, Docs & Release Audit | 0/TBD | Not started | - |
 
 ## Coverage

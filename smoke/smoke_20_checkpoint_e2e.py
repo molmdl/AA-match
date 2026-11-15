@@ -52,6 +52,11 @@ process -- run 2 IS the quit->relaunch half):
       mechanically impossible, so the repair's live-value proof goes
       through ONE pop: cleanup restores _saved_msm and THEN
       cmd.get == saved_msm); real predicate restored in a try/finally.
+      2026-11-16 (quick-004, deferred-(b)): two additive C rows -- the
+      button_mode mirror of the msm repair (rebuilt._saved_button_mode
+      == the sidecar saved_button_mode) and the ONE-pop live restore
+      (post-full pop button_mode == saved_button_mode); existing rows
+      stay byte-identical.
     -> rmtree fixtures -> print PASS.
 
 Fixtures live in the git-ignored tmp/smoke fixtures/aam_pse20/
@@ -306,6 +311,7 @@ if PHASE == 'verify':
               'keys=%s' % (sorted(snap.keys()),))
         books = snap['books']
         saved_msm = books.get('saved_msm')
+        saved_bm = books.get('saved_button_mode')
 
         # -- THE LOAD (ADOPT branch) -------------------------------------
         summary = gamestart.load_checkpoint(ZIP_PATH)
@@ -486,6 +492,13 @@ if PHASE == 'verify':
                   rebuilt._saved_msm == saved_msm,
               'saved_msm=%r want %r (msm repair landed in the books)'
               % (rebuilt._saved_msm, saved_msm))
+            # quick-004 (2026-11-16) deferred-(b) rows: the repair landed
+            check('C forced-rebuild: _saved_button_mode == sidecar '
+                  'saved_button_mode (the quick-004 repair landed)',
+                  saved_bm is not None
+                  and rebuilt._saved_button_mode == saved_bm,
+                  'got=%r want=%r'
+                  % (getattr(rebuilt, '_saved_button_mode', '?'), saved_bm))
             live_msm = int(cmd.get('mouse_selection_mode'))
             check('C forced-rebuild: live msm is the in-game defensive 0',
                   live_msm == 0,
@@ -497,6 +510,10 @@ if PHASE == 'verify':
             check('C forced-rebuild: pop->cleanup restores the repaired '
                   'msm', popped_msm == saved_msm,
                   'post-pop msm=%d want %r' % (popped_msm, saved_msm))
+            popped_bm = int(cmd.get('button_mode'))
+            check('C pop->cleanup restores the repaired button_mode profile',
+                  popped_bm == saved_bm,
+                  'post-pop button_mode=%d want %r' % (popped_bm, saved_bm))
             print('SMOKE-20 VERDICT resume: forced-rebuild branch '
                   '(predicate patched False) -> PROVEN', flush=True)
         finally:

@@ -97,6 +97,10 @@ PART G  THE 07-08 REBUILD-PATH PRIMITIVES: a default game armed via
         wizard and False for None / a plain object / a
         foreign-identity GameWizard stub (the name matches; the module
         suffix does not -- 07-RESEARCH-state.md sec. 6).
+        2026-11-16 (quick-004, deferred-(b)): two additive rows -- the
+        7-key books roster (saved_button_mode carried) and the
+        saved_button_mode corrupt-then-resume round trip; the existing
+        rows stay byte-identical (83 -> 85 checks).
 
 Pick scripting (real-mouse delivery is the human checkpoint,
 03-RESEARCH-wizard-interaction.md SS8): the C layer would route a
@@ -1005,6 +1009,21 @@ try:
           '%d object(s): every pair a (int id, color) tuple -- the '
           'store is rebuilt, never the sidecar lists adopted by '
           'reference' % len(wiz_g._color_store))
+
+    # quick-004 (2026-11-16) deferred-(b) rows: the books carry
+    check('part G snapshot_books carries saved_button_mode (7-key roster)',
+          sorted(saved_books) == ['color_store', 'current_slot', 'error',
+                                  'event_seq', 'last_event',
+                                  'saved_button_mode', 'saved_msm'],
+          'keys=%s' % (sorted(saved_books),))
+    wiz_g._saved_button_mode = 999      # corrupt then re-resume
+    wiz_g.resume_from(saved_books)
+    check('part G resume_from restores saved_button_mode',
+          wiz_g._saved_button_mode == saved_books['saved_button_mode']
+          and isinstance(wiz_g._saved_button_mode, int),
+          'got=%r want %r'
+          % (wiz_g._saved_button_mode,
+             saved_books['saved_button_mode']))
 
     # The identity predicate: the name + module-suffix form catches a
     # GameWizard under EITHER import identity (isinstance cannot cross

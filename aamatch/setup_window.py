@@ -905,17 +905,35 @@ class SetupWindow(QtWidgets.QDialog):
         return result['deleted']
 
     def _on_cleanup(self):
-        """Cleanup model button (SETUP-09): cancel-first + pop-cleanup.
+        """Cleanup model button (SETUP-09): cancel-first + guard + cleanup.
 
         Cancels any pending countdown FIRST (pitfall P-2: a countdown
         surviving the cleanup would fire a stale GO whose wizard
         registry references the very objects this cleanup deletes).
-        Then the pop-first cleanup via _guard. deleted == 0 is a LEGAL
-        no-op (nothing on the scene) -- the plan brief: the count is
-        always surfaced, zero included; only None (a _guard-caught
-        refusal) means no box.
+        Then -- 2026-11-18, 09-01 Decision A = a-add -- a Yes/No
+        confirmation (default No) whenever game objects exist; an empty
+        scene stays an ask-free no-op. The guard lives HERE in the thin
+        wrapper (the smoke-99 law): _cleanup_now and
+        placement.cleanup_game_objects stay modal-free, so SMOKE-11
+        PART E and SMOKE-21 (which drive the impls directly) are
+        untouched. Then the pop-first cleanup via _guard. deleted == 0
+        is a LEGAL no-op (nothing on the scene) -- the plan brief: the
+        count is always surfaced, zero included; only None (a
+        _guard-caught refusal) means no box.
         """
         self.game_tab.cancel_pending_start()
+        from . import geometry
+        doomed = [name for name in cmd.get_names('objects')
+                  if name.startswith(geometry.GAME_PREFIX)]
+        if doomed:
+            from . import status_text
+            reply = QtWidgets.QMessageBox.question(
+                self, status_text.CLEANUP_WARNING_TITLE,
+                status_text.CLEANUP_WARNING_TEXT,
+                QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No,
+                QtWidgets.QMessageBox.No)
+            if reply != QtWidgets.QMessageBox.Yes:
+                return
         deleted = self._guard(self._cleanup_now)
         if deleted is not None:
             QtWidgets.QMessageBox.information(

@@ -199,6 +199,12 @@ SKIP_WARNING_TEXT = ('Skip this molecule and move to the next one? '
 GIVEUP_WARNING_TITLE = 'Give up?'
 GIVEUP_WARNING_TEXT = ('Give up and end the game now? The game ends at '
                        'this stage and the endgame summary is shown.')
+# 09-05: Cleanup destructive-action guard (criterion 1; 09-01 Decision
+# A = add). Same NO-number variant: the wrapper pre-checks for existing
+# game objects, then asks before deleting them.
+CLEANUP_WARNING_TITLE = 'Remove the game objects?'
+CLEANUP_WARNING_TEXT = ('Cleanup removes every game-generated object '
+                        'from the scene. Remove them now?')
 
 
 def _require_kind(event, kind, name):

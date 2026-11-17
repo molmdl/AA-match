@@ -50,7 +50,11 @@ TEARDOWN - pop the wizard, cleanup_game_objects(), assert the scene is
     EXACTLY the pre-game name-set baseline (smoke_05:385-403 shape).
 
 Every raw number is echoed as SMOKE-ENV lines (the receipt value is the
-number, not the boolean). Tier law: WSL tests assert NOTHING for these
+number, not the boolean). Timing uses stdlib time.time() per the
+research harness law; on Windows its wall-clock tick is ~15.6 ms, so a
+sub-tick op may read 0.000 ms (min shows the floor, max the observed
+tick) -- that quantization is ~8% of the 200 ms budget, and the 30 s
+generate rows are unaffected. Tier law: WSL tests assert NOTHING for these
 budgets (tests/test_detector_invariance.py's 2.0 s loose guard is WSL-
 only and must never leak into this gate -- smoke_05:97-101 precedent).
 
@@ -283,7 +287,14 @@ else:
 # =============== Row D: scripted drag timing (N=20) ===================
 if wiz_s is not None:
     try:
+        # Non-vacuity guard (this row must not pass if drag_move silently
+        # no-ops): the AA picked in row P must actually displace on the
+        # first rep. Without this, a zero-work drag records 0 ms and
+        # would satisfy the budget for the wrong reason.
+        obj_d = registry_s['molecules'][0]['slots'][wiz_s._current_slot][0]
+        start_c = geometry.centroid_of(obj_d)
         drags = []
+        first_move = None
         for rep in range(DRAG_REPS):
             if rep % 2 == 0:
                 dx, dy = 20.0, 12.0
@@ -292,6 +303,13 @@ if wiz_s is not None:
             t0 = time.time()
             wiz_s.drag_move(dx, dy)
             drags.append((time.time() - t0) * 1000.0)
+            if rep == 0:
+                end_c = geometry.centroid_of(obj_d)
+                first_move = max(abs(end_c[i] - start_c[i])
+                                 for i in range(3))
+        check('D drag moved the selected AA',
+              first_move is not None and first_move > 1e-3,
+              'first-rep centroid delta=%.4f A' % (first_move,))
         drag_min, drag_avg, drag_max = _summarize(drags)
         check('D drag avg < 200 ms', drag_avg < FEEDBACK_BUDGET_MS,
               'avg=%.3f ms (< %.0f ms)'

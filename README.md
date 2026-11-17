@@ -113,8 +113,67 @@ demo-dev-1 is a development fixture kept for regression testing; it appears in t
 ## Project Structure
 
 ```
-#TBD
+aamatch/                     # plugin package - 29 modules in 3 enforced tiers
+  __init__.py                # entry point: AA-match menu item; zero module-level imports
+
+  PURE tier (20 modules; no pymol / Qt / numpy - pinned by tests/test_purity.py)
+    persistence.py           # versioned containers + atomic I/O
+    detector.py              # 7-type geometry detection
+    thresholds.py            # approved detection constants
+    generator.py             # level generation + solvability
+    game_state.py            # scoring + game state
+    level_spec.py            # versioned level-spec container
+    setup_state.py           # 7-field setup schema
+    capability.py            # AA / ligand atom typing
+    manifest.py              # MANIFEST parsing + entry enumeration
+    game_file.py             # shareable game file + upload splitting
+    checkpoint.py            # .aamz sidecar + zip I/O
+    status_text.py           # status-log / endgame text
+    wizard_text.py           # panel / prompt text
+    wizard_core.py           # movement math + color constants
+    spatial.py               # cell-list candidate pairs
+    vec3.py                  # vector math
+    backup.py                # snapshot / restore policy
+    paths.py                 # path guard + package-data lookup
+    setup_form.py            # setup-form helpers + tier-grouped rows
+    help_text.py             # canonical in-game help content
+
+  CMD tier (6 modules; the non-UI layer that drives PyMOL's cmd)
+    engine.py                # game operations (generate / detect / record / advance)
+    geometry.py              # atom extraction + bounding sphere
+    placement.py             # amino-acid materialization + grid bake
+    upload.py                # uploaded-molecule bridge
+    gamestart.py             # start / import / checkpoint seams
+    wizard.py                # play wizard (pick, drag, confirm)
+
+  Qt tier (2 modules; the two-tab window shell)
+    setup_window.py          # Setup tab + Help dialog
+    game_window.py           # Game-status tab (timer, log, endgame)
+
+  data/                      # bundled demo molecules
+    MANIFEST.json            # 10 sets / 18 entries
+    ligands/*.sdf            # 18 single-record SDF files
+
+tests/                       # python3.6 WSL test battery
+smoke/                       # headless Windows PyMOL smokes 01-25 + run_smoke.sh
+scripts/build_demos.py       # reproducible demo pipeline
+scripts/demo_specs/*.json    # 10 demo-set specs
 ```
+
+The PURE tier imports only the standard library plus other pure modules -
+never PyMOL, Qt, or numpy. The CMD tier is the non-UI layer that drives
+PyMOL's `cmd`; the Qt tier is the two-tab window shell.
+
+`tests/` holds the python3.6 WSL battery; the standing gates pin the
+plugin's purity (`test_purity.py`), the cmd-tier source contracts
+(`test_wizard_source.py`), AST audits (`test_code_audit.py`), and the demo
+data (`test_demo_data.py`, `test_demo_supply.py`). `smoke/` runs the
+headless Windows PyMOL battery: module identity, every demo set loading,
+the end-to-end loops, and the performance budgets. `scripts/build_demos.py`
+plus `scripts/demo_specs/*.json` are the reproducible demo pipeline
+(`--report-only` re-derives every entry).
+
+Development planning records live under `.planning/` (not shipped).
 
 ## License
 

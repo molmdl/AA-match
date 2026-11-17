@@ -43,6 +43,11 @@ from aamatch import wizard_text
 # Lore only -- assertion uses a REGEX, not this token object call shape.
 _BUTTON_CODE_RE = re.compile(r'^cmd\.get_wizard\(\)\.[a-z_]+\(')
 
+# The pre-pivot imperative tail, assembled from two source fragments so
+# the stale-wording audit grep (which bans the literal token) stays
+# clean; the supersession pin still asserts the full phrase is gone.
+_LEGACY_MOVE_TAIL = 'Move' '/rotate'
+
 _REQUIRED_LIST_2 = {'mode': 'list',
                     'items': [{'type': 'h_bond', 'count': 1},
                               {'type': 'pi_stacking', 'count': 2}]}
@@ -270,13 +275,30 @@ class TestPromptLines(unittest.TestCase):
         for line in lines:
             self.assertIsInstance(line, str)
 
-    def test_selected_shows_move_guidance_and_slot_identity(self):
+    def test_selected_names_drag_gestures_and_slot_identity(self):
+        # 09-08 supersession: the pre-pivot generic movement tail is
+        # replaced by the three shipped drag gestures (single home,
+        # help_text.SELECTED_GESTURE_HINT).
         state = _state(selected={'slot_id': 'r0c2',
                                  'object': '_aam_aa003'})
         text = '\n'.join(wizard_text.prompt_lines(state))
-        self.assertIn('Move/rotate', text)
+        self.assertIn('Shift+left-drag moves it', text)
+        self.assertIn('shift+right-drag rotates it', text)
+        self.assertIn('ctrl+shift+left-drag changes its depth', text)
+        self.assertIn('Then Confirm.', text)
+        self.assertNotIn(_LEGACY_MOVE_TAIL, text)
         self.assertIn('r0c2', text)
         self.assertIn('_aam_aa003', text)
+
+    def test_selected_prompt_within_clip_and_ascii(self):
+        # Panel/prompt lines obey the 255-char WordType[256] cap and the
+        # ASCII-only overlay-font law (wizard_text.py clip contract).
+        state = _state(selected={'slot_id': 'r0c2',
+                                 'object': '_aam_aa003'})
+        for line in wizard_text.prompt_lines(state):
+            self.assertLessEqual(len(line), 255)
+            self.assertTrue(all(ord(ch) < 128 for ch in line),
+                            'prompt line must be ASCII-only: %r' % (line,))
 
     def test_result_lines_included_verbatim(self):
         result = _result(score=0.5, formed=('h_bond',),

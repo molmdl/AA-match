@@ -338,7 +338,7 @@ Plans:
 - [x] 09-06-PLAN.md — README demo-set table (10 sets incl. dev fixture + thin-refusal footnotes) + DATA_SOURCES link fix + Acknowledgements + banner-verdict apply (wave 2)
 - [x] 09-07-PLAN.md — Setup-window Help button + modal child help dialog (bioCHEMeleon-v1 pattern, smoke-99 split build/exec) + single-home widget repoint + SMOKE-11 additive part (wave 3)
 - [x] 09-08-PLAN.md — wizard prompt-tail reworded to the drag model via help_text.SELECTED_GESTURE_HINT (all 4 stale 'Move/rotate' sites) + pin supersession + clip/ASCII continuity (wave 3)
-- [ ] 09-09-PLAN.md — README Project Structure filled from the live tree (tiers + gates + trees; last TBD gone) (wave 3)
+- [x] 09-09-PLAN.md — README Project Structure filled from the live tree (tiers + gates + trees; last TBD gone) (wave 3)
 - [ ] 09-10-PLAN.md — NEW tests/test_docs_audit.py: coverage/presence checks over README placeholders/vibe-warning/set table, DATA_SOURCES 18/18 + licenses, versions, load-bearing tooltips (wave 4)
 - [ ] 09-11-PLAN.md — [HUMAN] ONE combined fresh-session ritual: 9-step learnability (HELP-01) + perf feel on NAD (criterion 4) + README read-through + text-only amendment application (wave 5)
 - [ ] 09-12-PLAN.md — 09-AUDIT.md claim→code audit artifact (README/help/tooltip census/DATA_SOURCES rows, build_demos --report-only reproduction) + text-only discrepancy fixes (wave 6)

@@ -244,6 +244,20 @@ class SetupWindow(QtWidgets.QDialog):
         self.tabs.addTab(self.game_tab, 'Game status')
         top.addWidget(self.tabs)
 
+        # 09-07 (HELP-01): the Help affordance is a WINDOW-level row
+        # BELOW the tabs, so both tabs inherit it (09-RESEARCH-help-ui.md
+        # SS3.2 Option A -- the v1 shape). Deliberately OUTSIDE the
+        # Setup page's 7-button row: SMOKE-11 PART B pins that row's
+        # inventory and spec order.
+        help_row = QtWidgets.QHBoxLayout()
+        help_row.addStretch(1)
+        self.btn_help = QtWidgets.QPushButton('Help', self)
+        self.btn_help.setToolTip(
+            'Open the help panel: how to play, the interaction types, '
+            'scoring, modes, buttons, saving/loading, and tips.')
+        help_row.addWidget(self.btn_help)
+        top.addLayout(help_row)
+
         # 04-09 SETUP-07 connections: Reset, Randomize, Save Setup,
         # Load Setup; 04-10 connects the upload Browse button; 04-11
         # SETUP-09 connects Cleanup; 04-12 SETUP-08 connects Generate
@@ -256,6 +270,56 @@ class SetupWindow(QtWidgets.QDialog):
         self.btn_cleanup.clicked.connect(self._on_cleanup)
         self.btn_generate_export.clicked.connect(self._on_generate_export)
         self.btn_start.clicked.connect(self._on_start)
+        self.btn_help.clicked.connect(self._show_help)
+
+    # ---- Help panel (09-07, HELP-01) ----
+
+    def _build_help_dialog(self):
+        """Construct (but never open) the modal CHILD help dialog.
+
+        The IMPL half: pure construction from the single-home pure
+        module help_text.py (help_html()), so headless smokes can prove
+        the whole surface without a modal. The ONLY owner of the modal
+        is the thin wrapper _show_help below -- the smoke-99 law: a
+        modal .exec_() under platform=offscreen BLOCKS indefinitely
+        (the receipt quoted at game_window.py's endgame-modal
+        docstring), so boxes/modals live only in thin wrappers, never
+        in driven impls.
+
+        Shape borrowed from the bioCHEMeleon v1 help dialog
+        (09-RESEARCH-help-ui.md SS3.1): read-only QTextEdit rendering
+        the escaped fragment + a right-aligned OK button; the dialog is
+        parented to the window (modal CHILD, allowed by this module's
+        top docstring) and floats above the OpenGL viewer via the
+        endgame-modal WindowStaysOnTopHint pattern. QTextEdit renders
+        FRAGMENTS -- help_html() emits no html/body wrapper.
+        """
+        from . import help_text
+        dlg = QtWidgets.QDialog(self)
+        dlg.setWindowTitle('AA-match Help')
+        dlg.setMinimumSize(520, 600)   # the v1 sizes
+        dlg.setWindowFlags(dlg.windowFlags() | QtCore.Qt.WindowStaysOnTopHint)
+        vbox = QtWidgets.QVBoxLayout(dlg)
+        text = QtWidgets.QTextEdit(dlg)
+        text.setReadOnly(True)
+        text.setHtml(help_text.help_html())
+        vbox.addWidget(text, 1)
+        button_row = QtWidgets.QHBoxLayout()
+        button_row.addStretch(1)
+        ok = QtWidgets.QPushButton('OK', dlg)
+        ok.clicked.connect(dlg.accept)
+        button_row.addWidget(ok)
+        vbox.addLayout(button_row)
+        return dlg
+
+    def _show_help(self):
+        """The THIN WRAPPER -- the only owner of the modal exec_().
+
+        Never driven by a smoke (smoke-99 law: offscreen exec_ blocks);
+        opening the panel is a [HUMAN] checkpoint action. Everything
+        assertable headless lives in _build_help_dialog above.
+        """
+        self._build_help_dialog().exec_()
 
     # ---- the 7-field form (SETUP-02..06 widget side, 04-07) ----
 

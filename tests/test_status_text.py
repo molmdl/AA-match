@@ -411,6 +411,16 @@ class TestWarningConstants(unittest.TestCase):
             'Give up and end the game now? The game ends at this stage '
             'and the endgame summary is shown.')
 
+    def test_cleanup_warning_title(self):
+        self.assertEqual(status_text.CLEANUP_WARNING_TITLE,
+                         'Remove the game objects?')
+
+    def test_cleanup_warning_text(self):
+        self.assertEqual(
+            status_text.CLEANUP_WARNING_TEXT,
+            'Cleanup removes every game-generated object from the scene. '
+            'Remove them now?')
+
 
 class TestMoleculeScoredLines(unittest.TestCase):
     """The scored event (SCORE-02): header line + the wizard_text

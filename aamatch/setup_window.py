@@ -380,49 +380,10 @@ class SetupWindow(QtWidgets.QDialog):
                      for i in range(combo.count())
                      if combo.itemData(i) is not None)
 
-    # UI-only display labels for the canonical interaction enum strings
-    # (the stored values stay the enum strings from
-    # setup_state.INTERACTION_TYPES; iteration order is frozen there).
-    _INTERACTION_LABELS = {
-        'h_bond': 'Hydrogen bond',
-        'salt_bridge': 'Salt bridge',
-        'pi_stacking': 'Pi-stacking',
-        'cation_pi': 'Cation-pi',
-        'hydrophobic': 'Hydrophobic',
-        'halogen': 'Halogen bond',
-        'metal': 'Metal coordination',
-    }
-    # Per-type tooltips in game terms (spec UI standard: clear but
-    # sufficient in-game explanation).
-    _INTERACTION_TIPS = {
-        'h_bond': 'Hydrogen bond: a donor hydrogen (-OH or -NH) '
-                  'facing an acceptor oxygen or nitrogen on the other '
-                  'molecule.',
-        'salt_bridge': 'Salt bridge: an opposite-charge pair held '
-                       'together (a positive group on one molecule, a '
-                       'negative group on the other).',
-        'pi_stacking': 'Pi-stacking: two aromatic rings stacked '
-                       'face-on or edge-on.',
-        'cation_pi': 'Cation-pi: a positively charged group resting '
-                     'on the face of an aromatic ring.',
-        'hydrophobic': 'Hydrophobic: non-polar carbons of both '
-                       'molecules clustered into the same greasy '
-                       'patch.',
-        'halogen': 'Halogen bond: a Cl/Br/I on the molecule accepting '
-                   'from a donor on the amino acid.',
-        'metal': 'Metal coordination: a metal ion bound by two or '
-                 'more donor atoms.',
-    }
-    # Context-label strings restating the current interaction mode's
-    # meaning under the radios (research mode_widget_design).
-    _MODE_CONTEXT = {
-        'exclusive': 'The game accepts ANY of the checked interactions',
-        'block_exclusive': 'The player must form EXACTLY the checked '
-                           'interactions',
-        'unset': 'The game randomizes the required set from the '
-                 'checked types (hydrophobic excluded from random '
-                 'picks).',
-    }
+    # 09-07: the label/tip/mode dictionaries moved to the pure single
+    # home aamatch/help_text.py (09-04); widgets read them via lazy
+    # import. The strings are byte-identical (tests/test_help_text.py
+    # pins them verbatim), so this re-home is behavior-preserving.
 
     def _build_spinboxes(self):
         """SETUP-04/05 spinboxes with ranges from the frozen constants.
@@ -504,8 +465,11 @@ class SetupWindow(QtWidgets.QDialog):
 
     def _on_mode_toggled(self, *args):
         """Restate the current mode's meaning under the radios."""
+        # 09-07: lazy sibling import (module-identity law, contract 4);
+        # the mode strings live in the pure single home help_text.py.
+        from . import help_text
         self.mode_context_label.setText(
-            self._MODE_CONTEXT[self._current_mode()])
+            help_text.MODE_CONTEXT[self._current_mode()])
 
     def _build_interactions(self):
         """SETUP-06 checkboxes: 7 in canonical INTERACTION_TYPES order.
@@ -517,13 +481,16 @@ class SetupWindow(QtWidgets.QDialog):
         list keeps collect order == validate_state order.
         """
         from .setup_state import INTERACTION_TYPES
+        # 09-07: lazy sibling import (module-identity law, contract 4);
+        # labels/tips live in the pure single home help_text.py.
+        from . import help_text
         group = QtWidgets.QGroupBox('Allowed interactions', self)
         vbox = QtWidgets.QVBoxLayout(group)
         self.interaction_checks = []
         for itype in INTERACTION_TYPES:
             cb = QtWidgets.QCheckBox(
-                self._INTERACTION_LABELS[itype], group)
-            cb.setToolTip(self._INTERACTION_TIPS[itype])
+                help_text.INTERACTION_LABELS[itype], group)
+            cb.setToolTip(help_text.INTERACTION_TIPS[itype])
             vbox.addWidget(cb)
             self.interaction_checks.append((itype, cb))
         self.form_area.layout().addWidget(group)

@@ -1,7 +1,6 @@
 > This is a vibe-coding project. While the human attempt to verify the source of all 
 > contents, if you find any issues please contact me.
 > 
-> !! Under Development !!
 
 # AA-match
 
@@ -94,17 +93,22 @@ PyMOL's **Plugin Manager** can copy the package into a plugin directory:
 
 | Tier | Category | Source | ID(s) | Needs network? |
 |------|----------|--------|-------|----------------|
-| Easy | 
-| Easy | 
-| Easy | 
-| Hard | 
-| Hard | 
-| Hard | 
-| Challenge | 
-| Very challenging | 
-| Very challenging | 
+| Easy | Everyday organics (demo-easy-1) | NCBI PubChem (public domain) | aspirin, benzoic_acid | No |
+| Easy | Metabolites & ions (demo-easy-2) | NCBI PubChem (public domain) | citric_acid, acetate | No |
+| Easy | Caffeine (demo-easy-3) | NCBI PubChem (public domain) | caffeine | No |
+| Hard | Trypsin classics (demo-hard-1) | NCBI PubChem (public domain) | benzamidine, guanidinium | No |
+| Hard | Charged messengers (demo-hard-2) | NCBI PubChem (public domain) | glutamic_acid, acetylcholine | No |
+| Hard | Cofactors (demo-hard-3) | NCBI PubChem (public domain) | atp, nad | No |
+| Challenge | Halogen & alkaloids (demo-challenge-1) | NCBI PubChem (public domain) | chloramphenicol, quinine | No |
+| Very challenging | Big & iodinated (demo-veryhard-1) | NCBI PubChem (public domain) | folic_acid, thyroxine | No |
+| Very challenging | Metalloporphyrin (demo-veryhard-2) | wwPDB CCD (CC0 1.0) | heme | No |
+| Easy | Phase-2 development set (demo-dev-1) - development fixture, script-built in-repo (no download) | (none - generated in this repo) | benzamide, acetate | No |
 
-Full attribution in `DATA_SOURCES.md`.
+All bundled files ship with the plugin - no network is needed to play. Full per-file provenance (sources, licenses, DOIs, sha256) in [docs/DATA_SOURCES.md](docs/DATA_SOURCES.md).
+
+At the default settings (2 small molecules per level), three sets cannot start and refuse with a clear message: demo-easy-3 and demo-veryhard-2 (single-entry sets) and demo-veryhard-1 (its small-molecule pool is too thin at level 0). Lower 'Small molecules per level' or choose another set.
+
+demo-dev-1 is a development fixture kept for regression testing; it appears in the dropdown's Easy group.
 
 ## Project Structure
 
@@ -118,6 +122,6 @@ BSD 3-Clause — see [LICENSE](LICENSE).
 
 ## Acknowledgements
 
-Demo data courtesy of `TBD`
+Demo data courtesy of NCBI PubChem (public domain) for 8 of the 10 bundled sets and the wwPDB Chemical Component Dictionary (CC0 1.0) for the heme set, with full per-file attribution in [docs/DATA_SOURCES.md](docs/DATA_SOURCES.md). The development fixture set is generated inside this repository.
 
 ---

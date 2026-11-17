@@ -333,7 +333,7 @@ Plans:
 - [ ] 09-01-PLAN.md — checkpoint:decision — Cleanup destructive-action confirm + README "Under Development" banner verdicts (records-only; the answers steer 09-04/09-05/09-06) (wave 1)
 - [x] 09-02-PLAN.md — SMOKE-25 perf-budget battery: Generate < 30 s (NAD via largest_entry + max-LEGAL workload 4/10/all-candidates) + 20-rep pick/drag min/avg/max < 200 ms on the 82-object level-9 scene (wave 1)
 - [x] 09-03-PLAN.md — README Install drift fixes (point at __init__.py, neutral label, plugin-path verified route, double-install warning) + Usage section filled from the shipped-reality flow (wave 1)
-- [ ] 09-04-PLAN.md — NEW pure aamatch/help_text.py canonical help module (labels/tips/mode re-home, drag-gesture hint, 7 sections, help_html) + PURE_MODULES registration (atomic) + tests/test_help_text.py verbatim pins (wave 2)
+- [x] 09-04-PLAN.md — NEW pure aamatch/help_text.py canonical help module (labels/tips/mode re-home, drag-gesture hint, 7 sections, help_html) + PURE_MODULES registration (atomic) + tests/test_help_text.py verbatim pins (wave 2)
 - [ ] 09-05-PLAN.md — apply 09-01 Decision A: Cleanup Yes/No guard (wrapper-only, constants pinned) OR record acceptance + sharpened tooltip; SMOKE-11-PART-E impl boundary proven (wave 2)
 - [ ] 09-06-PLAN.md — README demo-set table (10 sets incl. dev fixture + thin-refusal footnotes) + DATA_SOURCES link fix + Acknowledgements + banner-verdict apply (wave 2)
 - [ ] 09-07-PLAN.md — Setup-window Help button + modal child help dialog (bioCHEMeleon-v1 pattern, smoke-99 split build/exec) + single-home widget repoint + SMOKE-11 additive part (wave 3)

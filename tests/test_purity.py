@@ -96,11 +96,13 @@ if REPO_ROOT not in sys.path:
 #                   chain replaying parse_game_data VERBATIM, sentinel-first
 #                   reconcile_registry; stdlib json/os/tempfile/zipfile +
 #                   pure persistence/game_file ONLY).
+# Phase 9 (09-04): help_text (canonical in-game help content strings +
+#                   builders; stdlib + .setup_state INTERACTION_TYPES).
 PURE_MODULES = ['setup_state', 'level_spec', 'persistence', 'backup',
                 'paths', 'vec3', 'spatial', 'manifest', 'capability',
                 'thresholds', 'detector', 'generator', 'game_state',
                 'wizard_core', 'wizard_text', 'setup_form', 'game_file',
-                'status_text', 'checkpoint']
+                'status_text', 'checkpoint', 'help_text']
 
 # Roots that must NEVER appear in any import of a pure module, in ANY
 # scope (module level or function body -- B7). dataclasses is 3.7+.
@@ -350,7 +352,7 @@ class TestPureModuleRegistrationPins(unittest.TestCase):
                     'paths', 'vec3', 'spatial', 'manifest', 'capability',
                     'thresholds', 'detector', 'generator', 'game_state',
                     'wizard_core', 'wizard_text', 'setup_form', 'game_file',
-                    'status_text', 'checkpoint']
+                    'status_text', 'checkpoint', 'help_text']
         for name in expected:
             with self.subTest(module=name):
                 self.assertIn(

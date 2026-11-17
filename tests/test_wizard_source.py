@@ -919,7 +919,7 @@ class TestCmdTierRegistration(unittest.TestCase):
 
     The derived roster (aamatch/*.py - PURE_MODULES - __init__) is
     today exactly [engine, game_window, gamestart, geometry, placement,
-    setup_window, upload, wizard] (8 = 28 files - 19 PURE_MODULES -
+    setup_window, upload, wizard] (8 = 29 files - 20 PURE_MODULES -
     the exempt composition root). The partition into SCANNED_MODULES u
     NON_UI_CMD_CORE must cover it with no remainder and no overlap, so
     a NEW cmd-tier module fails HERE -- loudly and by name -- instead

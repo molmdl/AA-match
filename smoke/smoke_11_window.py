@@ -201,6 +201,21 @@ PART K  (ALWAYS, T0-in-smoke): Gate A2 shape sanity echoed inside
         discipline the menu rewire must preserve). (05-06 inserted PART
         I before the echo -- the established renumber pattern; the echo
         letter shifted H -> I (05-05) -> J (05-06) -> K (05-08).)
+PART L  (T1b -- the 04-01 probe verdict is PASS (platform=offscreen),
+        so this part RUNS; 09-07 HELP-01 help-surface drives --
+        CONSTRUCTION ONLY, never exec_ per the smoke-99 law): L1 the
+        window-level btn_help exists with text 'Help' + a non-empty
+        tooltip; L2 win._build_help_dialog() returns a QDialog whose
+        parentWidget() IS the setup window (modal CHILD), minimum size
+        520x600, exactly one read-only QTextEdit whose toHtml() carries
+        the pinned fragments ('How to play', 'Hydrogen bond', 'Salt
+        bridge', 'shift+left-drag', 'Tips') and one OK button; L3 the
+        live interaction checkbox labels equal the canonical 7 labels in
+        order AND equal help_text.INTERACTION_LABELS values read through
+        the live widgets (the single-home proof end-to-end). A comment
+        row records that win._show_help is [HUMAN]-only to open: its
+        exec_() blocks offscreen (smoke-99), so it is never
+        smoke-driven.
 
 Conventions (frozen Phase 1, kept): anchor the repo root via sys.argv
 first / cwd fallback (never __file__); import aamatch directly (module
@@ -1306,6 +1321,98 @@ try:
 except Exception:
     traceback.print_exc()
     check('part K Gate A2 echo', False, 'raised (see traceback)')
+
+# ============================================================
+# PART L: 09-07 help surface (T1b -- the 04-01 probe verdict is PASS
+# (platform=offscreen), so this part RUNS). CONSTRUCTION ONLY, NO
+# exec_ (the smoke-99 law: a modal blocks indefinitely offscreen).
+# The Help row is WINDOW-level (below the tabs; both tabs inherit it);
+# win._build_help_dialog is the driven impl, and win._show_help is
+# [HUMAN]-only to open -- never smoke-driven (see the comment row).
+# ============================================================
+try:
+    if setup_window is None:
+        raise RuntimeError('part A failed')
+    from pymol.Qt import QtWidgets
+    from aamatch import help_text
+
+    app = QtWidgets.QApplication.instance()
+    if app is None:
+        app = QtWidgets.QApplication(['aamatch-smoke-11'])
+    win = setup_window.open_window()   # singleton reuse
+
+    # ---- L1: the window-level Help button ----
+    has_btn_l = hasattr(win, 'btn_help')
+    check("part L1: btn_help exists with text 'Help'",
+          has_btn_l and win.btn_help.text() == 'Help',
+          'text=%r' % (win.btn_help.text() if has_btn_l else None,))
+    check('part L1: btn_help carries a non-empty tooltip',
+          has_btn_l and bool(win.btn_help.toolTip().strip()),
+          'tip=%r' % (win.btn_help.toolTip() if has_btn_l else None,))
+
+    # ---- L2: the child dialog constructs (never opened/exec_d) ----
+    help_dlg_l = win._build_help_dialog()
+    check('part L2: _build_help_dialog returns a QDialog',
+          isinstance(help_dlg_l, QtWidgets.QDialog),
+          'type=%r' % (type(help_dlg_l),))
+    check('part L2: the help dialog is a modal CHILD of the window',
+          help_dlg_l.parentWidget() is win,
+          'parent=%r' % (help_dlg_l.parentWidget(),))
+    check('part L2: v1 minimum size 520 x 600',
+          help_dlg_l.minimumWidth() == 520
+          and help_dlg_l.minimumHeight() == 600,
+          'min=%rx%r' % (help_dlg_l.minimumWidth(),
+                         help_dlg_l.minimumHeight()))
+    edits_l = help_dlg_l.findChildren(QtWidgets.QTextEdit)
+    check('part L2: exactly one QTextEdit, read-only (help body)',
+          len(edits_l) == 1 and edits_l[0].isReadOnly(),
+          'count=%r readonly=%r'
+          % (len(edits_l),
+             edits_l[0].isReadOnly() if edits_l else None))
+    html_l = edits_l[0].toHtml() if len(edits_l) == 1 else ''
+    # Content double-sourced from the pure pins (tests/test_help_text.py).
+    # NB: the authored canonical line is lowercase 'shift+left-drag'
+    # (help_text.py:177-179); the plan's capital-S spelling does not
+    # appear in the rendered fragment.
+    frags_l = ['How to play', 'Hydrogen bond', 'Salt bridge',
+               'shift+left-drag', 'Tips']
+    missing_l = [frag for frag in frags_l if frag not in html_l]
+    check('part L2: the rendered help carries the pinned content',
+          not missing_l, 'missing=%r' % (missing_l,))
+    ok_buttons_l = [b for b in help_dlg_l.findChildren(
+        QtWidgets.QPushButton) if b.text() == 'OK']
+    check("part L2: exactly one 'OK' button",
+          len(ok_buttons_l) == 1, 'count=%r' % (len(ok_buttons_l),))
+
+    # ---- L3: the single-home proof through the LIVE widgets ----
+    expected_labels_l = ['Hydrogen bond', 'Salt bridge', 'Pi-stacking',
+                         'Cation-pi', 'Hydrophobic', 'Halogen bond',
+                         'Metal coordination']
+    live_labels_l = [cb.text() for (_t, cb) in win.interaction_checks]
+    check('part L3: interaction checkbox labels == canonical 7 in '
+          'order (arrive via help_text)',
+          live_labels_l == expected_labels_l,
+          'labels=%r' % (live_labels_l,))
+    check('part L3: live labels are help_text.INTERACTION_LABELS '
+          'values themselves (single home)',
+          live_labels_l == [help_text.INTERACTION_LABELS[t]
+                            for (t, _cb) in win.interaction_checks],
+          '')
+
+    # [HUMAN]-only: win._show_help() owns the modal exec_() and BLOCKS
+    # under platform=offscreen (smoke-99 law) -- never smoke-driven.
+    # Construction above is the full headless proof of the surface.
+    help_dlg_l.close()
+    app.processEvents()
+    win.close()
+    REC['help'] = ('btn_help + tooltip; child dialog 520x600, one '
+                   'read-only QTextEdit with pinned content + OK; '
+                   'checkboxes read help_text.INTERACTION_LABELS '
+                   '(construction only -- never exec_)')
+except Exception:
+    traceback.print_exc()
+    check('part L help-surface construction', False,
+          'raised (see traceback)')
 
 # --- evidence summary -------------------------------------------------
 print('SMOKE-ENV record: %s'

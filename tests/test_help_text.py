@@ -118,11 +118,11 @@ class TestGestureHint(unittest.TestCase):
 
     def test_prompt_plus_hint_fits_the_overlay_clip(self):
         # The 255-char WordType[256] panel cap: the longest realistic
-        # selection line joined with the hint must still fit.
-        prompt = ('Selected: slot r0c2 (_aam_aa999999). Move/rotate it, '
-                  'then Confirm. ')
-        self.assertLess(len(prompt + help_text.SELECTED_GESTURE_HINT),
-                        255)
+        # selection line (slot identity + gesture hint + confirm tail)
+        # must still fit.
+        prompt = ('Selected: slot r0c2 (_aam_aa999999). %s Then Confirm.'
+                  % help_text.SELECTED_GESTURE_HINT)
+        self.assertLess(len(prompt), 255)
 
 
 class TestHelpSections(unittest.TestCase):

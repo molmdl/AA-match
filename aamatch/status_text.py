@@ -161,7 +161,7 @@ def selected_line(selected):
     """The selection event line: 'Selected: slot %s (%s).'
 
     The panel's first prompt line minus its imperative tail
-    (wizard_text prompt minus 'Move/rotate it, then Confirm.'). Returns
+    (wizard_text prompt minus '<gesture hint> Then Confirm.'). Returns
     None for a None/empty selected -- a DESELECT logs nothing: only the
     pinned slot-selection string exists; the panel reflects deselects
     (planner decision adopted from the research's silence).

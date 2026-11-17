@@ -4,9 +4,11 @@ Layer: PURE -- registered in tests/test_purity.py PURE_MODULES (Gate A
 scans EVERY scope, module level and function bodies). (2026-10-18
 pivot, recorded disposition 2026-10-19: the movement-constant import
 from ``.wizard_core`` retired -- the panel's only movement button is
-now Toward ligand and its header is the constant 'Movement:' string,
-so this module imports NOTHING; the .wizard_core single-home law
-survives for any future constant need.) NO pymol/Qt/numpy: these
+now Toward ligand and its header is the constant 'Movement:' string;
+the module's sole import is the pure sibling ``.help_text`` (the
+09-08 single home of the selected-prompt gesture hint), so the
+.wizard_core single-home law survives for any future constant need.)
+NO pymol/Qt/numpy: these
 builders are dumb functions of the plain-data state dict the cmd-tier
 GameWizard (plan 03-03) assembles -- plain data in, plain data out.
 
@@ -40,6 +42,8 @@ per the human decision -- the list keeps ONLY 'Toward ligand' under
 the 'Movement:' header (wording m1); the former move-header embed of
 the nudge step constant is retired with the nudge channel.
 """
+
+from . import help_text
 
 # 2026-10-18 pivot (recorded disposition 2026-10-19): the six direction
 # nudge rows (Left/Right/Up/Down/In/Out) and the panel Rotate-90 row
@@ -244,7 +248,7 @@ def prompt_lines(state):
     None; get_prompt returns list-of-strings).
 
     Order: the state-machine line first (click instruction when nothing
-    is selected, else the Move/rotate guidance naming slot id + object),
+    is selected, else the drag-gesture guidance naming slot id + object),
     then the multi-molecule notice when the level has more than one
     molecule, then the result lines VERBATIM when a result is present,
     then an 'ERROR'-prefixed line LAST (appended after status -- the
@@ -270,6 +274,7 @@ def prompt_lines(state):
 def _status_line(selected):
     """First prompt line: selection status or the click instruction."""
     if selected:
-        return ('Selected: slot %s (%s). Move/rotate it, then Confirm.'
-                % (selected.get('slot_id'), selected.get('object')))
+        return ('Selected: slot %s (%s). %s Then Confirm.'
+                % (selected.get('slot_id'), selected.get('object'),
+                   help_text.SELECTED_GESTURE_HINT))
     return _CLICK_INSTRUCTION

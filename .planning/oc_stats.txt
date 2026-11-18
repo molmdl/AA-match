@@ -1,21 +1,21 @@
 ┌────────────────────────────────────────────────────────┐
 │                       OVERVIEW                         │
 ├────────────────────────────────────────────────────────┤
-│Sessions                                            294 │
-│Messages                                         10,133 │
-│Days                                                 73 │
+│Sessions                                            304 │
+│Messages                                         10,532 │
+│Days                                                 75 │
 └────────────────────────────────────────────────────────┘
 
 ┌────────────────────────────────────────────────────────┐
 │                    COST & TOKENS                       │
 ├────────────────────────────────────────────────────────┤
-│Total Cost                                      $310.81 │
-│Avg Cost/Day                                      $4.26 │
-│Avg Tokens/Session                                 3.2M │
-│Median Tokens/Session                              2.2M │
-│Input                                             67.9M │
-│Output                                             9.7M │
-│Cache Read                                       875.1M │
+│Total Cost                                      $315.42 │
+│Avg Cost/Day                                      $4.21 │
+│Avg Tokens/Session                                 3.3M │
+│Median Tokens/Session                              2.3M │
+│Input                                             70.8M │
+│Output                                             9.9M │
+│Cache Read                                       910.7M │
 │Cache Write                                           0 │
 └────────────────────────────────────────────────────────┘
 
@@ -38,21 +38,21 @@
 │  Cache Write                                         0 │
 │  Cost                                         $22.6065 │
 ├────────────────────────────────────────────────────────┤
-│ synthetic/hf:zai-org/GLM-5.3                           │
-│  Messages                                          827 │
-│  Input Tokens                                     8.7M │
-│  Output Tokens                                    1.7M │
-│  Cache Read                                     105.4M │
-│  Cache Write                                         0 │
-│  Cost                                         $46.9243 │
-├────────────────────────────────────────────────────────┤
 │ synthetic/hf:deepseek-ai/DeepSeek-V4.1-Flash-1017      │
-│  Messages                                          524 │
-│  Input Tokens                                     3.4M │
-│  Output Tokens                                  384.4K │
-│  Cache Read                                      55.3M │
+│  Messages                                          873 │
+│  Input Tokens                                     5.9M │
+│  Output Tokens                                  603.7K │
+│  Cache Read                                      87.1M │
 │  Cache Write                                         0 │
-│  Cost                                          $4.1360 │
+│  Cost                                          $6.8523 │
+├────────────────────────────────────────────────────────┤
+│ synthetic/hf:zai-org/GLM-5.3                           │
+│  Messages                                          866 │
+│  Input Tokens                                     9.1M │
+│  Output Tokens                                    1.7M │
+│  Cache Read                                     109.2M │
+│  Cache Write                                         0 │
+│  Cost                                         $48.8175 │
 ├────────────────────────────────────────────────────────┤
 │ synthetic/hf:deepseek-ai/DeepSeek-V4.1-Flash           │
 │  Messages                                          181 │
@@ -83,16 +83,16 @@
 ┌────────────────────────────────────────────────────────┐
 │                      TOOL USAGE                        │
 ├────────────────────────────────────────────────────────┤
-│ bash               ████████████████████ 6442 (50.9%)   │
-│ read               ████████             2883 (22.8%)   │
-│ edit               ██████               2064 (16.3%)   │
-│ write              █                    502 ( 4.0%)    │
-│ grep               █                    310 ( 2.4%)    │
-│ task               █                    278 ( 2.2%)    │
+│ bash               ████████████████████ 6754 (51.4%)   │
+│ read               ████████             2913 (22.2%)   │
+│ edit               ██████               2184 (16.6%)   │
+│ write              █                    517 ( 3.9%)    │
+│ grep               █                    311 ( 2.4%)    │
+│ task               █                    287 ( 2.2%)    │
 │ webfetch           █                     88 ( 0.7%)    │
 │ glob               █                     64 ( 0.5%)    │
 │ invalid            █                     14 ( 0.1%)    │
-│ question           █                     12 ( 0.1%)    │
+│ question           █                     13 ( 0.1%)    │
 │ skill              █                      1 ( 0.0%)    │
 └────────────────────────────────────────────────────────┘
 
